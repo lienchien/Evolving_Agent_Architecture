@@ -1,5 +1,11 @@
 # Capability-Evolving Agent — Phase 1 MVP (Agent + API 系統面)
 
+## 狀態：骨架已實作完成，尚未執行/驗證
+
+以下所有程式碼（`src/`、`tests/`）已依本計畫寫入專案目錄。因為本機沒有可用的 Python 直譯器，且使用者要求不安裝任何額外程式，**目前尚未實際跑過 `pytest` 或啟動過 API**，邏輯正確性僅靠設計時的手動推導確認，尚待使用者在自己的環境安裝依賴後驗證。
+
+`.env.example` 因權限設定的 deny rule 被擋下，改以 **`env.example`**（無開頭句點）建立在專案根目錄；使用時請自行複製為 `.env`。
+
 ## Context
 
 專案目前只有兩份設計文件（System Design v1.6、Tech Stack v1），尚無任何程式碼，也不是 git repo。使用者希望先聚焦在 **Agent 與 API 系統面**的開發，暫緩 Sharing / Import / Export / Marketplace 等文件中標記為「Future Reserved」的部分。
@@ -28,8 +34,9 @@ Export / Import / Publish / Discover / Sync / Marketplace / Collective Network�
 
 ```
 Evolving_Agent_Architecture/
+├── DEV_PLAN.md                      # 本文件
 ├── requirements.txt
-├── .env.example
+├── env.example                      # 複製為 .env 後填入金鑰
 ├── .gitignore
 ├── pytest.ini
 ├── src/
@@ -111,11 +118,23 @@ MVP 用 `task_family` 關鍵字比對 registry（§59 向量檢索留待 Phase 2
 
 ---
 
-## 驗證方式
+## 驗證方式（尚未執行，待使用者環境備妥後跑一次）
 
-1. `tests/test_full_loop.py`：模擬「提交未知 task_family 任務 → 觸發 gap → evolution 產生候選 → validation/testing 通過 → pending_approval → 呼叫 approve → capability 變 active」，接著「提交同 task_family 第二個任務 → 直接 reuse，不再產生新 gap」，斷言全程狀態與輸出正確。
-2. `tests/test_capability_schema.py`、`test_capability_service.py`：涵蓋 schema 預設值與狀態機合法/非法轉換。
-3. 使用者之後自行安裝 Python + `pip install -r requirements.txt` 後，可用 `uvicorn src.main:app --reload` 啟動 API，並用 curl/Swagger UI（`/docs`）手動跑一次相同流程；也可直接 `pytest` 跑上述測試。**這一輪只交付程式碼與測試，不執行安裝或啟動任何服務。**
+1. `tests/test_capability_schema.py`、`test_capability_service.py`：涵蓋 schema 預設值與狀態機合法/非法轉換。
+2. `tests/test_full_loop.py`：模擬「提交未知 task_family 任務 → 觸發 gap → evolution 產生候選 → validation/testing 通過 → pending_approval → 呼叫 approve → capability 變 active」，接著「提交同 task_family 第二個任務 → 直接 reuse，不再產生新 gap」，斷言全程狀態與輸出正確。
+3. 使用者自行安裝 Python 3.10+ 後：
+   ```
+   pip install -r requirements.txt
+   pytest
+   uvicorn src.main:app --reload   # 另開一個視窗，之後用 curl/Swagger UI (/docs) 手動跑一次相同流程
+   ```
+   **我這一輪只交付程式碼與測試，不執行安裝、不啟動任何服務。**
+
+### 首次執行時建議留意的風險點
+
+- **LangGraph API 版本**：`agents/main_agent.py`、`agents/evolution_agent.py` 用了 `StateGraph.add_conditional_edges` 標準寫法，若 `requirements.txt` 裝到的版本 API 有差異，可能需要微調。
+- **Windows subprocess sandbox**：`infrastructure/subprocess_sandbox.py` 用 `sys.executable` 開子行程執行生成的程式碼，在 Windows 上路徑/編碼理論上沒問題，但這是唯一沒有實際跑過的執行路徑，值得先手動測一次。
+- **SQLite 檔案位置**：預設會在執行時的當前目錄產生 `capability_library.db`（與 `capability_library/` 產物資料夾同名但不同東西，注意不要搞混）。
 
 ---
 

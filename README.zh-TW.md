@@ -2,6 +2,13 @@
 
 **語言：** [English](README.md) | 繁體中文
 
+![Status](https://img.shields.io/badge/status-experimental-orange)
+![Phase](https://img.shields.io/badge/phase-skeleton--implemented-blue)
+![Validation](https://img.shields.io/badge/runtime%20validation-pending-yellow)
+
+> [!WARNING]
+> 本專案目前仍在積極開發中。Repository 內已建立核心架構骨架與測試程式，但尚未完成 runtime 驗證。目前應視為實驗性研究原型，而非可正式投入使用的 production-ready 系統。
+
 這是一個研究導向的 Agent 架構，探索 AI Agent 是否能夠**辨識自身缺少的能力、建立新的可執行能力、進行驗證與測試、產生可稽核報告、請求人類核准、啟用通過的能力，並在未來任務中重複使用**。
 
 長期目標是研究：Agent 的效能是否能透過 **Capability Accumulation（能力累積）**持續成長，而不只依賴更強的基礎模型。

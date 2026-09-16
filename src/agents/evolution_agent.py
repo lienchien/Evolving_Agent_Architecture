@@ -4,10 +4,11 @@ from typing import Any, TypedDict
 
 from langgraph.graph import END, StateGraph
 
-from src.domain.capability import Capability
+from src.domain.capability import Capability, CapabilityStatus
 from src.domain.gap import CapabilityGap
 from src.domain.report import TestReport
 from src.services.approval_service import ApprovalService
+from src.services.capability_service import CapabilityService
 from src.services.evolution_service import EvolutionService
 from src.services.testing_service import TestingService
 from src.services.validation_service import ValidationService
@@ -27,11 +28,13 @@ class EvolutionAgent:
         validation_service: ValidationService,
         testing_service: TestingService,
         approval_service: ApprovalService,
+        capability_service: CapabilityService,
     ) -> None:
         self._evolution_service = evolution_service
         self._validation_service = validation_service
         self._testing_service = testing_service
         self._approval_service = approval_service
+        self._capability_service = capability_service
         self._graph = self._build_graph()
 
     def _build_graph(self):
@@ -44,7 +47,13 @@ class EvolutionAgent:
         graph.set_entry_point("generate")
         graph.add_edge("generate", "validate")
         graph.add_edge("validate", "test")
-        graph.add_edge("test", "finalize")
+        graph.add_conditional_edges(
+            "test",
+            lambda state: (
+                "finalize" if state["capability"].status == CapabilityStatus.TESTED else "end"
+            ),
+            {"finalize": "finalize", "end": END},
+        )
         graph.add_edge("finalize", END)
         return graph.compile()
 
@@ -60,7 +69,8 @@ class EvolutionAgent:
         report = self._testing_service.run_autonomous_tests(
             state["capability"], state["functional_results"]
         )
-        return {"test_report": report}
+        capability = self._capability_service.get(state["capability"].capability_id)
+        return {"test_report": report, "capability": capability}
 
     def _finalize(self, state: EvolutionState) -> dict[str, Any]:
         capability = self._approval_service.request_approval(state["capability"])

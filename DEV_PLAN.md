@@ -8,15 +8,21 @@
 
 ## Context
 
-專案目前只有兩份設計文件（System Design v1.6、Tech Stack v1），尚無任何程式碼，也不是 git repo。使用者希望先聚焦在 **Agent 與 API 系統面**的開發，暫緩 Sharing / Import / Export / Marketplace 等文件中標記為「Future Reserved」的部分。
+專案目前已完成 **Phase 1 MVP 的程式骨架與測試案例**，包含 Main Agent、Evolution Agent、Capability lifecycle、Validation / Testing、Approval、Notification、Audit、FastAPI routes 與端對端測試。現階段仍聚焦在 **Agent 與 API 系統面**，尚未進入真實基礎設施整合與正式執行驗證。
+
+目前核心流程已依 System Design v1.6 建立：
+
+`Gap → Generate → Validate → Test → Report → Notify → Approve → Activate → Reuse`
+
+Sharing / Import / Export / Marketplace / Collective Capability Network 等設計仍維持 **Future Reserved**，本階段不實作完整邏輯，只保留必要 schema 與介面擴充點。
 
 使用者已確認兩個關鍵決策：
 1. **起手方式**：先用最小可行版本（in-memory/SQLite + mock LLM）跑通一次完整循環，之後再逐步替換成真實 PostgreSQL / Docker sandbox / LiteLLM。
 2. **LLM 憑證**：目前沒有 NVIDIA NIM / OpenRouter API Key，先用 Mock LLM Provider。
 
-環境檢查發現：本機 `python` 只有 Windows Store 的 stub（非真實直譯器），`git` 存在，`docker` 未確認在 PATH 上。使用者明確要求**只做系統開發（寫程式碼/專案骨架），不要安裝任何額外程式**（包含 Python 本身）。因此本輪產出是**原始碼與專案結構**，執行環境安裝與 `pip install` 由使用者自行之後處理，我不會執行安裝動作。
+目前 repo 已存在完整原始碼與測試，但尚未在實際 Python 執行環境跑過 `pytest` 或啟動 API。因此本階段的剩餘工作重點，是先完成 **Phase 1 骨架驗證**，再進入 **Phase 1.5 Real Infrastructure Integration**。
 
-目標：實作 System Design v1.6 §58 (Phase 1 — Core MVP) 所列核心循環，讓 Agent 能自主偵測能力缺口、產生候選能力、驗證、測試、產生報告、通知、經人工核准後啟用，並於後續任務重用 —— 全程用 mock/in-memory 元件證明流程可行，介面預留未來替換真實服務。
+目標：實作並驗證 System Design v1.6 §58 (Phase 1 — Core MVP) 所列核心循環，讓 Agent 能自主偵測能力缺口、產生候選能力、驗證、測試、產生報告、通知、經人工核准後啟用，並於後續任務重用 —— 目前先使用 mock/in-memory 元件證明流程，介面預留未來替換真實服務。
 
 ---
 
@@ -32,9 +38,10 @@ Export / Import / Publish / Discover / Sync / Marketplace / Collective Network�
 
 ## 專案結構
 
-```
+```text
 Evolving_Agent_Architecture/
 ├── DEV_PLAN.md                      # 本文件
+├── PROJECT_STATUS.md                # 開發階段與完成度追蹤
 ├── requirements.txt
 ├── env.example                      # 複製為 .env 後填入金鑰
 ├── .gitignore
@@ -58,7 +65,7 @@ Evolving_Agent_Architecture/
 │   │   ├── mock_llm.py              # MockLLMProvider（樣板式生成）
 │   │   ├── memory_queue.py          # In-memory EvolutionQueue
 │   │   ├── sqlite_repository.py     # SQLite 版 CapabilityRepository
-│   │   ├── subprocess_sandbox.py     # 子行程沙箱（Docker 之前的替代品）
+│   │   ├── subprocess_sandbox.py    # 子行程沙箱（Docker 之前的替代品）
 │   │   └── console_notification.py  # Console 版 NotificationProvider
 │   ├── services/
 │   │   ├── capability_service.py    # Registry CRUD + lifecycle 狀態機
@@ -123,12 +130,12 @@ MVP 用 `task_family` 關鍵字比對 registry（§59 向量檢索留待 Phase 2
 1. `tests/test_capability_schema.py`、`test_capability_service.py`：涵蓋 schema 預設值與狀態機合法/非法轉換。
 2. `tests/test_full_loop.py`：模擬「提交未知 task_family 任務 → 觸發 gap → evolution 產生候選 → validation/testing 通過 → pending_approval → 呼叫 approve → capability 變 active」，接著「提交同 task_family 第二個任務 → 直接 reuse，不再產生新 gap」，斷言全程狀態與輸出正確。
 3. 使用者自行安裝 Python 3.10+ 後：
-   ```
+   ```text
    pip install -r requirements.txt
    pytest
-   uvicorn src.main:app --reload   # 另開一個視窗，之後用 curl/Swagger UI (/docs) 手動跑一次相同流程
+   uvicorn src.main:app --reload
    ```
-   **我這一輪只交付程式碼與測試，不執行安裝、不啟動任何服務。**
+   之後可用 curl 或 Swagger UI (`/docs`) 手動跑一次相同流程。
 
 ### 首次執行時建議留意的風險點
 
@@ -138,9 +145,23 @@ MVP 用 `task_family` 關鍵字比對 registry（§59 向量檢索留待 Phase 2
 
 ---
 
-## 後續替換點（先留介面，不現在做）
+## 下一階段：Phase 1.5 — Real Infrastructure Integration
 
-- `MockLLMProvider` → `LiteLLMProvider`（接 NVIDIA NIM / OpenRouter，只需要 `.env` 塞 API Key，並在 `src/main.py` 的 `Container` 換掉一行）
+Phase 1 骨架完成並通過基本測試後，下一步將逐步把 mock / local substitute 換成真實基礎設施：
+
+1. `MockLLMProvider` → LiteLLM Provider
+2. 接入 NVIDIA NIM / OpenRouter
+3. `SqliteCapabilityRepository` → PostgreSQL
+4. `SubprocessSandbox` → Docker Sandbox
+5. 增加更完整的 autonomous test / generalization cases
+
+Phase 2 再導入 pgvector、semantic capability retrieval 與更完整的 evaluation / observability。
+
+---
+
+## 後續替換點
+
+- `MockLLMProvider` → `LiteLLMProvider`（接 NVIDIA NIM / OpenRouter，只需要 `.env` 塞 API Key，並在 `src/main.py` 的 `Container` 換掉 adapter）
 - `SubprocessSandbox` → Docker-based sandbox（`interfaces/sandbox.py` 介面不變）
 - `SqliteCapabilityRepository` → PostgreSQL repository（`interfaces/repository.py` 介面不變）
 - `InMemoryEvolutionQueue` → Redis/RQ（`interfaces/queue.py` 介面不變）

@@ -39,7 +39,8 @@ class TestingService:
         )
 
         all_results = list(functional_results) + list(boundary_results)
-        failed = [r.name for r in all_results if not r.passed]
+        failed_results = [result for result in all_results if not result.passed]
+        failed = [result.name for result in failed_results]
         pass_rate = (len(all_results) - len(failed)) / len(all_results) if all_results else 0.0
 
         risk_level = RiskLevel.LOW
@@ -48,9 +49,16 @@ class TestingService:
         if pass_rate < 0.5:
             risk_level = RiskLevel.HIGH
 
-        functional_passed = all(r.passed for r in functional_results)
+        functional_passed = all(result.passed for result in functional_results)
         final_status = CapabilityStatus.TESTED if functional_passed else CapabilityStatus.FAILED
         recommended_action = "manual_review" if functional_passed else "regenerate"
+
+        known_limitations = []
+        for result in failed_results:
+            detail = f"{result.test_type} test failed: {result.name}"
+            if result.error:
+                detail += f" ({result.error})"
+            known_limitations.append(detail)
 
         report = TestReport(
             capability_id=capability.capability_id,
@@ -58,7 +66,7 @@ class TestingService:
             test_cases=all_results,
             pass_rate=pass_rate,
             failed_cases=failed,
-            known_limitations=[f"boundary case failed: {name}" for name in failed],
+            known_limitations=known_limitations,
             risk_level=risk_level,
             recommended_action=recommended_action,
         )

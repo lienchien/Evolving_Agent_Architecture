@@ -57,6 +57,7 @@ class Container:
             self.validation_service,
             self.testing_service,
             self.approval_service,
+            self.capability_service,
         )
         self.main_agent = MainAgent(
             self.capability_service,

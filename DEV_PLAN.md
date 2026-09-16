@@ -283,6 +283,22 @@ Phase 1 只有在以下條件成立時才可標示完成：
 
 ---
 
+## 補充：Failed / Revision Requested 自動迴圈（已實作）
+
+複查文件時發現 README 畫了兩條例外路徑（`Testing → Failed → Evolution Queue`、`Pending Approval → Revision Requested → Evolution Queue`），但當時 `CapabilityStatus` 沒有對應狀態、程式也沒有自動迴圈邏輯。現已補上：
+
+- `CapabilityStatus` 新增 `FAILED`、`REVISION_REQUESTED` 兩個狀態，並更新 `capability_service.py` 的合法轉換表。
+- `TestingService.run_autonomous_tests()`：只要 functional test 有任何一項沒過，直接判定 `FAILED`（不再送進 `pending_approval` 打擾管理員）；只有 boundary test 失敗則維持原本 `TESTED → pending_approval`，交給人類看報告判斷。
+- `EvolutionAgent`：`test` 節點後改成條件邊，只有狀態是 `TESTED` 才會走到 `finalize`（送審），`FAILED` 直接結束該次演化。
+- `ApprovalService.request_revision()`：改成轉成 `REVISION_REQUESTED`（原本誤轉回 `DRAFT`）。
+- 「回到 Evolution Queue」的實際機制：`FAILED`／`REVISION_REQUESTED` 都不算 `find_active_by_task_family()` 的命中對象，所以下一次同 `task_family` 的任務進來時，`GapDetectionService` 會重新判定為 gap，`MainAgent` 會照原本流程把新 gap 送進 `InMemoryEvolutionQueue` 再跑一次完整 Evolution，產生一個全新的 Capability（新 `capability_id`）。這是 Phase 1（還沒有背景 worker）下最貼近文件描述、又不用另外做輪詢/重試機制的做法。
+- 新增 `tests/test_capability_failure_and_revision.py`：用一個故意產生錯誤結果的假 LLM Provider 驗證 FAILED 路徑，並驗證 revision-requested 後重新提交任務會產生新的 Capability。
+- 測試共用的 wiring 邏輯抽到 `tests/support.py`，`test_full_loop.py` 改為呼叫它。
+
+同樣尚未實際執行 `pytest` 驗證，屬於程式碼層級的補完，不是 runtime evidence。
+
+---
+
 ## Next Stage — Phase 1.5 Real Infrastructure Integration
 
 只有 Phase 1 runtime validation 成功後才開始。

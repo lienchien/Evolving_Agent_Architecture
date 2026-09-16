@@ -483,3 +483,67 @@ First Verified End-to-End Run
 ```
 
 只有這個里程碑完成後，才開始 Phase 1.5 Real Infrastructure Integration。
+
+---
+
+## 2026-09-16 — 補上 Testing Failed / Revision Requested 自動迴圈
+
+### Phase
+
+Phase 1 — Governance Skeleton（補完）
+
+### 目標
+
+讓 `README.md` / `README.zh-TW.md` 中畫出的兩條例外生命週期路徑：
+
+```text
+Testing → Failed → Evolution Queue
+Pending Approval → Revision Requested → Evolution Queue
+```
+
+從「文件描述的預期行為」變成「程式碼實際實作的行為」。
+
+### 背景 / 原因
+
+重新檢查專案文件時發現：`src/domain/capability.py` 的 `CapabilityStatus` 當時沒有 `FAILED` 或 `REVISION_REQUESTED` 狀態，`TestingService` 永遠把結果導向 `TESTED`，`ApprovalService.request_revision()` 實際上是轉回 `DRAFT` 而非文件描述的 `Revision Requested`。這是文件與程式碼不一致，且不只是「尚未驗證」，而是「根本沒實作」，違反專案一貫要求的「不要用完成式描述未完成的事」原則。
+
+### 實作內容
+
+- `CapabilityStatus` 新增 `FAILED`、`REVISION_REQUESTED`，並更新 `capability_service.py` 的合法轉換表（`TESTING → {TESTED, FAILED}`、`PENDING_APPROVAL → {APPROVED, ARCHIVED, REVISION_REQUESTED}`，`FAILED`/`REVISION_REQUESTED` 皆可再轉 `ARCHIVED`）。
+- `TestingService.run_autonomous_tests()`：以 functional test 是否全部通過作為硬性關卡 —— 全過才進 `TESTED`（走向人工審核），只要有一項沒過就直接判定 `FAILED`，`recommended_action` 改為 `regenerate`。boundary test 失敗仍只記錄在報告中，不影響這個關卡（維持人類自行判斷）。
+- `EvolutionAgent`：`test` 節點後改成條件邊，只有狀態為 `TESTED` 才會進入 `finalize`（請求審核）；`FAILED` 直接結束，不會打擾管理員。
+- `ApprovalService.request_revision()`：目標狀態由 `DRAFT` 改成 `REVISION_REQUESTED`。
+- 沒有新增背景 worker 或額外的 queue 輪詢機制。「回到 Evolution Queue」是透過既有機制自然達成：`FAILED`／`REVISION_REQUESTED` 都不符合 `find_active_by_task_family()` 的查詢條件，所以下一次同 `task_family` 的任務一進來，`GapDetectionService` 就會重新判定為 gap，`MainAgent` 沿用原本的 `queue.enqueue()` → `queue.dequeue()` → `EvolutionAgent.run()` 流程處理，產生一個全新版本的 Capability。
+
+### 修改檔案
+
+```text
+src/domain/capability.py
+src/services/capability_service.py
+src/services/testing_service.py
+src/services/approval_service.py
+src/agents/evolution_agent.py
+src/main.py
+tests/support.py（新增，抽出共用 wiring）
+tests/test_full_loop.py（改用 tests/support.py）
+tests/test_capability_failure_and_revision.py（新增）
+```
+
+### 技術決策
+
+- Functional test 失敗 = 硬性關卡（自動判定失敗，不進人工審核）；Boundary test 失敗 = 軟性訊號（仍進 pending_approval，寫進報告讓人判斷）。理由：如果 LLM 生成的程式碼連自己宣稱要滿足的基本功能測試都不過，讓管理員審核沒有意義。
+- 不引入新的背景 worker 或顯式的 queue draining 邏輯，改為讓既有的「找不到 ACTIVE capability 就視為 gap」邏輯自然承接重新演化的需求 —— 符合 Phase 1「還沒有背景 worker」的邊界，也避免過度設計。
+
+### 驗證狀態
+
+同樣是 **Implemented，尚未 Executed / Verified**。新增的兩個測試案例（`test_failed_functional_test_marks_capability_failed`、`test_revision_requested_reopens_the_gap`）尚未實際跑過 `pytest`。
+
+### 問題與限制
+
+1. 沿用既有限制：LangGraph 版本相容性、Windows subprocess 行為、SQLite 行為都還沒實測。
+2. `FAILED` / `REVISION_REQUESTED` 的舊 Capability 記錄目前只是留著（可轉 `ARCHIVED`），沒有自動清理或封存流程，也沒有 API 路由觸發封存。
+3. 沒有實作「重試上限」；理論上如果 Mock/LLM 持續產生錯誤程式碼，每次任務都會產生一筆新的 `FAILED` Capability 記錄，不會停止。Phase 1.5 接上真實 LLM 後應評估是否需要重試次數上限或退避策略。
+
+### 下一步
+
+不變：仍是先取得 **First Verified End-to-End Run**，這次的修改只是讓程式碼行為對齊文件敘述，屬於同一個里程碑範圍內的補完。

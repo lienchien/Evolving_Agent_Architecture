@@ -57,6 +57,8 @@ Reuse
 - [x] LangGraph orchestration 定義
 - [x] Capability search → execute / evolve branching 程式邏輯
 - [x] Evolution flow: generate → validate → test → approval request 程式邏輯
+- [x] Testing 失敗（functional test 未通過）自動判定為 `FAILED`，跳過 approval request
+- [x] `request_revision` 轉為 `REVISION_REQUESTED`，下次同 task_family 任務會重新觸發 evolution
 - [ ] 實際執行並驗證 LangGraph 流程
 
 ## Domain Layer

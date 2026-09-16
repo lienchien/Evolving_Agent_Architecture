@@ -10,23 +10,33 @@
 
 ### Phase 1 — Core MVP Skeleton Implementation
 
-**Status:** Skeleton implemented / Tests written / Runtime validation not started.
+**Status:** Skeleton implemented / Failure & revision routing implemented / Tests written / Ready for first runtime validation.
 
 目前實際狀況：
 
 - Agent 與 API 的核心程式骨架已建立。
 - Capability lifecycle、Validation、Testing、Approval、Notification、Audit 等對應模組已建立。
-- 單元測試與 full-loop 測試程式已撰寫。
+- Main Agent 與 Evolution Agent wiring 已同步。
+- `FAILED` 與 `REVISION_REQUESTED` lifecycle 已補齊。
+- Evolution Agent 已具備 test 後的條件分流：`TESTED → finalize / approval`、`FAILED → END`。
+- Functional test failure 會直接標記 Capability 為 `FAILED`，不進人工 approval。
+- `request_revision` 會轉入 `REVISION_REQUESTED`，後續同 task family 任務會重新觸發 evolution。
+- 單元測試、full-loop 測試、failure path 測試與 revision path 測試程式已撰寫。
+- Test Report 的 failed test 描述已依實際 `test_type` 區分，不再將所有失敗一律標記為 boundary failure。
 - **尚未實際執行 `pytest`。**
 - **尚未啟動 FastAPI 驗證 API。**
-- **尚未證明端對端流程可成功執行。**
+- **尚未取得端對端 runtime evidence。**
 - **尚未整合真實 LLM、PostgreSQL 或 Docker Sandbox。**
 
-因此目前沒有 runtime evidence 可以宣稱核心循環已跑通。
+因此目前仍不能宣稱 MVP 已完成或核心循環已跑通；但 Phase 1 code-level skeleton 已具備進入第一次 runtime validation 的條件。
 
-目標循環仍為：
+目標循環：
 
 ```text
+Task
+ ↓
+Capability Search
+ ↓
 Gap
  ↓
 Generate
@@ -34,16 +44,18 @@ Generate
 Validate
  ↓
 Test
- ↓
-Report
- ↓
-Notify
- ↓
-Approve
- ↓
-Activate
- ↓
-Reuse
+ ├─ FAILED → END / future re-evolution
+ └─ TESTED
+      ↓
+    Report
+      ↓
+    Notify
+      ↓
+    Approve
+      ↓
+    Activate
+      ↓
+    Reuse
 ```
 
 ---
@@ -56,15 +68,18 @@ Reuse
 - [x] Evolution Agent 程式骨架
 - [x] LangGraph orchestration 定義
 - [x] Capability search → execute / evolve branching 程式邏輯
-- [x] Evolution flow: generate → validate → test → approval request 程式邏輯
+- [x] Evolution flow: generate → validate → test → conditional finalize
 - [x] Testing 失敗（functional test 未通過）自動判定為 `FAILED`，跳過 approval request
-- [x] `request_revision` 轉為 `REVISION_REQUESTED`，下次同 task_family 任務會重新觸發 evolution
+- [x] `request_revision` 轉為 `REVISION_REQUESTED`
+- [x] Evolution Agent / main container / test support dependency wiring 一致
 - [ ] 實際執行並驗證 LangGraph 流程
 
 ## Domain Layer
 
 - [x] Capability schema
 - [x] Capability lifecycle states
+- [x] `FAILED` lifecycle state
+- [x] `REVISION_REQUESTED` lifecycle state
 - [x] Capability Gap model
 - [x] Test Report model
 - [x] Approval Record model
@@ -78,6 +93,7 @@ Reuse
 - [x] Evolution Service skeleton
 - [x] Validation Service skeleton
 - [x] Testing Service skeleton
+- [x] Functional vs boundary failed-test descriptions
 - [x] Approval Service skeleton
 - [x] Notification Service skeleton
 - [x] Capability Execution Service skeleton
@@ -109,7 +125,10 @@ Reuse
 
 - [x] Capability schema test code written
 - [x] Capability service / lifecycle test code written
-- [x] Full-loop test code written
+- [x] Full-loop happy-path test code written
+- [x] Functional-test failure path test code written
+- [x] Revision-requested re-evolution test code written
+- [x] Shared test wiring extracted to `tests/support.py`
 - [ ] `pytest` actually executed
 - [ ] Test suite passes
 - [ ] Manual API end-to-end test executed
@@ -118,16 +137,20 @@ Reuse
 
 # 2. Runtime Validation Status
 
-目前 **尚未開始 runtime validation**。
+目前 **尚未開始正式 runtime validation**，但 code-level blockers 已完成第一輪修正，下一步應直接進入第一次 `pytest`。
 
-以下全部仍待實際執行：
+以下仍待實際執行：
 
 - [ ] Python dependencies verified
 - [ ] LangGraph version compatibility verified
 - [ ] Windows subprocess sandbox verified
 - [ ] SQLite persistence behavior verified
 - [ ] Generated capability code execution verified
+- [ ] Happy-path full loop verified
+- [ ] Functional failure path verified
+- [ ] Revision-requested path verified
 - [ ] Test report files generated and inspected
+- [ ] Failed-test descriptions inspected
 - [ ] Console notification flow verified
 - [ ] Approval API verified
 - [ ] Capability activation verified
@@ -136,10 +159,11 @@ Reuse
 
 ### Known Validation Risks
 
-1. LangGraph API 版本可能需要調整。
+1. LangGraph API 版本仍可能需要依實際安裝版本微調。
 2. Windows subprocess 的 path、encoding 與 generated code execution 尚未實測。
 3. SQLite 與 artifact path 尚未實測。
-4. 目前所有 full-loop 結果都只是 test code 的預期行為，不是實際測試結果。
+4. Failure / revision lifecycle 雖已完成 code-level routing，但尚未由 pytest 證明。
+5. 目前沒有 retry limit；若真實 LLM 持續產生失敗 Capability，未來可能需要 retry / backoff policy。
 
 ---
 
@@ -153,10 +177,12 @@ Reuse
 - [ ] Evolution Agent 實際產生 Candidate Capability
 - [ ] Validation 實際完成
 - [ ] Autonomous Testing 實際產生 Test Report
+- [ ] Functional failure 實際進入 `FAILED` 並跳過 approval
+- [ ] Revision request 實際進入 `REVISION_REQUESTED` 並可觸發下一輪 evolution
 - [ ] Capability 實際進入 `pending_approval`
 - [ ] Administrator approval 實際使 Capability 轉為 `active`
 - [ ] 同類 task 實際 reuse 既有 Capability
-- [ ] 重複任務沒有建立 duplicate Capability
+- [ ] 重複任務沒有建立 duplicate Active Capability
 - [ ] Audit records 實際產生
 
 ### Phase 1 Completion Rule
@@ -170,30 +196,34 @@ Reuse
 
 目前統一使用：
 
-> **Phase 1 Skeleton Implemented / Runtime Validation Pending**
+> **Phase 1 Skeleton Implemented / Ready for Runtime Validation**
 
 ---
 
-# 4. Immediate Next Milestone — First Verified End-to-End Run
+# 4. Immediate Next Milestone — First Runtime Validation
 
-目前最高優先級不是增加新功能，而是取得第一份 runtime evidence。
+目前最高優先級不是增加新功能，而是第一次真正執行：
 
-成功條件：
-
-```text
-Task
-→ Gap
-→ Generate
-→ Validate
-→ Test
-→ Report
-→ Notify
-→ Approve
-→ Activate
-→ Reuse
+```bash
+pytest
 ```
 
-上述流程必須實際執行一次並留下：
+第一輪應至少驗證三條路徑：
+
+```text
+A. Happy Path
+Unknown Task → Gap → Generate → Validate → Test → Pending Approval → Approve → Active → Reuse
+
+B. Failure Path
+Generated Capability → Functional Test Fail → FAILED → No Approval
+
+C. Revision Path
+Pending Approval → Revision Requested → Next Same Task → New Evolution
+```
+
+第一輪 pytest 通過後，再啟動 FastAPI 做 API-level validation。
+
+完整 Phase 1 milestone 最後仍需留下：
 
 - pytest result
 - runtime log
@@ -237,8 +267,8 @@ Task
 
 ## Testing Improvements
 
-- [ ] Boundary tests
-- [ ] Failure cases
+- [ ] More boundary tests
+- [ ] More failure cases
 - [ ] Regression tests
 - [ ] Generalization tests
 - [ ] Safety tests
@@ -328,16 +358,20 @@ Design documents                Available
 Architecture skeleton           Implemented, not runtime-verified
 Main Agent code                 Implemented, not runtime-verified
 Evolution Agent code            Implemented, not runtime-verified
+FAILED routing                  Implemented, not runtime-verified
+REVISION_REQUESTED routing      Implemented, not runtime-verified
 Capability lifecycle code       Implemented, not runtime-verified
 Validation abstraction          Implemented, not runtime-verified
 Testing skeleton                Implemented, not runtime-verified
+Failed-test reporting           Refined, not runtime-verified
 Test report skeleton            Implemented, not runtime-verified
 Human approval code             Implemented, not runtime-verified
 Notification abstraction        Implemented, not runtime-verified
 Audit skeleton                  Implemented, not runtime-verified
 FastAPI routes                  Implemented, server not started
-Unit test code                  Written, not executed
-End-to-end test code            Written, not executed
+Happy-path test code            Written, not executed
+Failure-path test code          Written, not executed
+Revision-path test code         Written, not executed
 
 Runtime evidence                None yet
 Real cloud LLM                  Not started
@@ -353,8 +387,8 @@ Sharing / Marketplace           Future Reserved
 
 ## Current Project State
 
-> **The project currently has an implementation skeleton, not a verified MVP.**
+> **The Phase 1 code skeleton is ready for first runtime validation, but it is still not a verified MVP.**
 
-下一個重要成果不是新增更多模組，而是取得：
+下一個重要成果是：
 
-> **First Verified End-to-End Run**
+> **Run `pytest` and obtain the first runtime evidence.**

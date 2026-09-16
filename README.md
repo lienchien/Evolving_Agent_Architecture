@@ -1,5 +1,7 @@
 # Capability-Evolving Agent Architecture
 
+**Language:** English | [繁體中文](README.zh-TW.md)
+
 A research-oriented Agent architecture that explores whether an AI agent can **identify missing capabilities, generate new executable capabilities, validate and test them, produce auditable reports, request human approval, activate approved capabilities, and reuse them in future tasks**.
 
 The long-term goal is to study whether Agent performance can scale through **capability accumulation**, rather than depending only on stronger foundation models.
@@ -433,6 +435,7 @@ Future notification providers may include:
 ```text
 Evolving_Agent_Architecture/
 ├── README.md
+├── README.zh-TW.md
 ├── Capability-Evolving Agent Architecture — System Design v1.6.md
 ├── Capability_Evolving_Agent_Tech_Stack_v1.md
 ├── DEV_PLAN.md
@@ -987,7 +990,8 @@ The repository uses separate documents for different project-management purposes
 
 | Document | Purpose |
 |---|---|
-| `README.md` | Project overview and entry point |
+| `README.md` | English project overview and entry point |
+| `README.zh-TW.md` | Traditional Chinese project overview and entry point |
 | `Capability-Evolving Agent Architecture — System Design v1.6.md` | Long-term system architecture and design principles |
 | `Capability_Evolving_Agent_Tech_Stack_v1.md` | Technology stack and phased adoption plan |
 | `DEV_PLAN.md` | Current implementation plan and replacement paths |

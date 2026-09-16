@@ -2,6 +2,13 @@
 
 **Language:** English | [繁體中文](README.zh-TW.md)
 
+![Status](https://img.shields.io/badge/status-experimental-orange)
+![Phase](https://img.shields.io/badge/phase-skeleton--implemented-blue)
+![Validation](https://img.shields.io/badge/runtime%20validation-pending-yellow)
+
+> [!WARNING]
+> This project is currently under active development. The repository contains an implemented architecture skeleton and test code, but runtime validation has not yet been completed. It should be treated as an experimental research prototype, not a production-ready system.
+
 A research-oriented Agent architecture that explores whether an AI agent can **identify missing capabilities, generate new executable capabilities, validate and test them, produce auditable reports, request human approval, activate approved capabilities, and reuse them in future tasks**.
 
 The long-term goal is to study whether Agent performance can scale through **capability accumulation**, rather than depending only on stronger foundation models.

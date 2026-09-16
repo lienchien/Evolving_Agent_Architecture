@@ -2,78 +2,51 @@
 
 ## Purpose
 
-`DEVELOPMENT_LOG.md` 用於記錄專案的**實際開發過程與決策脈絡**。
+`DEVELOPMENT_LOG.md` 用於記錄專案的**實際開發過程、設計決策、實作內容與驗證證據**。
 
-它與其他文件的角色區分如下：
+與其他文件的角色區分：
 
 - `Capability-Evolving Agent Architecture — System Design v1.6.md`：長期系統架構與設計原則
-- `Capability_Evolving_Agent_Tech_Stack_v1.md`：技術棧與分階段安裝規劃
-- `DEV_PLAN.md`：目前開發計畫、範圍與替換路徑
-- `PROJECT_STATUS.md`：目前所處 Phase、完成度與下一步
-- `DEVELOPMENT_LOG.md`：詳細記錄「實際做了什麼、為什麼這樣做、遇到什麼問題、如何處理、造成什麼影響」
+- `Capability_Evolving_Agent_Tech_Stack_v1.md`：技術棧與分階段導入規劃
+- `DEV_PLAN.md`：目前開發方案與下一步
+- `PROJECT_STATUS.md`：目前所處階段與完成度
+- `DEVELOPMENT_LOG.md`：實際做了什麼、為什麼這樣做、修改了什麼，以及是否真的驗證成功
 
-這份文件應採**持續追加**方式維護，不覆蓋歷史紀錄。
+本文件採**持續追加**方式維護。
 
 ---
 
-# 記錄原則
+# Recording Rules
 
-每次有實質開發、重構、架構調整或重要測試結果時，都應新增一筆紀錄。
-
-每筆紀錄至少應包含：
+每筆紀錄應盡量包含：
 
 - 日期
-- 開發階段
-- 開發目標
-- 背景與原因
+- Phase
+- 目標
+- 背景 / 原因
 - 實作內容
-- 重要技術決策
+- 技術決策
 - 修改檔案
-- 測試 / 驗證狀態
+- 驗證狀態
 - 問題與限制
-- 後續影響
+- 對後續架構的影響
 - 下一步
-- 關聯文件 / Commit（若有）
+- 關聯 Commit / 文件
 
-建議格式：
+特別注意：
 
-```markdown
-## YYYY-MM-DD — 紀錄標題
+> **Implementation 與 Validation 必須分開記錄。**
 
-### Phase
-Phase X
+例如：
 
-### 目標
-...
+- `Implemented` = 程式碼已建立
+- `Test Written` = 測試程式已撰寫
+- `Executed` = 已實際執行
+- `Verified` = 已有成功結果與證據
 
-### 背景 / 原因
-...
+目前專案仍停留在：
 
-### 實作內容
-...
-
-### 技術決策
-...
-
-### 修改檔案
-- ...
-
-### 驗證結果
-- ...
-
-### 問題與限制
-- ...
-
-### 對後續架構的影響
-- ...
-
-### 下一步
-- ...
-
-### 關聯
-- Commit: ...
-- Design: ...
-```
+> **Implemented / Test Written，尚未 Executed / Verified**
 
 ---
 
@@ -82,11 +55,12 @@ Phase X
 ## 2026-09-16 — Phase 1 MVP 架構骨架建立
 
 ### Phase
-Phase 1 — Core MVP
+
+Phase 1 — Core MVP Skeleton Implementation
 
 ### 目標
 
-建立 Capability-Evolving Agent 的第一版可執行系統骨架，先驗證核心生命週期：
+建立 Capability-Evolving Agent 的第一版程式骨架，使核心生命週期在程式結構上有完整對應：
 
 ```text
 Gap
@@ -100,24 +74,28 @@ Gap
 → Reuse
 ```
 
-此階段的目標不是接入完整正式基礎設施，而是先確認系統各層責任、資料流與 Agent orchestration 能形成完整閉環。
+此階段目標是建立可供後續執行與驗證的 implementation skeleton，**不是宣稱上述閉環已經跑通**。
 
 ### 背景 / 原因
 
-設計初期曾考慮直接使用 PostgreSQL、Docker、NVIDIA NIM、OpenRouter、LiteLLM 等正式技術棧，但若一次導入過多基礎設施，會讓研究初期難以區分：
+若研究初期直接同時整合 PostgreSQL、Docker、NVIDIA NIM、OpenRouter、LiteLLM 等正式 infrastructure，出現問題時很難判斷問題來自：
 
-- 問題來自 Capability-Evolving Architecture 本身
-- 還是來自外部服務、環境安裝或整合問題
+- Capability-Evolving Architecture
+- Agent orchestration
+- 外部 API
+- Database
+- Sandbox
+- 環境配置
 
-因此決定採用：
+因此採用：
 
 > **Implement Simple, Interface for Complex**
 
-先以 mock / in-memory / SQLite / subprocess 方式完成最小閉環，同時保留抽象介面，後續再逐步替換正式 implementation。
+先建立 mock / in-memory / SQLite / subprocess 版本的骨架，再逐步取得 runtime evidence。
 
 ### 實作內容
 
-建立主要專案分層：
+建立主要分層：
 
 ```text
 src/
@@ -133,12 +111,12 @@ src/
 
 #### Agent Layer
 
-建立：
+已建立程式碼：
 
 - `MainAgent`
 - `EvolutionAgent`
 
-`MainAgent` 主要流程：
+預期 Main Agent flow：
 
 ```text
 Task
@@ -148,20 +126,20 @@ Task
     └─ No  → Detect Gap → Evolution
 ```
 
-`EvolutionAgent` 流程：
+預期 Evolution Agent flow：
 
 ```text
 Generate
 → Validate
 → Test
-→ Finalize / Approval Request
+→ Approval Request
 ```
 
-LangGraph 僅負責 orchestration，主要 Business Logic 放入 Service Layer。
+以上流程目前只有 code-level implementation，尚未實際執行。
 
 #### Domain Layer
 
-建立：
+已建立：
 
 - Capability
 - CapabilityGap
@@ -180,11 +158,9 @@ Capability Schema 已預留：
 - Safety requirements
 - Trust level
 
-以避免未來做 Enterprise / Sharing / Marketplace 時重新修改核心資料模型。
-
 #### Interface Layer
 
-建立抽象介面：
+已建立：
 
 - `LLMProvider`
 - `QueueInterface`
@@ -192,11 +168,11 @@ Capability Schema 已預留：
 - `NotificationProvider`
 - `CapabilityRepository`
 
-目的是讓 Agent / Service 不直接依賴具體 Infrastructure。
+設計目的為讓 Agent / Service 不直接依賴具體 infrastructure。
 
 #### Infrastructure Layer
 
-Phase 1 先使用：
+已建立替代實作：
 
 - `MockLLMProvider`
 - `InMemoryEvolutionQueue`
@@ -204,11 +180,11 @@ Phase 1 先使用：
 - `SubprocessSandbox`
 - `ConsoleNotificationProvider`
 
-這些皆為正式服務的替代實作。
+目前僅代表 adapter code 已存在，尚未 runtime 驗證。
 
 #### Service Layer
 
-建立：
+已建立：
 
 - CapabilityService
 - GapDetectionService
@@ -222,67 +198,65 @@ Phase 1 先使用：
 - TestReportStore
 - AuditService
 
-使主要系統責任從 Agent orchestration 中分離。
-
 #### API Layer
 
-FastAPI routes 建立：
+已建立 FastAPI route code：
 
 - `POST /api/tasks`
-- Capability 查詢 API
-- Evolution Queue API
-- Approval API
-- Audit API
+- Capability query endpoints
+- Evolution Queue endpoint
+- Approval endpoints
+- Audit endpoint
 
-### 技術決策
+FastAPI server 尚未實際啟動。
+
+### 測試程式
+
+已撰寫：
+
+```text
+tests/test_capability_schema.py
+tests/test_capability_service.py
+tests/test_full_loop.py
+```
+
+`test_full_loop.py` 的預期情境為：
+
+```text
+Unknown Task
+→ Gap
+→ Generate Capability
+→ Validate
+→ Test
+→ Pending Approval
+→ Approve
+→ Active
+→ Reuse
+```
+
+但目前這只是**測試程式所描述的預期行為**，並不是已經取得的測試結果。
+
+### 重要技術決策
 
 #### 1. LangGraph 只作 Orchestration
 
-不將大量 Business Logic 直接寫進 node。
-
-原因：
-
-未來若改用其他 Agent Framework 或 Durable Workflow Engine，不需要重寫整套核心邏輯。
+Business Logic 放在 Service Layer，以降低 framework coupling。
 
 #### 2. SQLite 先取代 PostgreSQL
 
-雖然正式架構規劃使用 PostgreSQL，但 Phase 1 使用 SQLite，降低初始 runtime dependency。
-
-後續透過 `CapabilityRepository` interface 替換成 PostgreSQL。
+先降低 Phase 1 的 infrastructure complexity，後續透過 repository interface 替換。
 
 #### 3. Mock LLM 先取代真實 LLM
 
-使用 Mock Provider 先驗證 workflow。
-
-後續目標：
-
-```text
-MockLLMProvider
-→ LiteLLMProvider
-→ NVIDIA NIM / OpenRouter
-```
+先降低模型不確定性；目前也尚未實際執行 Mock Provider flow。
 
 #### 4. Subprocess 先取代 Docker Sandbox
 
-Phase 1 先以 Python subprocess 測試產生的 Capability。
+只作為第一輪 execution-path 驗證工具，不視為正式安全邊界。
 
-這不是正式安全邊界，只是用來驗證：
+#### 5. Human Approval 從研究階段開始保留
 
-- generated implementation
-- functional test
-- execution path
-
-正式版本會改成 Docker-based sandbox，後期高風險場景再考慮 gVisor / Firecracker / VM。
-
-#### 5. 人工 Approval 從研究版開始保留
-
-新 Capability 不允許：
-
-```text
-Generated → Active
-```
-
-而必須：
+新 Capability 預期生命週期：
 
 ```text
 Generated
@@ -294,90 +268,42 @@ Generated
 → Active
 ```
 
-此設計從研究階段即保留，未來正式商品化不需重新設計治理流程。
-
-### 修改 / 建立檔案
-
-主要建立：
-
-```text
-src/agents/main_agent.py
-src/agents/evolution_agent.py
-
-src/domain/capability.py
-src/domain/gap.py
-src/domain/report.py
-src/domain/approval.py
-src/domain/events.py
-
-src/interfaces/llm.py
-src/interfaces/queue.py
-src/interfaces/sandbox.py
-src/interfaces/notification.py
-src/interfaces/repository.py
-
-src/infrastructure/mock_llm.py
-src/infrastructure/memory_queue.py
-src/infrastructure/sqlite_repository.py
-src/infrastructure/subprocess_sandbox.py
-src/infrastructure/console_notification.py
-
-src/services/capability_service.py
-src/services/gap_detection_service.py
-src/services/evolution_service.py
-src/services/validation_service.py
-src/services/testing_service.py
-src/services/policy_service.py
-src/services/approval_service.py
-src/services/notification_service.py
-src/services/execution_service.py
-src/services/report_store.py
-src/services/audit_service.py
-
-src/api/routes/tasks.py
-src/api/routes/capabilities.py
-src/api/routes/evolution.py
-src/api/routes/approvals.py
-src/api/routes/audit.py
-
-src/main.py
-```
-
-並建立測試：
-
-```text
-tests/test_capability_schema.py
-tests/test_capability_service.py
-tests/test_full_loop.py
-```
-
 ### 驗證狀態
 
-目前：
+截至目前：
 
-- 程式骨架：完成
-- Test cases：完成
-- 實際 `pytest`：尚未執行
-- FastAPI runtime：尚未啟動驗證
-- 真實 LLM：尚未接入
-- PostgreSQL：尚未接入
-- Docker sandbox：尚未接入
+```text
+Architecture / design       Available
+Program skeleton            Implemented
+Test code                   Written
+pytest                      NOT executed
+FastAPI runtime             NOT started
+Full end-to-end loop        NOT verified
+Generated capability run    NOT verified
+Test report generation      NOT verified
+Approval / activation       NOT verified
+Reuse                       NOT verified
+Real LLM                    NOT integrated
+PostgreSQL                  NOT integrated
+Docker Sandbox              NOT integrated
+```
 
-因此目前應視為：
+目前正式狀態：
 
-> **Architecture Skeleton Complete / Runtime Validation Pending**
+> **Phase 1 Skeleton Implemented / Runtime Validation Pending**
 
 ### 問題與限制
 
-1. Mock LLM 只能證明 workflow，不代表真實 LLM 能穩定產生 Capability。
-2. subprocess sandbox 不具備正式隔離能力。
-3. SQLite 不代表未來 PostgreSQL persistence / concurrency 行為。
-4. Capability Search 目前仍以 task family / 簡單邏輯為主，尚未做 semantic retrieval。
-5. 自主 Testing Agent 目前屬基礎版，還沒有完整 adversarial / generalization test generation。
+1. Mock LLM 尚未實際執行，因此目前不能證明 generation flow 正常。
+2. Subprocess sandbox 尚未實測 Windows path / encoding / execution behavior。
+3. SQLite persistence 尚未實測。
+4. LangGraph API compatibility 尚未確認。
+5. Full-loop test 尚未執行。
+6. Testing Agent 目前仍是基礎骨架，尚未進入完整 adversarial / generalization testing。
 
 ### 對後續架構的影響
 
-Phase 1 已確認專案應繼續採用：
+目前的**設計方向**決定繼續採用：
 
 ```text
 Agent
@@ -386,46 +312,33 @@ Agent
 → Infrastructure Adapter
 ```
 
-而不是：
-
-```text
-Agent
-→ Database / Docker / NVIDIA API
-```
-
-這個邊界會直接沿用至正式版本。
+但這個邊界是否能在實際 runtime 中順利工作，仍需 Phase 1 validation 驗證。
 
 ### 下一步
 
-進入：
+先完成：
 
-**Phase 1.5 — Real Infrastructure Integration**
+> **First Verified End-to-End Run**
 
-預計依序處理：
-
-1. 實際執行 pytest / API，確認骨架可跑
-2. LiteLLM Provider
-3. NVIDIA NIM / OpenRouter
-4. PostgreSQL Repository
-5. Docker Sandbox
-6. 更完整 Autonomous Testing
+再考慮進入 Phase 1.5。
 
 ---
 
-## 2026-09-16 — 新增 Capability 測試報告與人工治理流程
+## 2026-09-16 — Capability 自主測試、Test Report 與人工治理納入核心設計
 
 ### Phase
-Phase 1 — Core Governance Design
+
+Phase 1 — Governance Skeleton
 
 ### 目標
 
-將 Capability Evolution 從單純的：
+將 Capability Evolution 的設計從：
 
 ```text
 Generate → Validate → Store
 ```
 
-提升為：
+改成：
 
 ```text
 Generate
@@ -439,98 +352,66 @@ Generate
 
 ### 背景 / 原因
 
-如果 Agent 可以自行產生能力，但沒有獨立測試、報告與人工確認，未來正式應用會缺乏：
+如果 Agent 能自行建立能力，卻沒有獨立測試與人工治理，未來研究與正式產品都缺乏：
 
 - 可稽核性
 - 可靠性
-- 人類治理
+- 人類控制
 - 回溯依據
 
-因此 Testing / Report / Approval / Notification 被提升為核心 Capability Lifecycle，而不是商品化後再增加的附加功能。
+因此 Testing、Report、Notification、Approval 被提升為核心生命週期元件。
+
+### 實作狀態
+
+目前已建立對應 service / model / route skeleton，但尚未執行 runtime validation。
+
+因此這一項目前是：
+
+> **Governance flow implemented at code level, not yet verified.**
 
 ### 技術決策
 
-#### Testing Agent 與 Evolution Agent 分離
-
-Evolution Agent：
-
-> 負責建立能力。
-
-Testing Agent：
-
-> 負責嘗試找出能力是否會失敗。
-
-避免「能力建立者自行判定成功」的設計偏差。
-
-#### Test Report 永久保存
-
-每一個 Capability Version 都應保留自己的：
-
-```text
-test_report.json
-test_report.md
-```
-
-未來管理員 Approval、Regression、Rollback 都依此追蹤。
-
-#### Notification 與 Approval 分離
-
-Notification 只負責告知管理員。
-
-Approval Service 才具有修改 Capability lifecycle 的權限。
+- Testing 與 Evolution 職責分離
+- Test Report 應永久保存並綁定 Capability Version
+- Notification 只負責通知，不具有 activation 權限
+- Approval Service 才能改變 Capability lifecycle
 
 ### 下一步
 
-後續正式 Infrastructure Integration 時，必須確保 Test Report、Notification、Approval 不因替換底層服務而消失。
+第一輪 runtime validation 必須確認：
+
+- Test Report 是否真的產生
+- notification 是否真的送出
+- approval 是否真的改變狀態
+- audit 是否真的留下紀錄
 
 ---
 
 ## 2026-09-16 — Capability Sharing / Import / Marketplace 架構預留
 
 ### Phase
+
 Future Productization — Reserved Architecture
 
 ### 目標
 
-保留未來商品化後讓使用者：
+保留未來商品化後：
 
-- 上傳自己的 Capability
+- 上傳 Capability
 - 選擇是否分享 Capability
 - 搜尋其他人的 Capability
 - 下載外部 Capability
-- 將外部 Capability 安裝到自己的 Agent
+- 將外部 Capability 加入自己的 Agent
 
 的架構空間。
 
-### 背景 / 原因
-
-Capability-Evolving Agent 若商品化，Capability Library 本身可能形成平台級資產。
-
-長期可能出現：
-
-```text
-Agent A learns Capability X
-→ User Opt-In Share
-→ Shared Registry
-→ Agent B discovers X
-→ User Opt-In Download
-→ Local Validation
-→ Agent B gains X
-```
-
-這代表 Agent 之間可以進行：
-
-> **Capability-level collective learning**
-
-而不需要交換模型權重。
-
 ### 目前決策
 
-此功能目前定義為：
+此區塊目前定義為：
 
 > **Future Reserved Development**
 
-研究 MVP 不實作完整：
+Phase 1 不實作：
 
 - Import
 - Export
@@ -539,75 +420,66 @@ Agent A learns Capability X
 - Sync
 - Marketplace
 
-但 Capability Schema 先保留：
+只保留 schema / interface extension point。
 
-- `scope`
-- `sharing_policy`
-- `origin`
-- `parent_capability_id`
-- `distribution_metadata`
+### 核心安全原則
 
-並預留未來服務邊界：
+未來任何外部 Capability 都必須視為 Untrusted，不能因為其他使用者已有測試報告就直接啟用。
 
-- CapabilityImportService
-- CapabilityExportService
-- CapabilityPublishingService
-- CapabilityDiscoveryService
-- CapabilitySyncService
-
-### 安全原則
-
-外部 Capability 一律視為 Untrusted。
-
-即使已有其他環境測試報告，進入本地 Agent 仍必須：
+預期流程：
 
 ```text
 Import
 → Compatibility Check
 → Local Validation
 → Local Testing
-→ Local Test Report
+→ Test Report
 → Administrator Approval
 → Active
 ```
 
-### 下一步
+分享預設為 opt-in，不自動上傳使用者 Capability。
 
-此區目前不進入實作，等待核心 Capability-Evolving Architecture 完成研究驗證後再開發。
+### 驗證狀態
 
----
-
-# Pending Log Entries
-
-後續應持續新增：
-
-- Phase 1 首次 Runtime Validation
-- Phase 1.5 LiteLLM 整合
-- NVIDIA NIM 整合
-- OpenRouter fallback 整合
-- PostgreSQL Repository migration
-- Docker Sandbox migration
-- Phase 2 pgvector semantic retrieval
-- Phoenix / MLflow integration
-- Autonomous Generalization Testing
-- Capability Sharing prototype
+此區目前只有 architecture reservation，尚未實作、尚未測試。
 
 ---
 
-# Maintenance Rule
+## 2026-09-16 — 專案狀態文件校正
 
-當以下任一事件發生時，應更新本文件：
+### Phase
 
-- 新增一個核心 Service / Agent
-- 替換 Infrastructure Provider
-- Capability Lifecycle 有變更
-- 重大 Bug / Failure 被發現
-- 做出重要架構取捨
-- Phase 完成
-- Benchmark / Experiment 得到重要結果
-- 安全模型改變
-- Future Reserved 功能開始實作
+Project Governance
 
-`DEVELOPMENT_LOG.md` 的目標不是只列完成事項，而是保留：
+### 原因
 
-> **這個系統是怎麼一步一步被設計、修改、驗證與演進出來的。**
+發現部分文件使用「完成」、「完整循環」等字眼，可能讓人誤以為 Phase 1 已經實際跑通。
+
+實際狀況是：
+
+> **目前只完成 implementation skeleton 與 test code，尚未進行任何 runtime testing。**
+
+### 修正
+
+統一文件用語：
+
+- `Skeleton Implemented`
+- `Test Code Written`
+- `Runtime Validation Pending`
+
+避免使用：
+
+- `MVP Complete`
+- `Full Loop Verified`
+- `Phase 1 Complete`
+
+直到實際測試證據存在。
+
+### 下一里程碑
+
+```text
+First Verified End-to-End Run
+```
+
+只有這個里程碑完成後，才開始 Phase 1.5 Real Infrastructure Integration。

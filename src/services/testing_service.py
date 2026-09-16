@@ -48,6 +48,10 @@ class TestingService:
         if pass_rate < 0.5:
             risk_level = RiskLevel.HIGH
 
+        functional_passed = all(r.passed for r in functional_results)
+        final_status = CapabilityStatus.TESTED if functional_passed else CapabilityStatus.FAILED
+        recommended_action = "manual_review" if functional_passed else "regenerate"
+
         report = TestReport(
             capability_id=capability.capability_id,
             capability_version=capability.capability_version,
@@ -56,12 +60,12 @@ class TestingService:
             failed_cases=failed,
             known_limitations=[f"boundary case failed: {name}" for name in failed],
             risk_level=risk_level,
-            recommended_action="manual_review",
+            recommended_action=recommended_action,
         )
         self._report_store.save(report)
         self._write_report_files(capability, report)
 
-        self._capability_service.transition(capability.capability_id, CapabilityStatus.TESTED)
+        self._capability_service.transition(capability.capability_id, final_status)
         return report
 
     def _write_report_files(self, capability: Capability, report: TestReport) -> None:

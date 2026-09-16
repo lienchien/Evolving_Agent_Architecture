@@ -48,7 +48,9 @@ class ApprovalService:
     def request_revision(
         self, capability_id: str, reviewer: str = "administrator", notes: str = ""
     ) -> Capability:
-        capability = self._capability_service.transition(capability_id, CapabilityStatus.DRAFT)
+        capability = self._capability_service.transition(
+            capability_id, CapabilityStatus.REVISION_REQUESTED
+        )
         self._record(capability_id, ApprovalDecision.REVISION_REQUESTED, reviewer, notes)
         self._audit_service.record("request_revision", capability_id, {"reviewer": reviewer})
         return capability

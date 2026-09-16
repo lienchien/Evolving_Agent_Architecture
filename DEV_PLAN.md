@@ -1,168 +1,339 @@
-# Capability-Evolving Agent — Phase 1 MVP (Agent + API 系統面)
+# Capability-Evolving Agent — Phase 1 MVP Development Plan
 
-## 狀態：骨架已實作完成，尚未執行/驗證
+## Current Status
 
-以下所有程式碼（`src/`、`tests/`）已依本計畫寫入專案目錄。因為本機沒有可用的 Python 直譯器，且使用者要求不安裝任何額外程式，**目前尚未實際跑過 `pytest` 或啟動過 API**，邏輯正確性僅靠設計時的手動推導確認，尚待使用者在自己的環境安裝依賴後驗證。
+**Phase 1 Skeleton Implemented / Runtime Validation Pending**
 
-`.env.example` 因權限設定的 deny rule 被擋下，改以 **`env.example`**（無開頭句點）建立在專案根目錄；使用時請自行複製為 `.env`。
+目前 repo 已建立 Phase 1 所需的主要程式骨架與測試程式，包括 Main Agent、Evolution Agent、Capability lifecycle、Validation / Testing、Approval、Notification、Audit、FastAPI routes，以及 full-loop 測試程式。
+
+但目前必須明確區分：
+
+- **程式骨架已建立**
+- **測試程式已撰寫**
+- **尚未實際執行 `pytest`**
+- **尚未啟動 FastAPI**
+- **尚未驗證端對端流程**
+- **尚未取得任何 runtime evidence**
+
+因此目前不能宣稱 MVP 已完成或核心流程已跑通。
+
+`.env.example` 因權限設定的 deny rule 被擋下，目前 repo 使用 `env.example`；實際使用時再複製為 `.env`。
+
+---
 
 ## Context
 
-專案目前已完成 **Phase 1 MVP 的程式骨架與測試案例**，包含 Main Agent、Evolution Agent、Capability lifecycle、Validation / Testing、Approval、Notification、Audit、FastAPI routes 與端對端測試。現階段仍聚焦在 **Agent 與 API 系統面**，尚未進入真實基礎設施整合與正式執行驗證。
+目前階段的目標是建立 Capability-Evolving Agent 的最小實作骨架，讓以下核心生命週期在程式結構上都有明確對應：
 
-目前核心流程已依 System Design v1.6 建立：
+```text
+Gap
+→ Generate
+→ Validate
+→ Test
+→ Report
+→ Notify
+→ Approve
+→ Activate
+→ Reuse
+```
 
-`Gap → Generate → Validate → Test → Report → Notify → Approve → Activate → Reuse`
+現階段只代表上述流程已有對應程式碼與 test code，**不代表流程已成功執行**。
 
-Sharing / Import / Export / Marketplace / Collective Capability Network 等設計仍維持 **Future Reserved**，本階段不實作完整邏輯，只保留必要 schema 與介面擴充點。
+Sharing / Import / Export / Marketplace / Collective Capability Network 維持 **Future Reserved**，目前只保留必要 schema 與 extension point，不納入 Phase 1 runtime validation。
 
-使用者已確認兩個關鍵決策：
-1. **起手方式**：先用最小可行版本（in-memory/SQLite + mock LLM）跑通一次完整循環，之後再逐步替換成真實 PostgreSQL / Docker sandbox / LiteLLM。
-2. **LLM 憑證**：目前沒有 NVIDIA NIM / OpenRouter API Key，先用 Mock LLM Provider。
+Phase 1 採用簡化 infrastructure：
 
-目前 repo 已存在完整原始碼與測試，但尚未在實際 Python 執行環境跑過 `pytest` 或啟動 API。因此本階段的剩餘工作重點，是先完成 **Phase 1 骨架驗證**，再進入 **Phase 1.5 Real Infrastructure Integration**。
+- Mock LLM
+- SQLite
+- In-memory Queue
+- Python subprocess sandbox
+- Console notification
 
-目標：實作並驗證 System Design v1.6 §58 (Phase 1 — Core MVP) 所列核心循環，讓 Agent 能自主偵測能力缺口、產生候選能力、驗證、測試、產生報告、通知、經人工核准後啟用，並於後續任務重用 —— 目前先使用 mock/in-memory 元件證明流程，介面預留未來替換真實服務。
+目的是先降低外部依賴，再進行第一次完整 runtime 驗證。
 
 ---
 
-## 範圍邊界
+## Phase 1 Scope
 
-**現在做（對應 §71「真的要做」清單）：**
-Gap → Generate → Validate → Test → Report → Notify → Approve → Activate → Reuse
+### 本階段實作
 
-**現在不做（對應 §71「只需要預留」清單，本輪完全不 scaffold）：**
-Export / Import / Publish / Discover / Sync / Marketplace / Collective Network、Tenant/Sharing 進階邏輯（schema 欄位保留但不做邏輯）、真實 PostgreSQL / Docker sandbox / LiteLLM / NVIDIA NIM / OpenRouter / pgvector / Phoenix / MLflow / Redis — 這些都用符合文件 §3.7~3.9（Model Independent / Infrastructure Independent / Implement Simple, Interface for Complex）的介面占位，之後可平滑替換。
+```text
+Gap
+→ Generate
+→ Validate
+→ Test
+→ Report
+→ Notify
+→ Approve
+→ Activate
+→ Reuse
+```
+
+### 本階段暫不實作
+
+- Export
+- Import
+- Publish
+- Discover
+- Sync
+- Marketplace
+- Collective Network
+- 真實 PostgreSQL runtime adapter
+- Docker Sandbox
+- LiteLLM / NVIDIA NIM / OpenRouter
+- pgvector
+- Phoenix / MLflow
+- Redis / RQ
 
 ---
 
-## 專案結構
+## Project Structure
 
 ```text
 Evolving_Agent_Architecture/
-├── DEV_PLAN.md                      # 本文件
-├── PROJECT_STATUS.md                # 開發階段與完成度追蹤
+├── DEV_PLAN.md
+├── PROJECT_STATUS.md
+├── DEVELOPMENT_LOG.md
 ├── requirements.txt
-├── env.example                      # 複製為 .env 後填入金鑰
-├── .gitignore
+├── env.example
 ├── pytest.ini
 ├── src/
-│   ├── main.py                      # FastAPI app entrypoint + 手動 DI container
-│   ├── config.py                    # Settings（mock/真實服務切換用的預留點）
+│   ├── main.py
+│   ├── config.py
 │   ├── domain/
-│   │   ├── capability.py            # Capability schema (§10) + lifecycle enum (§13)
-│   │   ├── gap.py                   # CapabilityGap (§6)
-│   │   ├── report.py                # TestReport (§20)
-│   │   ├── approval.py              # ApprovalRecord (§22/24)
-│   │   └── events.py                # Event 定義 (§25 核心事件子集)
+│   │   ├── capability.py
+│   │   ├── gap.py
+│   │   ├── report.py
+│   │   ├── approval.py
+│   │   └── events.py
 │   ├── interfaces/
-│   │   ├── llm.py                   # LLMProvider ABC
-│   │   ├── queue.py                 # QueueInterface ABC
-│   │   ├── sandbox.py               # SandboxInterface ABC
-│   │   ├── notification.py          # NotificationProvider ABC
-│   │   └── repository.py            # CapabilityRepository ABC
+│   │   ├── llm.py
+│   │   ├── queue.py
+│   │   ├── sandbox.py
+│   │   ├── notification.py
+│   │   └── repository.py
 │   ├── infrastructure/
-│   │   ├── mock_llm.py              # MockLLMProvider（樣板式生成）
-│   │   ├── memory_queue.py          # In-memory EvolutionQueue
-│   │   ├── sqlite_repository.py     # SQLite 版 CapabilityRepository
-│   │   ├── subprocess_sandbox.py    # 子行程沙箱（Docker 之前的替代品）
-│   │   └── console_notification.py  # Console 版 NotificationProvider
+│   │   ├── mock_llm.py
+│   │   ├── memory_queue.py
+│   │   ├── sqlite_repository.py
+│   │   ├── subprocess_sandbox.py
+│   │   └── console_notification.py
 │   ├── services/
-│   │   ├── capability_service.py    # Registry CRUD + lifecycle 狀態機
+│   │   ├── capability_service.py
 │   │   ├── gap_detection_service.py
 │   │   ├── evolution_service.py
 │   │   ├── validation_service.py
 │   │   ├── testing_service.py
-│   │   ├── policy_service.py        # can_generate/validate/execute/activate stub
+│   │   ├── policy_service.py
 │   │   ├── approval_service.py
 │   │   ├── notification_service.py
-│   │   ├── execution_service.py     # CapabilityExecutor
+│   │   ├── execution_service.py
 │   │   ├── report_store.py
-│   │   └── audit_service.py         # append-only audit log
+│   │   └── audit_service.py
 │   ├── agents/
-│   │   ├── main_agent.py            # LangGraph: Task → Search → Execute | Gap
-│   │   └── evolution_agent.py       # LangGraph: Gap → Generate → Validate → Test → Report
-│   └── api/
-│       └── routes/
-│           ├── tasks.py             # POST /api/tasks
-│           ├── capabilities.py      # GET /api/capabilities[/{id}][/test-report]
-│           ├── evolution.py         # GET /api/evolution/queue
-│           ├── approvals.py         # POST /api/approvals/{capability_id}/...
-│           └── audit.py             # GET /api/audit
+│   │   ├── main_agent.py
+│   │   └── evolution_agent.py
+│   └── api/routes/
+│       ├── tasks.py
+│       ├── capabilities.py
+│       ├── evolution.py
+│       ├── approvals.py
+│       └── audit.py
 └── tests/
     ├── test_capability_schema.py
     ├── test_capability_service.py
-    └── test_full_loop.py            # 端對端：新任務→gap→evolution→approve→reuse
+    └── test_full_loop.py
 ```
 
 ---
 
-## 核心元件設計
+## Core Component Intent
 
-### Capability Schema (`domain/capability.py`)
-依 §10 定義 Pydantic model，欄位含 `capability_id / capability_version / name / description / task_family / inputs / outputs / preconditions / dependencies / implementation / validation_requirements / safety_requirements / trust_level / status / sharing_policy(預設 private_only) / tenant_id/owner_id/organization_id/scope(預留，先用 default 值) / created_at/updated_at`。狀態機依 §13：`draft → candidate → validating → testing → tested → pending_approval → approved → active → deprecated/revoked/archived`。
+### Capability Schema
 
-### Main Agent (`agents/main_agent.py`)
-用 LangGraph 定義簡單狀態圖：`receive_task → search_capability → (found: execute_capability | not_found: create_gap + enqueue)`。對應 §5 職責邊界（不能直接修改/啟用/上傳 Capability）。
+目前已建立對應 schema 與 lifecycle state，包含版本、scope、sharing policy、validation requirements、safety requirements 等欄位。
 
-### Gap Detection (`services/gap_detection_service.py`)
-MVP 用 `task_family` 關鍵字比對 registry（§59 向量檢索留待 Phase 2 用 pgvector，這裡先用簡單字串比對），找不到就建立 `CapabilityGap` 並丟進 in-memory queue。
+這些結構目前只完成 code-level 定義，尚未 runtime 驗證 serialization / persistence / transition behavior。
 
-### Evolution Service + Mock LLM
-`MockLLMProvider` 不是真的呼叫外部 API，而是依 task 描述關鍵字比對內建樣板（csv 欄位統計、文字字數統計）產生 `implementation.py` 程式碼字串與基礎測試案例，證明 Generate→Validate→Test 全流程可跑，之後替換 LiteLLM+NVIDIA NIM 時只需換掉這個 Provider。
+### Main Agent
 
-### Validation / Testing (`subprocess_sandbox.py`)
-`SandboxInterface.run_test_cases/execute` 用 Python subprocess（非 Docker）執行產生的程式碼、餵測試輸入、比對輸出，介面與未來 Docker/gVisor 替換相容。ValidationService 跑 functional 案例；TestingService（獨立 agent，對應 §17）再跑額外的 boundary 案例，產生 `test_report.json` + `test_report.md`（§20）存到 `capability_library/CAP-xxxx/`。
+預期流程：
+
+```text
+Task
+→ Search Capability
+→ Found?
+   ├─ Yes → Execute
+   └─ No  → Gap → Evolution
+```
+
+目前已有 LangGraph 定義，但尚未實際 invoke 驗證。
+
+### Evolution Agent
+
+預期流程：
+
+```text
+Generate
+→ Validate
+→ Test
+→ Finalize / Approval Request
+```
+
+目前已有流程程式碼，但尚未實際執行。
+
+### Mock LLM
+
+Mock Provider 目前只用來提供 deterministic capability generation behavior，目的在降低第一輪測試變數。
+
+它尚未實際跑過，因此目前不能宣稱 Generate 流程已被證明。
+
+### Validation / Testing
+
+Subprocess Sandbox、ValidationService、TestingService 已實作骨架。
+
+預期功能包括：
+
+- 執行 generated implementation
+- functional test
+- boundary / additional test
+- Test Report 產生
+
+目前都尚待實際 runtime 驗證。
 
 ### Registry / Approval / Notification
-`CapabilityService` 管狀態轉換與版本；`ApprovalService` 提供 `approve/reject/request_revision/approve_with_restrictions`（§24），且會先問過 `PolicyService.can_activate()`（§53）才真正 Activate；`NotificationService` 用 console provider 印出「有能力待審核」訊息（§23）。
 
-### API (FastAPI, `src/api/routes/*`)
-對應 §27 Service Layer 列出的路徑草案：`/api/tasks`、`/api/capabilities`、`/api/evolution`、`/api/approvals`、`/api/audit`。
+Capability lifecycle、Approval、Console Notification 與 Audit 都已有對應程式碼。
 
-### Audit Trail
-`audit_service.py` 用 in-memory append-only list 記錄 §26 列出的動作（request_approval/approve/reject/request_revision），提供 `GET /api/audit` 查詢。
+目前仍需實際驗證：
 
----
+- `pending_approval`
+- approve → active
+- notification output
+- audit record
 
-## 驗證方式（尚未執行，待使用者環境備妥後跑一次）
+### FastAPI
 
-1. `tests/test_capability_schema.py`、`test_capability_service.py`：涵蓋 schema 預設值與狀態機合法/非法轉換。
-2. `tests/test_full_loop.py`：模擬「提交未知 task_family 任務 → 觸發 gap → evolution 產生候選 → validation/testing 通過 → pending_approval → 呼叫 approve → capability 變 active」，接著「提交同 task_family 第二個任務 → 直接 reuse，不再產生新 gap」，斷言全程狀態與輸出正確。
-3. 使用者自行安裝 Python 3.10+ 後：
-   ```text
-   pip install -r requirements.txt
-   pytest
-   uvicorn src.main:app --reload
-   ```
-   之後可用 curl 或 Swagger UI (`/docs`) 手動跑一次相同流程。
-
-### 首次執行時建議留意的風險點
-
-- **LangGraph API 版本**：`agents/main_agent.py`、`agents/evolution_agent.py` 用了 `StateGraph.add_conditional_edges` 標準寫法，若 `requirements.txt` 裝到的版本 API 有差異，可能需要微調。
-- **Windows subprocess sandbox**：`infrastructure/subprocess_sandbox.py` 用 `sys.executable` 開子行程執行生成的程式碼，在 Windows 上路徑/編碼理論上沒問題，但這是唯一沒有實際跑過的執行路徑，值得先手動測一次。
-- **SQLite 檔案位置**：預設會在執行時的當前目錄產生 `capability_library.db`（與 `capability_library/` 產物資料夾同名但不同東西，注意不要搞混）。
+API routes 已建立，但 server 尚未啟動過。
 
 ---
 
-## 下一階段：Phase 1.5 — Real Infrastructure Integration
+## Test Plan
 
-Phase 1 骨架完成並通過基本測試後，下一步將逐步把 mock / local substitute 換成真實基礎設施：
+目前已有：
 
-1. `MockLLMProvider` → LiteLLM Provider
-2. 接入 NVIDIA NIM / OpenRouter
-3. `SqliteCapabilityRepository` → PostgreSQL
-4. `SubprocessSandbox` → Docker Sandbox
-5. 增加更完整的 autonomous test / generalization cases
+- `tests/test_capability_schema.py`
+- `tests/test_capability_service.py`
+- `tests/test_full_loop.py`
 
-Phase 2 再導入 pgvector、semantic capability retrieval 與更完整的 evaluation / observability。
+這代表**測試程式已撰寫**，不是測試已通過。
+
+### First Runtime Validation
+
+第一輪必須實際完成：
+
+```text
+pip install -r requirements.txt
+pytest
+uvicorn src.main:app --reload
+```
+
+然後驗證：
+
+1. Unknown task 產生 Gap
+2. Evolution 產生 Candidate Capability
+3. Validation 實際執行
+4. Testing 實際產生 Test Report
+5. Capability 進入 `pending_approval`
+6. Approval 後變成 `active`
+7. 第二次同類 task reuse 既有 Capability
+8. Audit 與 notification 實際產生
 
 ---
 
-## 後續替換點
+## Known Risks Before First Run
 
-- `MockLLMProvider` → `LiteLLMProvider`（接 NVIDIA NIM / OpenRouter，只需要 `.env` 塞 API Key，並在 `src/main.py` 的 `Container` 換掉 adapter）
-- `SubprocessSandbox` → Docker-based sandbox（`interfaces/sandbox.py` 介面不變）
-- `SqliteCapabilityRepository` → PostgreSQL repository（`interfaces/repository.py` 介面不變）
-- `InMemoryEvolutionQueue` → Redis/RQ（`interfaces/queue.py` 介面不變）
-- Gap Detection 關鍵字比對 → pgvector 語意搜尋（Phase 2）
+- LangGraph API compatibility
+- Windows subprocess path / encoding behavior
+- generated Python code execution
+- SQLite path / persistence behavior
+- test report filesystem path
+- lifecycle transition defects
+- API dependency / DI wiring defects
+
+在第一輪 runtime validation 前，以上都屬於未驗證風險。
+
+---
+
+## Phase 1 Exit Criteria
+
+Phase 1 只有在以下條件成立時才可標示完成：
+
+- `pytest` passes
+- FastAPI starts successfully
+- Full capability lifecycle actually runs
+- Test Report is actually generated
+- Approval actually activates Capability
+- Reuse is actually demonstrated
+- Audit / notification evidence exists
+
+在此之前，統一稱為：
+
+> **Phase 1 Skeleton Implemented / Runtime Validation Pending**
+
+---
+
+## Next Stage — Phase 1.5 Real Infrastructure Integration
+
+只有 Phase 1 runtime validation 成功後才開始。
+
+預計順序：
+
+1. MockLLMProvider → LiteLLMProvider
+2. NVIDIA NIM / OpenRouter
+3. SQLite → PostgreSQL
+4. SubprocessSandbox → DockerSandbox
+5. 擴充 autonomous testing / generalization testing
+
+Phase 2 再加入：
+
+- pgvector
+- semantic capability retrieval
+- observability
+- experiment tracking
+
+---
+
+## Future Adapter Replacement
+
+```text
+MockLLMProvider
+→ LiteLLMProvider
+→ NVIDIA NIM / OpenRouter
+```
+
+```text
+SqliteCapabilityRepository
+→ PostgreSQLCapabilityRepository
+```
+
+```text
+SubprocessSandbox
+→ DockerSandbox
+```
+
+```text
+InMemoryEvolutionQueue
+→ Redis / RQ
+```
+
+```text
+Task-family matching
+→ pgvector semantic retrieval
+```
+
+核心原則仍是：
+
+> **Agent → Service → Interface → Infrastructure Adapter**
+
+但此架構目前仍處於 implementation skeleton 階段，尚待第一次實際執行驗證。

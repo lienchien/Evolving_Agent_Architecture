@@ -1,0 +1,72 @@
+{
+  "capability_id": "CAP-be76f20b",
+  "capability_version": "0.1.0",
+  "test_cases": [
+    {
+      "name": "basic_two_column_csv",
+      "test_type": "functional",
+      "passed": true,
+      "input": {
+        "csv_text": "a,b\n1,2\n3,4\n"
+      },
+      "expected_output": {
+        "statistics": {
+          "a": {
+            "count": 2,
+            "sum": 4.0,
+            "avg": 2.0,
+            "min": 1.0,
+            "max": 3.0
+          },
+          "b": {
+            "count": 2,
+            "sum": 6.0,
+            "avg": 3.0,
+            "min": 2.0,
+            "max": 4.0
+          }
+        }
+      },
+      "actual_output": {
+        "statistics": {
+          "a": {
+            "count": 2,
+            "sum": 4.0,
+            "avg": 2.0,
+            "min": 1.0,
+            "max": 3.0
+          },
+          "b": {
+            "count": 2,
+            "sum": 6.0,
+            "avg": 3.0,
+            "min": 2.0,
+            "max": 4.0
+          }
+        }
+      },
+      "error": null
+    },
+    {
+      "name": "empty_csv",
+      "test_type": "boundary",
+      "passed": true,
+      "input": {
+        "csv_text": "a,b\n"
+      },
+      "expected_output": {
+        "statistics": {}
+      },
+      "actual_output": {
+        "statistics": {}
+      },
+      "error": null
+    }
+  ],
+  "pass_rate": 1.0,
+  "failed_cases": [],
+  "known_limitations": [],
+  "risk_level": "low",
+  "recommended_action": "manual_review",
+  "generated_at": "2026-09-17T15:15:48.773119Z"
+}

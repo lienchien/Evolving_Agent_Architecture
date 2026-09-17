@@ -1,0 +1,31 @@
+{
+  "capability_id": "CAP-e571fa12",
+  "capability_version": "0.1.0",
+  "test_cases": [
+    {
+      "name": "expects_two",
+      "test_type": "functional",
+      "passed": false,
+      "input": {
+        "value": 1
+      },
+      "expected_output": {
+        "value": 2
+      },
+      "actual_output": {
+        "value": 1
+      },
+      "error": null
+    }
+  ],
+  "pass_rate": 0.0,
+  "failed_cases": [
+    "expects_two"
+  ],
+  "known_limitations": [
+    "functional test failed: expects_two"
+  ],
+  "risk_level": "high",
+  "recommended_action": "regenerate",
+  "generated_at": "2026-09-17T15:15:48.411275Z"
+}

@@ -44,9 +44,8 @@
 - `Executed` = 已實際執行
 - `Verified` = 已有成功結果與證據
 
-目前專案仍停留在：
-
-> **Implemented / Test Written，尚未 Executed / Verified**
+截至 2026-09-18，核心、API 與併發測試已 Executed / Verified（25 passed）。
+下列歷史紀錄保留當時狀態；最新進度見本文件末尾及 `PROJECT_STATUS.md`。
 
 ---
 
@@ -547,3 +546,82 @@ tests/test_capability_failure_and_revision.py（新增）
 ### 下一步
 
 不變：仍是先取得 **First Verified End-to-End Run**，這次的修改只是讓程式碼行為對齊文件敘述，屬於同一個里程碑範圍內的補完。
+
+---
+
+## 2026-09-17～18 — 首次測試、API feature、資安檢查與併發修復
+
+### Phase / 目標
+
+Phase 1 — 將核心程式從骨架推進至可驗證的 HTTP API，修復併發資料一致性。
+分支：`codex/feature-api-integration`，基於 `c71bf0c`；建立時原
+`feature/capability-registry` 與 `dev` 同指該提交。本次未合併或修改 main。
+
+### 環境與第一次執行
+
+- 最初只檢查到系統 Python，缺少 pytest/langgraph/httpx；重新檢查確認專案 `.venv`
+  已存在，Python 3.14.3、pytest 9.1.1，以及 FastAPI、Pydantic、LangGraph、httpx 可用。
+- 測試收集成功取得 6 項；實際執行曾因預設 pytest 暫存目錄存取被拒而出現 setup errors。
+- 指定專案內可寫暫存目錄並停用 cache 後得到 `6 passed in 0.87s`。
+  此錯誤屬環境權限問題，未以修改產品邏輯解決。
+
+### API 實作
+
+- 建立可注入 container 的 app factory、依賴取得函式及可設定的測試報告目錄。
+- 加入 Capability/TestReport response model、status/task_family 篩選、offset/limit 分頁。
+- 未知能力核准回 404；不合法狀態及後續的樂觀鎖衝突回 409；政策拒絕回 403。
+- 新增 HTTP 整合測試，驗證建立、查詢報告、核准、重用、要求修訂及限制 metadata。
+- 修正測試產物寫入專案目錄的副作用，測試使用獨立資料庫與報告目錄。
+- 此階段測試結果：9 passed。
+
+### 資安審查與 container 修復
+
+審查發現 request-time lazy container 初始化沒有同步保護；受控雙執行緒測試
+重現建立兩個 container、app.state 只保留其中一個，可能遺失另一實例的治理資料。
+
+改由 FastAPI lifespan 在接收請求前初始化；請求只讀取 container。
+未執行 startup 的預設 app 回 503，不在請求端重新建立；注入實例保持不變。
+加入首次併發、注入保留與未啟動路徑測試後：12 passed。
+
+同時確認匿名核准、caller-controlled reviewer、完整資料暴露、restrictions 未執行、
+無配額及一般 subprocess 缺乏隔離等限制。依開發階段決策，本輪保留授權與資料控制
+現狀，在 approvals/capabilities/audit/tasks 路由加入 `TODO(security)`，未宣稱安全驗證通過。
+
+### 併發問題重現與修復決策
+
+| 問題 | 修復前證據 | 實作 |
+|---|---|---|
+| 決策覆蓋 | 受控交錯中 approve/reject 均回 200，archived 被覆蓋成 active | revision 條件更新；失敗 409；核准的最終狀態與限制一次提交 |
+| 任務配錯 | CSV 與文字請求從共用 queue 取到彼此的 gap | Phase 1 同步直接執行自己的 gap |
+| 重複能力 | 24 同類請求產生 24 能力，全部可啟用 | SQLite 短交易預留 draft；partial unique index 限制每 family 一個 open 能力 |
+| 跨實例不一致 | 共用 SQLite 的另一 app 查得到 capability，但 report 404、audit 為空 | 版本化報告、核准、audit 全部持久化到同一 SQLite |
+
+治理資料持久化後，決策狀態、restrictions、ApprovalRecord、Audit 在同一交易提交，
+audit 寫入失敗會全部回滾。SQLite 連線也改為明確 close，避免依賴 GC 釋放檔案。
+schema 升級保留舊紀錄；若有多個同 family open 能力，明確拒絕啟動而不自動刪除資料。
+
+### 驗證證據
+
+- 實作過程的完整／目標測試依序驗證；最終完整套件為 **25 passed, 1 warning in 6.84s**。
+- 命令：`.\.venv\Scripts\python.exe -B -m pytest -q -p no:cacheprovider --basetemp=<全新可寫目錄>`。
+- 24 同類 HTTP 請求跨兩個 app：一個生成、一個 capability ID；24 次核准為 1 成功＋23 個 409。
+- 不同任務並行時各自拿到正確 task_family 的能力。
+- 4 個獨立 Python 程序預留同 family：只有一個 owner；並行核准只有一個成功與一筆成功紀錄。
+- 另一 app、重啟及新程序均能查到 Report、ApprovalRecord 與 Audit。
+- 注入 audit 寫入失敗確認整筆交易回滾；亦驗證過期更新拒絕及舊 schema migration。
+- 警告為既有 Starlette/AnyIO `BlockingPortal` alias 棄用，不影響測試結果。
+- 臨時資料庫、報告與測試目錄已清理；未拿較早提交的範例報告冒充本次測試證據。
+
+### 修改範圍與後續
+
+主要檔案：`src/main.py`、`src/api/`、`src/agents/`、`src/domain/capability.py`、
+`src/domain/errors.py`、`src/interfaces/repository.py`、SQLite adapter、相關 service、
+`tests/support.py`、`tests/test_api.py`、`tests/test_concurrency.py`。
+
+同步更新 README（雙語）、PROJECT_STATUS、DEV_PLAN；新增
+[API_CONCURRENCY.md](docs/API_CONCURRENCY.md) 記錄 API 語意、遷移與操作限制。
+本紀錄與 API/併發修復一起提交；可用 `git log -- DEVELOPMENT_LOG.md` 追溯對應 commit。
+
+仍待完成：獨立 Uvicorn/HTTP 驗證、長時間壓力測試、強制終止後名額復原、授權與資料
+控制、真正限制執行及隔離。跨主機部署不在本次範圍。Phase 1.5 仍未開始。
+目前狀態為 **自動化核心/API/併發驗證通過，獨立伺服器驗證待完成**。

@@ -48,6 +48,7 @@ class Capability(BaseModel):
     schema_version: str = "1.0"
     capability_id: str = Field(default_factory=lambda: f"CAP-{uuid.uuid4().hex[:8]}")
     capability_version: str = "0.1.0"
+    revision: int = Field(default=0, ge=0)
 
     name: str
     description: str = ""

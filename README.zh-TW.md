@@ -3,11 +3,11 @@
 **語言：** [English](README.md) | 繁體中文
 
 ![Status](https://img.shields.io/badge/status-experimental-orange)
-![Phase](https://img.shields.io/badge/phase-skeleton--implemented-blue)
-![Validation](https://img.shields.io/badge/runtime%20validation-pending-yellow)
+![Phase](https://img.shields.io/badge/phase-1--api--integration-blue)
+![Validation](https://img.shields.io/badge/automated%20tests-25%20passed-green)
 
 > [!WARNING]
-> 本專案目前仍在積極開發中。Repository 內已建立核心架構骨架與測試程式，但尚未完成 runtime 驗證。目前應視為實驗性研究原型，而非可正式投入使用的 production-ready 系統。
+> 本實驗性研究原型已通過核心、API 與併發自動化測試；獨立伺服器驗證、認證與資料存取控制仍待完成，尚非 production-ready 系統。
 
 這是一個研究導向的 Agent 架構，探索 AI Agent 是否能夠**辨識自身缺少的能力、建立新的可執行能力、進行驗證與測試、產生可稽核報告、請求人類核准、啟用通過的能力，並在未來任務中重複使用**。
 
@@ -17,11 +17,13 @@
 
 ## 專案狀態
 
-> **目前階段：Phase 1 — Skeleton Implemented / Runtime Validation Pending**
+> **目前階段（2026-09-18）：Phase 1 — 自動化核心/API/併發測試通過，獨立伺服器驗證待完成**
 
 目前 repository 已包含 Phase 1 MVP 所需的架構骨架、核心 domain model、service、interface、Agent orchestration、API route 與測試程式。
 
-但專案目前**尚未完成實際 runtime 驗證**。
+最近完整測試為 **25 passed**，另有一項既有 Starlette/AnyIO 棄用警告。已執行 TestClient HTTP 流程、SQLite 交易、subprocess 與跨程序持久化驗證；獨立 Uvicorn／網路操作仍待完成。
+
+詳見[專案狀態](PROJECT_STATUS.md)、[開發紀錄](DEVELOPMENT_LOG.md)及[API 併發行為](docs/API_CONCURRENCY.md)。下方架構圖包含長期設計：目前同步演化直接處理自己的 gap，queue 預留給未來背景 worker；報告、核准與 audit 已共用 SQLite 儲存。
 
 目前狀態：
 
@@ -41,9 +43,10 @@ FastAPI routes                  ✓
 Unit / lifecycle tests          ✓
 End-to-end test definition      ✓
 
-pytest 實際執行                  Pending
-FastAPI runtime 測試             Pending
-Verified end-to-end run         Pending
+pytest 實際執行                  25 passed
+FastAPI TestClient 測試          Passed
+Mock 核心循環                   Passed
+獨立 Uvicorn / HTTP             Pending
 真實 LLM 整合                    Pending
 PostgreSQL runtime adapter      Pending
 Docker sandbox                  Pending
@@ -54,11 +57,11 @@ Capability sharing              Future Reserved
 Marketplace                     Future Reserved
 ```
 
-因此目前第一個主要里程碑是：
+下一個驗證里程碑是：
 
-> **First Verified End-to-End Run**
+> **獨立 API 執行與 runtime 證據留存**
 
-在以下流程於真實 runtime 中完整執行並驗證之前，Phase 1 不視為完成：
+以下流程已通過自動化 mock 測試；Phase 1 仍需完成獨立伺服器驗證：
 
 ```text
 Task
@@ -601,9 +604,9 @@ InMemoryQueue
 
 # 11. Phase 1 Runtime Validation
 
-Repository 已經有測試程式，但目前尚未在目標 runtime environment 中實際執行。
+自動化測試已實際通過：25 passed，另有一項既有套件警告。包含受控競爭、跨兩個 app 的 24 請求併發，以及獨立 Python 程序驗證；不代表 production 負載基準測試。
 
-預計驗證指令：
+驗證指令（在已安裝相依套件的環境中）：
 
 ```bash
 pip install -r requirements.txt
@@ -622,7 +625,7 @@ uvicorn src.main:app --reload
 http://localhost:8000/docs
 ```
 
-Phase 1 只有在實際執行證明以下流程成立後才算完成：
+自動化套件已涵蓋以下流程；需再對獨立伺服器操作並保存證據，才標記 Phase 1 完成：
 
 1. 未知任務建立 Capability Gap
 2. Evolution Agent 建立 Candidate Capability
@@ -632,7 +635,7 @@ Phase 1 只有在實際執行證明以下流程成立後才算完成：
 6. 管理員核准後 Capability 進入 `active`
 7. 相同類型任務能重用既有 Capability
 8. 不會為重複任務建立重複 Capability
-9. 關鍵 lifecycle 行為都有 Audit Record
+9. 送審與核准決策留有 Audit Record
 
 ---
 
@@ -658,8 +661,8 @@ Phase 1 只有在實際執行證明以下流程成立後才算完成：
 
 尚需完成：
 
-- runtime validation
-- 第一輪真實執行後的 bug fixing
+- 獨立 Uvicorn / HTTP 驗證及 runtime 證據留存
+- 長時間負載與程序中止復原驗證
 
 ---
 
@@ -1108,6 +1111,6 @@ Share
 
 目前專案只應優先處理一件事：
 
-> **實際執行目前的 Phase 1 skeleton，取得第一次 verified end-to-end result。**
+> **驗證獨立 API，為已通過自動化測試的核心流程補齊 runtime 證據。**
 
-在核心流程被 runtime 證明可行之前，不應優先擴張新的大型架構功能。
+實際 infrastructure 整合前的 Phase 1 收尾工作見 [DEV_PLAN.md](DEV_PLAN.md)。

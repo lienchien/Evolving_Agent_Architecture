@@ -29,10 +29,12 @@ def build_main_agent(tmp_path, llm_provider: LLMProvider | None = None):
     gap_detection_service = GapDetectionService(capability_service)
     evolution_service = EvolutionService(llm_provider, capability_service)
     validation_service = ValidationService(sandbox, capability_service)
-    report_store = TestReportStore()
-    testing_service = TestingService(llm_provider, sandbox, capability_service, report_store)
+    report_store = TestReportStore(repository)
+    testing_service = TestingService(
+        llm_provider, sandbox, capability_service, report_store, tmp_path / "reports"
+    )
     notification_service = NotificationService(ConsoleNotificationProvider())
-    audit_service = AuditService()
+    audit_service = AuditService(repository)
     approval_service = ApprovalService(capability_service, notification_service, audit_service)
     execution_service = CapabilityExecutionService(sandbox)
     queue = InMemoryEvolutionQueue()

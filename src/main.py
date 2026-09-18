@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-from fastapi import FastAPI
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+
+from src.domain.errors import CapabilityConflictError
 
 from src.agents.evolution_agent import EvolutionAgent
 from src.agents.main_agent import MainAgent
@@ -29,22 +34,24 @@ class Container:
     without touching services, agents, or API routes.
     """
 
-    def __init__(self) -> None:
-        repository = SqliteCapabilityRepository(settings.database_path)
+    def __init__(self, database_path: str | None = None, report_directory: str = "capability_library") -> None:
+        repository = SqliteCapabilityRepository(
+            database_path if database_path is not None else settings.database_path
+        )
         llm_provider = MockLLMProvider()
         sandbox = SubprocessSandbox()
         notification_provider = ConsoleNotificationProvider()
 
         self.queue = InMemoryEvolutionQueue()
-        self.report_store = TestReportStore()
-        self.audit_service = AuditService()
+        self.report_store = TestReportStore(repository)
+        self.audit_service = AuditService(repository)
 
         self.capability_service = CapabilityService(repository)
         self.gap_detection_service = GapDetectionService(self.capability_service)
         self.evolution_service = EvolutionService(llm_provider, self.capability_service)
         self.validation_service = ValidationService(sandbox, self.capability_service)
         self.testing_service = TestingService(
-            llm_provider, sandbox, self.capability_service, self.report_store
+            llm_provider, sandbox, self.capability_service, self.report_store, report_directory
         )
         self.notification_service = NotificationService(notification_provider)
         self.approval_service = ApprovalService(
@@ -68,14 +75,32 @@ class Container:
         )
 
 
-container = Container()
-
-app = FastAPI(title="Capability-Evolving Agent - Phase 1 MVP")
-
 from src.api.routes import approvals, audit, capabilities, evolution, tasks  # noqa: E402
 
-app.include_router(tasks.router)
-app.include_router(capabilities.router)
-app.include_router(evolution.router)
-app.include_router(approvals.router)
-app.include_router(audit.router)
+
+def create_app(container: Container | None = None) -> FastAPI:
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        # Initialize before serving requests so concurrent requests cannot replace
+        # the shared service graph. Each worker owns a container, while workers
+        # using the same database share capabilities, reports and governance data.
+        if app.state.container is None:
+            app.state.container = Container()
+        yield
+
+    app = FastAPI(title="Capability-Evolving Agent - Phase 1 MVP", lifespan=lifespan)
+    app.state.container = container
+
+    @app.exception_handler(CapabilityConflictError)
+    async def capability_conflict(request: Request, exc: CapabilityConflictError):
+        return JSONResponse(status_code=409, content={"detail": str(exc)})
+
+    app.include_router(tasks.router)
+    app.include_router(capabilities.router)
+    app.include_router(evolution.router)
+    app.include_router(approvals.router)
+    app.include_router(audit.router)
+    return app
+
+
+app = create_app()

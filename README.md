@@ -3,11 +3,11 @@
 **Language:** English | [繁體中文](README.zh-TW.md)
 
 ![Status](https://img.shields.io/badge/status-experimental-orange)
-![Phase](https://img.shields.io/badge/phase-1--api--integration-blue)
+![Phase](https://img.shields.io/badge/phase-1--verified-blue)
 ![Validation](https://img.shields.io/badge/automated%20tests-25%20passed-green)
 
 > [!WARNING]
-> This experimental research prototype has passed automated core, API and concurrency tests. Standalone server validation, authentication and data-access controls remain pending; it is not production-ready.
+> This experimental research prototype has passed automated core, API, concurrency, and standalone Uvicorn/HTTP validation. Authentication, data-access controls, enforced execution restrictions, and production hardening remain pending; it is not production-ready.
 
 A research-oriented Agent architecture that explores whether an AI agent can **identify missing capabilities, generate new executable capabilities, validate and test them, produce auditable reports, request human approval, activate approved capabilities, and reuse them in future tasks**.
 
@@ -17,11 +17,11 @@ The long-term goal is to study whether Agent performance can scale through **cap
 
 ## Project Status
 
-> **Current Stage (2026-09-18): Phase 1 — Automated Core/API/Concurrency Tests Passed; Standalone Server Validation Pending**
+> **Current Stage (2026-09-20): Phase 1 Verification Complete; Production Hardening Pending**
 
 The repository currently contains the architecture skeleton, core domain models, services, interfaces, Agent orchestration, API routes, and test code for the Phase 1 MVP.
 
-The latest full test run passed **25 tests**, with one existing Starlette/AnyIO deprecation warning. TestClient HTTP flows, SQLite transactions, subprocess execution and cross-process persistence have been exercised. Standalone Uvicorn/network validation remains pending.
+The latest full test run passed **25 tests**, with one existing Starlette/AnyIO deprecation warning. TestClient HTTP flows, SQLite transactions, subprocess execution and cross-process persistence have been exercised. An independent Uvicorn process also completed the task, report, approval, reuse and restart-persistence HTTP flow successfully.
 
 See [project status](PROJECT_STATUS.md), [development log](DEVELOPMENT_LOG.md) and [API concurrency behavior](docs/API_CONCURRENCY.md). Architecture diagrams below describe the broader design: the current synchronous implementation handles each request's own gap directly; the queue is reserved for future background workers. Reports, approvals and audit records now share SQLite storage.
 

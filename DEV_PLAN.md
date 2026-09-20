@@ -1,14 +1,15 @@
 # Capability-Evolving Agent — Phase 1 Development Plan
 
-更新日期：2026-09-18
+更新日期：2026-09-20
 
 ## 目前基準
 
-**Phase 1 — 自動化核心、API 與併發驗證通過；獨立伺服器驗證待完成。**
+**Phase 1 — 驗證退出條件完成；進入 production hardening / Phase 1.5 準備。**
 
-目前分支 `codex/feature-api-integration` 已完成 API feature 與四項併發修復，
-最近完整測試為 **25 passed, 1 warning**。實作仍採 Mock LLM、SQLite、
-Python subprocess 與 Console Notification。
+目前 `dev` 與 `origin/dev` 同步於 `773df54`，已完成 API feature、四項併發修復、
+完整 pytest 及獨立 Uvicorn/HTTP 重啟驗證。最近完整測試為
+**25 passed, 1 warning in 6.82s**。實作仍採 Mock LLM、SQLite、Python subprocess
+與 Console Notification。
 本輪實際過程見 [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md)，完成度見
 [PROJECT_STATUS.md](PROJECT_STATUS.md)。
 
@@ -22,23 +23,35 @@ Python subprocess 與 Console Notification。
 6. 原子預留生成名額，唯一索引限制每個 task_family 的處理中／待核准／active 能力。
 7. 將 Report、ApprovalRecord、Audit 改為共享 SQLite 儲存並驗證多程序行為。
 8. 明確標記暫緩的授權、資料隔離、限制執行與資源管制項目。
+9. 以獨立 Uvicorn 程序完成外部 HTTP 全流程，核對 runtime log、JSON/Markdown 報告、
+   SQLite 治理資料，以及停止／重啟後的能力重用與資料持久化。
 
 上述行為與資料庫升級細節以 [API_CONCURRENCY.md](docs/API_CONCURRENCY.md) 為準。
 授權與資料控制本輪不啟用；既有安全註記需保留。
 
-## 下一個里程碑：獨立 API Runtime 驗證
+## 已完成里程碑：獨立 API Runtime 驗證
 
-使用隔離資料庫與報告目錄啟動 Uvicorn，在同機 loopback 介面驗證：
+2026-09-20 使用隔離資料庫與報告目錄啟動 Uvicorn，在同機 loopback 介面完成：
 
 1. 提交未知 task，確認待核准 capability 與報告。
-2. 查詢、篩選及分頁；核對不存在 ID、非法狀態與格式錯誤回應。
-3. 進行核准／拒絕／要求修訂／附限制核准，核對持久紀錄。
+2. 查詢 capability 與 test report，核對待核准狀態及 100% pass rate。
+3. 經 HTTP 核准，核對 active 狀態、ApprovalRecord 與 Audit。
 4. 核准後再次提交相同 family，確認重用原能力及正確輸出。
-5. 重啟服務並用相同 database path 查詢能力、報告與 audit。
-6. 保存 HTTP 結果、runtime log、通知輸出及必要報告，完成後清理測試資料。
+5. 重啟服務並用相同 database path 查詢能力、報告與 audit，再次成功執行。
+6. 核對 HTTP 200、runtime log、通知輸出、JSON/Markdown 報告與 SQLite 筆數；
+   完成後停止服務並清理隔離測試資料。
 
-目前 TestClient 已驗證 lifespan 與 HTTP 路由；此里程碑另驗證獨立伺服器與網路邊界。
-完成後才評估是否將 Phase 1 標記為完成。
+結果為能力 `active`、報告 pass rate 100%／risk `low`、重啟前後 audit 均為 2，
+隔離 SQLite 保存 1 Capability、1 TestReport、1 ApprovalRecord、2 AuditEntry。
+完整執行紀錄見 [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md)。
+
+## 下一個里程碑：Production Hardening 與 Phase 1.5 Adapter
+
+1. 為生成名額加入 lease／逾時復原，驗證程序強制終止後能安全重試。
+2. 加入認證、管理員授權、可信 reviewer 及 tenant/owner/scope 資料控制。
+3. 將 restrictions 接到實際執行政策，加入請求大小、資源與執行配額。
+4. 執行長時間負載、延遲、SQLite lock timeout 與故障復原量測。
+5. 依序評估 LiteLLM、PostgreSQL 與 Docker sandbox adapter；保留 Mock/SQLite 測試基線。
 
 ## 測試與執行
 

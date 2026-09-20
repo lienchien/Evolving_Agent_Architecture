@@ -1,16 +1,17 @@
 # Capability-Evolving Agent — Project Status
 
-更新日期：2026-09-18
+更新日期：2026-09-20
 
-開發分支：`codex/feature-api-integration`
+開發分支：`dev`（與 `origin/dev` 同步，`773df54`）
 
 ## Current Stage
 
-**Phase 1 — Automated Core/API/Concurrency Validation Passed; Standalone Server Validation Pending**
+**Phase 1 — Verification Complete; Production Hardening Pending**
 
 核心 mock 流程、FastAPI TestClient 整合、併發一致性與跨程序持久化已取得執行證據。
-最近完整測試結果為 **25 passed, 1 warning in 6.84s**。
-這不是 production-ready 或任意負載下的效能保證；Phase 1 尚待獨立 Uvicorn/HTTP 驗證收尾。
+2026-09-20 的完整測試結果為 **25 passed, 1 warning in 6.82s**，獨立 Uvicorn
+也已完成 loopback HTTP 全流程與停止／重啟持久化驗證。
+這不是 production-ready 或任意負載下的效能保證；安全與營運強化仍屬後續工作。
 
 歷史過程見 [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md)；API 行為及升級條件見
 [API_CONCURRENCY.md](docs/API_CONCURRENCY.md)。
@@ -30,6 +31,7 @@
 | 去重 | 每個 task_family 最多一個處理中、待核准或 active 能力；資料庫唯一索引強制保護 |
 | 共享資料 | Capability、版本化 TestReport、ApprovalRecord、Audit 共用 SQLite；跨 app、重啟與新程序查詢通過 |
 | 相容性 | 舊 SQLite schema 升級；遇既有重複能力明確拒絕啟動、不刪除資料 |
+| 獨立 Runtime | 真實 Uvicorn 程序完成建立、報告查詢、核准、重用；停止後以同一資料庫重啟仍可查詢與執行 |
 
 目前 adapter 仍為 MockLLMProvider、SQLite、Python subprocess、Console Notification。
 Queue 保留擴充介面，Phase 1 不透過它執行背景任務。
@@ -45,14 +47,20 @@ Queue 保留擴充介面，Phase 1 不透過它執行背景任務。
 - 注入 audit 寫入失敗：能力狀態、限制及核准紀錄全部回滾。
 - Windows 預設 pytest 暫存目錄曾遇到權限問題，改用唯一、可寫的測試目錄後通過。
 - 一項既有 Starlette/AnyIO `BlockingPortal` 棄用警告；測試未因此失敗。
+- 獨立 Uvicorn 驗證的 HTTP 請求均為 200；首次啟動與重啟皆完成 application startup，
+  runtime log 未出現 traceback 或伺服器錯誤。
+- Uvicorn 重啟後能力維持 `active`、報告 pass rate 100%／risk `low`、audit 維持 2 筆，
+  相同任務再次執行得到 `word_count = 3`。
+- 隔離 SQLite 最終核對：Capability 1、TestReport 1、ApprovalRecord 1、AuditEntry 2；
+  JSON 與 Markdown 報告副本皆成功產生並可解析。
 
 測試範圍是 TestClient HTTP 整合、真實 SQLite 及 subprocess；不是外部網路壓力測試。
-本輪測試產物已清理，repository 內較早提交的範例報告不作為本輪執行證據。
+本輪 pytest、runtime log、SQLite 與報告產物在核對後已清理；本文件與
+[DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md) 保存可版本控制的結果摘要，repository 內較早
+提交的範例報告不作為本輪執行證據。
 
 ## 尚未完成與已接受限制
 
-- [ ] 獨立啟動 Uvicorn，從外部 HTTP client 完整操作並保存 runtime log。
-- [ ] 手動核對 Console Notification、報告輸出與 API 結果。
 - [ ] 長時間負載、吞吐量、延遲、鎖定逾時及故障復原驗證。
 - [ ] 程序強制終止後的生成名額自動復原／租約。
 - [ ] 認證、管理員角色與 tenant/owner/scope 資料控制。
@@ -69,9 +77,10 @@ Queue 保留擴充介面，Phase 1 不透過它執行背景任務。
 - [x] mock 核心循環、功能失敗與修訂路徑通過。
 - [x] HTTP 整合的核准、啟用、重用與報告查詢通過。
 - [x] 併發去重、決策交易、跨實例持久化通過。
-- [ ] 獨立伺服器啟動與手動 API 驗證，保存相關證據。
+- [x] 獨立伺服器啟動、外部 HTTP 操作、報告／log 核對及重啟持久化通過。
 
-因此目前不標記 `Phase 1 Complete`。下一步見 [DEV_PLAN.md](DEV_PLAN.md)。
+Phase 1 的驗證退出條件已完成；下一步進入 production hardening 與 Phase 1.5 adapter
+工作，詳見 [DEV_PLAN.md](DEV_PLAN.md)。
 
 ## 後續階段
 

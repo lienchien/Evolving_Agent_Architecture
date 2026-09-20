@@ -3,11 +3,11 @@
 **語言：** [English](README.md) | 繁體中文
 
 ![Status](https://img.shields.io/badge/status-experimental-orange)
-![Phase](https://img.shields.io/badge/phase-1--api--integration-blue)
+![Phase](https://img.shields.io/badge/phase-1--verified-blue)
 ![Validation](https://img.shields.io/badge/automated%20tests-25%20passed-green)
 
 > [!WARNING]
-> 本實驗性研究原型已通過核心、API 與併發自動化測試；獨立伺服器驗證、認證與資料存取控制仍待完成，尚非 production-ready 系統。
+> 本實驗性研究原型已通過核心、API、併發自動化測試及獨立 Uvicorn/HTTP 驗證；認證、資料存取控制、執行限制強制套用與 production hardening 仍待完成，尚非 production-ready 系統。
 
 這是一個研究導向的 Agent 架構，探索 AI Agent 是否能夠**辨識自身缺少的能力、建立新的可執行能力、進行驗證與測試、產生可稽核報告、請求人類核准、啟用通過的能力，並在未來任務中重複使用**。
 
@@ -17,11 +17,11 @@
 
 ## 專案狀態
 
-> **目前階段（2026-09-18）：Phase 1 — 自動化核心/API/併發測試通過，獨立伺服器驗證待完成**
+> **目前階段（2026-09-20）：Phase 1 驗證退出條件完成，Production Hardening 待進行**
 
 目前 repository 已包含 Phase 1 MVP 所需的架構骨架、核心 domain model、service、interface、Agent orchestration、API route 與測試程式。
 
-最近完整測試為 **25 passed**，另有一項既有 Starlette/AnyIO 棄用警告。已執行 TestClient HTTP 流程、SQLite 交易、subprocess 與跨程序持久化驗證；獨立 Uvicorn／網路操作仍待完成。
+最近完整測試為 **25 passed**，另有一項既有 Starlette/AnyIO 棄用警告。已執行 TestClient HTTP 流程、SQLite 交易、subprocess 與跨程序持久化驗證；獨立 Uvicorn 程序也已完成任務、報告、核准、重用與停止／重啟持久化 HTTP 流程。
 
 詳見[專案狀態](PROJECT_STATUS.md)、[開發紀錄](DEVELOPMENT_LOG.md)及[API 併發行為](docs/API_CONCURRENCY.md)。下方架構圖包含長期設計：目前同步演化直接處理自己的 gap，queue 預留給未來背景 worker；報告、核准與 audit 已共用 SQLite 儲存。
 

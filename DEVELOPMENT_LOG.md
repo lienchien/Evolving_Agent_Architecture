@@ -625,3 +625,57 @@ schema 升級保留舊紀錄；若有多個同 family open 能力，明確拒絕
 仍待完成：獨立 Uvicorn/HTTP 驗證、長時間壓力測試、強制終止後名額復原、授權與資料
 控制、真正限制執行及隔離。跨主機部署不在本次範圍。Phase 1.5 仍未開始。
 目前狀態為 **自動化核心/API/併發驗證通過，獨立伺服器驗證待完成**。
+
+---
+
+## 2026-09-20 — dev 同步、完整回歸與獨立 Uvicorn/HTTP 驗證
+
+### 分支與基準
+
+- 在乾淨工作樹切換至 `dev`，以 `git pull --ff-only origin dev` 更新。
+- `dev` 由 `c71bf0c` fast-forward 至 `773df54`（`Merge feature/api-integration into dev`），
+  驗證結束時與 `origin/dev` 同步，沒有修改 `main` 或建立額外 merge commit。
+- 驗證期間建立的 SQLite、pytest 暫存目錄、runtime log 與報告副本均使用隔離目錄；
+  完成核對後已清理，未納入版本控制。
+
+### 完整 pytest
+
+- 環境：專案 `.venv`、Python 3.14.3、pytest 9.1.1。
+- 使用專案內唯一可寫的 `--basetemp` 並停用 pytest cache，完整收集 25 項測試。
+- 結果：**25 passed, 1 warning in 6.82s**。
+- 唯一警告為 Starlette TestClient 引用已棄用的 AnyIO `BlockingPortal` alias；
+  沒有產品程式錯誤或測試失敗。
+
+### 獨立 Uvicorn / HTTP 驗證
+
+以真正的獨立 Uvicorn 程序綁定 loopback 隨機連接埠，不使用 TestClient，完成：
+
+1. `GET /openapi.json` 確認 lifespan 啟動完成。
+2. `POST /api/tasks` 產生文字統計能力，取得 `capability_pending_approval`。
+3. 經 HTTP 查詢 capability 與 test report，確認狀態 `pending_approval`、pass rate 100%。
+4. `POST /api/approvals/{id}/approve` 後狀態成為 `active`。
+5. 再次提交同 task family，重用相同能力並得到 `word_count = 3`。
+6. 經 `GET /api/audit` 取得 2 筆紀錄：request approval 與 approve。
+7. 停止 Uvicorn、使用相同 SQLite 路徑重新啟動，再次經 HTTP 查詢並執行。
+
+首次啟動與重啟的 access log 中上述請求皆為 HTTP 200；process log 皆顯示
+application startup complete，未出現 traceback 或伺服器錯誤。驗證程序最後已停止，
+loopback 連接埠確認不再接受連線。
+
+### 報告與持久化證據
+
+- HTTP 與檔案副本中的報告一致：pass rate 100%、risk level `low`、
+  functional `basic_sentence` 與 boundary `empty_text` 均通過。
+- `test_report.json` 與 `test_report.md` 均存在且可讀；SQLite 內的版本化報告也可於
+  Uvicorn 重啟後由 HTTP 取得。
+- 重啟後 capability 仍為 `active`，audit 數量仍為 2，能力仍可正確執行。
+- 直接核對隔離 SQLite：Capability 1、TestReport 1、ApprovalRecord 1、AuditEntry 2。
+- 前兩次驗證腳本中曾分別誤用 task response 狀態名稱，以及將 PowerShell 回傳的 JSON
+  陣列再包成單一物件；對照 API 契約與 SQLite 後修正驗證腳本，最終以全新資料庫
+  從頭通過。這兩項是驗證腳本斷言問題，不是產品資料遺失。
+
+### 結論與剩餘限制
+
+Phase 1 定義的核心、HTTP、併發、跨程序持久化及獨立伺服器驗證均已有執行證據。
+這不代表 production-ready：認證／授權、tenant/owner/scope 控制、可信 reviewer、
+restrictions 強制執行、真正 sandbox、生成租約復原、長時間負載與跨主機部署仍未完成。

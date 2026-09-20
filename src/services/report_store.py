@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 from src.domain.report import TestReport
+from src.interfaces.repository import CapabilityRepository
 
 
 class TestReportStore:
-    def __init__(self) -> None:
-        self._reports: dict[str, TestReport] = {}
+    def __init__(self, repository: CapabilityRepository) -> None:
+        self._repository = repository
 
     def save(self, report: TestReport) -> None:
-        self._reports[report.capability_id] = report
+        self._repository.save_report(report)
 
     def get(self, capability_id: str) -> TestReport | None:
-        return self._reports.get(capability_id)
+        return self._repository.get_report(capability_id)

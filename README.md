@@ -3,11 +3,11 @@
 **Language:** English | [繁體中文](README.zh-TW.md)
 
 ![Status](https://img.shields.io/badge/status-experimental-orange)
-![Phase](https://img.shields.io/badge/phase-skeleton--implemented-blue)
-![Validation](https://img.shields.io/badge/runtime%20validation-pending-yellow)
+![Phase](https://img.shields.io/badge/phase-1--api--integration-blue)
+![Validation](https://img.shields.io/badge/automated%20tests-25%20passed-green)
 
 > [!WARNING]
-> This project is currently under active development. The repository contains an implemented architecture skeleton and test code, but runtime validation has not yet been completed. It should be treated as an experimental research prototype, not a production-ready system.
+> This experimental research prototype has passed automated core, API and concurrency tests. Standalone server validation, authentication and data-access controls remain pending; it is not production-ready.
 
 A research-oriented Agent architecture that explores whether an AI agent can **identify missing capabilities, generate new executable capabilities, validate and test them, produce auditable reports, request human approval, activate approved capabilities, and reuse them in future tasks**.
 
@@ -17,11 +17,13 @@ The long-term goal is to study whether Agent performance can scale through **cap
 
 ## Project Status
 
-> **Current Stage: Phase 1 — Skeleton Implemented / Runtime Validation Pending**
+> **Current Stage (2026-09-18): Phase 1 — Automated Core/API/Concurrency Tests Passed; Standalone Server Validation Pending**
 
 The repository currently contains the architecture skeleton, core domain models, services, interfaces, Agent orchestration, API routes, and test code for the Phase 1 MVP.
 
-However, the project has **not yet completed runtime validation**.
+The latest full test run passed **25 tests**, with one existing Starlette/AnyIO deprecation warning. TestClient HTTP flows, SQLite transactions, subprocess execution and cross-process persistence have been exercised. Standalone Uvicorn/network validation remains pending.
+
+See [project status](PROJECT_STATUS.md), [development log](DEVELOPMENT_LOG.md) and [API concurrency behavior](docs/API_CONCURRENCY.md). Architecture diagrams below describe the broader design: the current synchronous implementation handles each request's own gap directly; the queue is reserved for future background workers. Reports, approvals and audit records now share SQLite storage.
 
 Current status:
 
@@ -41,9 +43,10 @@ FastAPI routes               ✓
 Unit / lifecycle tests       ✓
 End-to-end test definition   ✓
 
-pytest execution             Pending
-FastAPI runtime test         Pending
-Verified end-to-end run      Pending
+pytest execution             25 passed
+FastAPI TestClient tests     Passed
+Mock core loop               Passed
+Standalone Uvicorn / HTTP    Pending
 Real LLM integration         Pending
 PostgreSQL runtime adapter   Pending
 Docker sandbox               Pending
@@ -54,11 +57,11 @@ Capability sharing           Future Reserved
 Marketplace                  Future Reserved
 ```
 
-The first major milestone is therefore:
+The next validation milestone is:
 
-> **First Verified End-to-End Run**
+> **Standalone API Run with Recorded Runtime Evidence**
 
-The project will not consider Phase 1 complete until the following flow is executed and verified in a real runtime environment:
+The following flow has passed automated mock tests; Phase 1 still requires standalone server verification:
 
 ```text
 Task
@@ -603,9 +606,9 @@ Planned technologies include:
 
 # 11. Phase 1 Runtime Validation
 
-The repository already contains test code, but tests have not yet been executed in the target runtime environment.
+Automated tests have been executed successfully: 25 passed, 1 existing dependency warning. This includes controlled races, 24 concurrent requests across two apps, and independent Python processes. It is not a production load benchmark.
 
-Planned validation commands:
+Validation commands (in an environment with requirements installed):
 
 ```bash
 pip install -r requirements.txt
@@ -624,7 +627,7 @@ Then inspect:
 http://localhost:8000/docs
 ```
 
-Phase 1 is complete only when a real run proves:
+The automated suite covers the flow below. Repeat it against a standalone server and record the evidence before marking Phase 1 complete:
 
 1. an unknown task creates a Capability Gap
 2. the Evolution Agent creates a candidate Capability
@@ -634,7 +637,7 @@ Phase 1 is complete only when a real run proves:
 6. administrator approval activates it
 7. a repeated task reuses the same Capability
 8. no duplicate Capability is generated
-9. audit records exist for key lifecycle actions
+9. audit records exist for review requests and approval decisions
 
 ---
 
@@ -658,8 +661,8 @@ Phase 1 is complete only when a real run proves:
 
 Still required:
 
-- runtime validation
-- bug fixing from first real execution
+- standalone Uvicorn / HTTP validation and retained runtime evidence
+- long-running load and crash-recovery validation
 
 ---
 
@@ -1106,6 +1109,6 @@ The research goal is to determine whether this architecture can enable an Agent 
 
 The project is currently focused on one thing:
 
-> **Run the existing Phase 1 skeleton and obtain the first verified end-to-end result.**
+> **Verify the standalone API and retain runtime evidence for the already-tested core loop.**
 
-No major architecture expansion should take priority over proving that the current core loop actually works in runtime.
+See [DEV_PLAN.md](DEV_PLAN.md) for the remaining Phase 1 work before real infrastructure integration.

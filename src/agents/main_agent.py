@@ -6,6 +6,8 @@ from langgraph.graph import END, StateGraph
 
 from src.agents.evolution_agent import EvolutionAgent
 from src.domain.gap import CapabilityGap
+from src.domain.capability import CapabilityStatus
+from src.domain.errors import CapabilityConflictError
 from src.interfaces.queue import QueueInterface
 from src.services.capability_service import CapabilityService
 from src.services.execution_service import CapabilityExecutionService
@@ -24,9 +26,8 @@ class TaskState(TypedDict, total=False):
 class MainAgent:
     """Owns the Task -> Capability Search -> Execute | Gap flow.
 
-    Per design doc Section 5, the Main Agent may not modify, activate, or
-    publish capabilities directly -- it only searches, executes, and (on a
-    miss) hands a CapabilityGap to the Evolution Agent.
+    Reserves a generation slot through the service on a search miss and hands
+    its own gap to the Evolution Agent. Activation remains an approval action.
     """
 
     def __init__(
@@ -68,22 +69,38 @@ class MainAgent:
 
     def _execute(self, state: TaskState) -> dict[str, Any]:
         capability = self._capability_service.get(state["capability_id"])
+        if capability is None or capability.status != CapabilityStatus.ACTIVE:
+            raise CapabilityConflictError("Capability is no longer active; retry the task")
         output = self._execution_service.execute(capability, state["input"])
-        return {"output": output, "status": "completed"}
+        return {"output": output, "status": "completed", "capability_id": capability.capability_id}
 
     def _evolve(self, state: TaskState) -> dict[str, Any]:
-        gap: CapabilityGap | None = self._gap_detection_service.detect(
-            state["task_family"], state["description"], state["input"]
+        capability, owns_generation = self._capability_service.reserve_for_task(
+            state["task_family"], state["description"]
         )
-        if gap is None:
-            return self._execute(state)
-
-        self._queue.enqueue(gap)
-        queued_gap = self._queue.dequeue()
-        assert queued_gap is not None
-
-        result = self._evolution_agent.run(queued_gap)
-        capability = result["capability"]
+        if capability.status == CapabilityStatus.ACTIVE:
+            return self._execute({**state, "capability_id": capability.capability_id})
+        if owns_generation:
+            gap = CapabilityGap(
+                task_family=state["task_family"], description=state["description"],
+                task_input=state["input"],
+            )
+            # Synchronous evolution handles its own gap, never a shared dequeue.
+            try:
+                capability = self._evolution_agent.run(gap, capability)["capability"]
+            except Exception:
+                current = self._capability_service.get(capability.capability_id)
+                if current is not None and current.status in {
+                    CapabilityStatus.DRAFT, CapabilityStatus.CANDIDATE, CapabilityStatus.VALIDATING,
+                    CapabilityStatus.TESTING, CapabilityStatus.TESTED,
+                }:
+                    try:
+                        self._capability_service.transition(current.capability_id, CapabilityStatus.FAILED)
+                    except CapabilityConflictError:
+                        pass  # Another state change won; do not overwrite it.
+                raise
+        # Followers receive the same ID and current progress without generating
+        # another candidate. Submit again after activation to execute their input.
         return {
             "output": None,
             "status": f"capability_{capability.status.value}",

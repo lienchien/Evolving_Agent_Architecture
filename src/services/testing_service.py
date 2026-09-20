@@ -21,11 +21,13 @@ class TestingService:
         sandbox: SandboxInterface,
         capability_service: CapabilityService,
         report_store: TestReportStore,
+        report_directory: Path | str = "capability_library",
     ) -> None:
         self._llm_provider = llm_provider
         self._sandbox = sandbox
         self._capability_service = capability_service
         self._report_store = report_store
+        self._report_directory = Path(report_directory)
 
     def run_autonomous_tests(self, capability: Capability, functional_results: list) -> TestReport:
         boundary_cases = self._llm_provider.generate_boundary_tests(capability)
@@ -77,7 +79,7 @@ class TestingService:
         return report
 
     def _write_report_files(self, capability: Capability, report: TestReport) -> None:
-        capability_dir = Path("capability_library") / capability.capability_id
+        capability_dir = self._report_directory / capability.capability_id
         capability_dir.mkdir(parents=True, exist_ok=True)
         (capability_dir / "test_report.json").write_text(
             report.model_dump_json(indent=2), encoding="utf-8"

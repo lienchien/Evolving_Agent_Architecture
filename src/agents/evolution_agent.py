@@ -58,7 +58,7 @@ class EvolutionAgent:
         return graph.compile()
 
     def _generate(self, state: EvolutionState) -> dict[str, Any]:
-        capability = self._evolution_service.evolve(state["gap"])
+        capability = self._evolution_service.evolve(state["gap"], state.get("capability"))
         return {"capability": capability}
 
     def _validate(self, state: EvolutionState) -> dict[str, Any]:
@@ -76,5 +76,8 @@ class EvolutionAgent:
         capability = self._approval_service.request_approval(state["capability"])
         return {"capability": capability}
 
-    def run(self, gap: CapabilityGap) -> EvolutionState:
-        return self._graph.invoke({"gap": gap})
+    def run(self, gap: CapabilityGap, reserved: Capability | None = None) -> EvolutionState:
+        initial: EvolutionState = {"gap": gap}
+        if reserved is not None:
+            initial["capability"] = reserved
+        return self._graph.invoke(initial)

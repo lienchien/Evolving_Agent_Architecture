@@ -733,3 +733,11 @@ token 與 average cost。正式跨模型／baseline 實驗仍屬 Phase 3；本�
 詳細語意與後續邊界見 [TOKEN_COST_RESEARCH.md](docs/TOKEN_COST_RESEARCH.md)。真實 provider
 usage、static baseline runner、reuse similarity、adaptation/revision cost 與長序列正式
 研究仍未完成，不能以本輪 mock 數據宣稱 CEAA 已證明節省 token。
+
+### 提交與分支狀態
+
+- 功能提交：`ca08851` — `feat: add token cost research instrumentation`。
+- 提交包含 24 個檔案，新增研究模型、service、API、測試與專用說明文件，並同步更新
+  System Design、Future Vision、README、Project Status 與 Development Plan。
+- 提交完成後工作樹乾淨；目前仍停留在 `feature/token-cost-research`。
+- `dev` 保持於 `6f2fd1d`，本功能尚未合併至 `dev`，也尚未推送遠端 feature 分支。

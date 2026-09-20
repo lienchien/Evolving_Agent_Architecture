@@ -1,5 +1,7 @@
 # Token／費用研究量測
 
+實作狀態：已提交於 `feature/token-cost-research` 的 `ca08851`；尚未合併至 `dev`。
+
 ## 研究目的
 
 本功能將 System Design v1.7 的 H-cost 假說提前納入 Phase 1 的執行基礎：

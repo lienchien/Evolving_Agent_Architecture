@@ -6,8 +6,10 @@
 
 **Phase 1 — 核心驗證完成，Token／費用研究量測基礎已納入。**
 
-目前分支 `feature/token-cost-research` 基於 `dev` 的 `6f2fd1d`，在既有 API、併發與
-獨立 Uvicorn 驗證上加入 task／LLM interaction 成本觀測、SQLite 持久化與研究 API。
+目前分支 `feature/token-cost-research` 基於 `dev` 的 `6f2fd1d`，功能已提交為
+`ca08851`（`feat: add token cost research instrumentation`），尚未合併至 `dev`。
+本分支在既有 API、併發與獨立 Uvicorn 驗證上加入 task／LLM interaction 成本觀測、
+SQLite 持久化與研究 API。
 最近完整測試為 **28 passed, 1 warning in 6.42s**。實作仍採 Mock LLM、SQLite、
 Python subprocess 與 Console Notification。
 本輪實際過程見 [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md)，完成度見

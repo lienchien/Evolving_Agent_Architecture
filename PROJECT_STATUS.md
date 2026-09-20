@@ -4,6 +4,8 @@
 
 開發分支：`feature/token-cost-research`（基於 `dev` 的 `6f2fd1d`）
 
+功能提交：`ca08851`（`feat: add token cost research instrumentation`）；尚未合併至 `dev`。
+
 ## Current Stage
 
 **Phase 1 — Verified Core plus Token/Cost Research Instrumentation**

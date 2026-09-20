@@ -4,7 +4,7 @@
 
 ![Status](https://img.shields.io/badge/status-experimental-orange)
 ![Phase](https://img.shields.io/badge/phase-1--verified-blue)
-![Validation](https://img.shields.io/badge/automated%20tests-25%20passed-green)
+![Validation](https://img.shields.io/badge/automated%20tests-28%20passed-green)
 
 > [!WARNING]
 > 本實驗性研究原型已通過核心、API、併發自動化測試及獨立 Uvicorn/HTTP 驗證；認證、資料存取控制、執行限制強制套用與 production hardening 仍待完成，尚非 production-ready 系統。
@@ -17,11 +17,11 @@
 
 ## 專案狀態
 
-> **目前階段（2026-09-20）：Phase 1 驗證退出條件完成，Production Hardening 待進行**
+> **目前階段（2026-09-20）：Phase 1 已驗證，並加入 Token／費用研究量測基礎**
 
 目前 repository 已包含 Phase 1 MVP 所需的架構骨架、核心 domain model、service、interface、Agent orchestration、API route 與測試程式。
 
-最近完整測試為 **25 passed**，另有一項既有 Starlette/AnyIO 棄用警告。已執行 TestClient HTTP 流程、SQLite 交易、subprocess 與跨程序持久化驗證；獨立 Uvicorn 程序也已完成任務、報告、核准、重用與停止／重啟持久化 HTTP 流程。
+最近完整測試為 **28 passed**，另有一項既有 Starlette/AnyIO 棄用警告。除已驗證的 HTTP 與持久化流程外，Phase 1 現在會為 token efficiency／cost amortization 研究記錄 task 層級成本觀測與每次 LLM interaction；provider 未回報的 token 明確維持 unavailable，不以字數或其他方式估算。
 
 詳見[專案狀態](PROJECT_STATUS.md)、[開發紀錄](DEVELOPMENT_LOG.md)及[API 併發行為](docs/API_CONCURRENCY.md)。下方架構圖包含長期設計：目前同步演化直接處理自己的 gap，queue 預留給未來背景 worker；報告、核准與 audit 已共用 SQLite 儲存。
 
@@ -43,10 +43,12 @@ FastAPI routes                  ✓
 Unit / lifecycle tests          ✓
 End-to-end test definition      ✓
 
-pytest 實際執行                  25 passed
+pytest 實際執行                  28 passed
 FastAPI TestClient 測試          Passed
 Mock 核心循環                   Passed
-獨立 Uvicorn / HTTP             Pending
+獨立 Uvicorn / HTTP             Passed
+Token／費用量測基礎              Passed
+真實 Provider Usage 資料         Pending
 真實 LLM 整合                    Pending
 PostgreSQL runtime adapter      Pending
 Docker sandbox                  Pending
@@ -57,11 +59,11 @@ Capability sharing              Future Reserved
 Marketplace                     Future Reserved
 ```
 
-下一個驗證里程碑是：
+下一個研究里程碑是：
 
-> **獨立 API 執行與 runtime 證據留存**
+> **真實 provider token／費用擷取與受控 baseline 比較**
 
-以下流程已通過自動化 mock 測試；Phase 1 仍需完成獨立伺服器驗證：
+完整 mock 流程與獨立伺服器路徑皆已通過；Phase 1 現在也會保存比較首次建立與後續重用所需的量測資料：
 
 ```text
 Task
@@ -75,7 +77,12 @@ Task
 → Human Approval
 → Activate
 → Reuse
+→ 持久化 LLM interaction 與 task cost metrics
+→ 以明確 baseline 比較 cumulative CEAA usage
 ```
+
+量測語意、API 與 Phase 1 基礎／Phase 3 正式實驗的邊界，見
+[Token／費用研究量測](docs/TOKEN_COST_RESEARCH.md)。
 
 ---
 
@@ -604,7 +611,7 @@ InMemoryQueue
 
 # 11. Phase 1 Runtime Validation
 
-自動化測試已實際通過：25 passed，另有一項既有套件警告。包含受控競爭、跨兩個 app 的 24 請求併發，以及獨立 Python 程序驗證；不代表 production 負載基準測試。
+自動化測試已實際通過：28 passed，另有一項既有套件警告。包含受控競爭、跨兩個 app 的 24 請求併發、獨立 Python 程序，以及 Token／費用量測持久化與 amortization 計算；不代表 production 負載基準，也不代表目前 Mock provider 已證明可節省真實 token。
 
 驗證指令（在已安裝相依套件的環境中）：
 

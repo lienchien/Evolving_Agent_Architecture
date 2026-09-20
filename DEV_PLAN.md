@@ -4,12 +4,12 @@
 
 ## 目前基準
 
-**Phase 1 — 驗證退出條件完成；進入 production hardening / Phase 1.5 準備。**
+**Phase 1 — 核心驗證完成，Token／費用研究量測基礎已納入。**
 
-目前 `dev` 與 `origin/dev` 同步於 `773df54`，已完成 API feature、四項併發修復、
-完整 pytest 及獨立 Uvicorn/HTTP 重啟驗證。最近完整測試為
-**25 passed, 1 warning in 6.82s**。實作仍採 Mock LLM、SQLite、Python subprocess
-與 Console Notification。
+目前分支 `feature/token-cost-research` 基於 `dev` 的 `6f2fd1d`，在既有 API、併發與
+獨立 Uvicorn 驗證上加入 task／LLM interaction 成本觀測、SQLite 持久化與研究 API。
+最近完整測試為 **28 passed, 1 warning in 6.42s**。實作仍採 Mock LLM、SQLite、
+Python subprocess 與 Console Notification。
 本輪實際過程見 [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md)，完成度見
 [PROJECT_STATUS.md](PROJECT_STATUS.md)。
 
@@ -25,6 +25,8 @@
 8. 明確標記暫緩的授權、資料隔離、限制執行與資源管制項目。
 9. 以獨立 Uvicorn 程序完成外部 HTTP 全流程，核對 runtime log、JSON/Markdown 報告、
    SQLite 治理資料，以及停止／重啟後的能力重用與資料持久化。
+10. 將 H-cost 研究提前納入 Phase 1：持久化 task 與 LLM interaction 指標，提供
+    明細／summary API，資料完整且有 baseline 時才計算 saving 與 break-even reuse count。
 
 上述行為與資料庫升級細節以 [API_CONCURRENCY.md](docs/API_CONCURRENCY.md) 為準。
 授權與資料控制本輪不啟用；既有安全註記需保留。
@@ -45,13 +47,15 @@
 隔離 SQLite 保存 1 Capability、1 TestReport、1 ApprovalRecord、2 AuditEntry。
 完整執行紀錄見 [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md)。
 
-## 下一個里程碑：Production Hardening 與 Phase 1.5 Adapter
+## 下一個里程碑：真實 Usage 與 Production Hardening
 
-1. 為生成名額加入 lease／逾時復原，驗證程序強制終止後能安全重試。
-2. 加入認證、管理員授權、可信 reviewer 及 tenant/owner/scope 資料控制。
-3. 將 restrictions 接到實際執行政策，加入請求大小、資源與執行配額。
-4. 執行長時間負載、延遲、SQLite lock timeout 與故障復原量測。
-5. 依序評估 LiteLLM、PostgreSQL 與 Docker sandbox adapter；保留 Mock/SQLite 測試基線。
+1. 讓 LiteLLM／NVIDIA NIM／OpenRouter adapter 回傳 provider 原生 token usage 與可靠費用。
+2. 建立 static-agent baseline runner 與 Exact／Near-Similar／Generalized 任務資料集。
+3. 為生成名額加入 lease／逾時復原，驗證程序強制終止後能安全重試。
+4. 加入認證、管理員授權、可信 reviewer 及 tenant/owner/scope 資料控制。
+5. 將 restrictions 接到實際執行政策，加入請求大小、資源與執行配額。
+6. 執行長時間負載、延遲、SQLite lock timeout 與故障復原量測。
+7. 評估 PostgreSQL 與 Docker sandbox adapter；保留 Mock/SQLite 測試基線。
 
 ## 測試與執行
 
@@ -69,7 +73,8 @@ $testRunPath = Join-Path (Get-Location).Path ('.test-run-' + [guid]::NewGuid().T
 ```
 
 測試資料會存入指定目錄；確認執行結束後只清理該次產物，不將資料庫或暫存檔提交。
-API、併發測試分別位於 `tests/test_api.py`、`tests/test_concurrency.py`；
+API、併發與成本研究測試分別位於 `tests/test_api.py`、`tests/test_concurrency.py`、
+`tests/test_research_metrics.py`；
 原有 schema、service、full-loop、failure/revision 測試仍保留。
 
 ## 後續修正候選
@@ -91,6 +96,7 @@ API、併發測試分別位於 `tests/test_api.py`、`tests/test_concurrency.py`
 2. PostgreSQL repository、migration 與 runtime configuration。
 3. Docker sandbox、資源限制、檔案隔離、network policy 與 cleanup。
 4. 更多 boundary/failure/regression/generalization/safety 測試及 performance metrics。
+5. 將真實 provider usage 寫入 Phase 1 已建立的研究資料模型，禁止估算缺失 token。
 
 Phase 2 再加入 embedding/pgvector、語意檢索、相容性與排序；之後評估 tracing、
 實驗追蹤、Redis/RQ 背景 worker、更強隔離、管理介面及企業場景。

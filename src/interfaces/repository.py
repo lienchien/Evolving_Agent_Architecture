@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from src.domain.capability import Capability
 from src.domain.approval import ApprovalRecord
 from src.domain.report import TestReport
+from src.domain.research import LLMInteractionMetric, TaskCostMetric
 
 
 class CapabilityRepository(ABC):
@@ -43,3 +44,17 @@ class CapabilityRepository(ABC):
 
     @abstractmethod
     def list_approvals(self) -> list[ApprovalRecord]: ...
+
+    @abstractmethod
+    def save_llm_interaction(self, metric: LLMInteractionMetric) -> None: ...
+
+    @abstractmethod
+    def list_llm_interactions(self, task_id: str | None = None) -> list[LLMInteractionMetric]: ...
+
+    @abstractmethod
+    def save_task_cost(self, metric: TaskCostMetric) -> None: ...
+
+    @abstractmethod
+    def list_task_costs(
+        self, task_family: str | None = None, capability_id: str | None = None,
+    ) -> list[TaskCostMetric]: ...

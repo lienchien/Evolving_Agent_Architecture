@@ -679,3 +679,57 @@ loopback 連接埠確認不再接受連線。
 Phase 1 定義的核心、HTTP、併發、跨程序持久化及獨立伺服器驗證均已有執行證據。
 這不代表 production-ready：認證／授權、tenant/owner/scope 控制、可信 reviewer、
 restrictions 強制執行、真正 sandbox、生成租約復原、長時間負載與跨主機部署仍未完成。
+
+---
+
+## 2026-09-20 — 將 Token／費用研究量測納入 Phase 1
+
+### 來源與範圍
+
+`Capability-Evolving Agent Architecture — System Design v1.7.md` 將 H-cost 定義為目前
+CEAA 研究範圍：首次建立 Capability 的成本可能較高，但後續重用可能降低 cumulative
+token 與 average cost。正式跨模型／baseline 實驗仍屬 Phase 3；本輪先把可靠量測、
+持久化、查詢與衍生計算基礎納入已開發的 Phase 1。
+
+功能分支依規則從乾淨 `dev` 的 `6f2fd1d` 建立為 `feature/token-cost-research`。
+
+### 實作
+
+- 新增 `TokenUsage`、`LLMInteractionMetric`、`TaskCostMetric`、`TokenCostSummary` 等模型。
+- `LLMProvider` response 可攜帶 provider/model、input/output/reasoning/total tokens 與
+  provider cost；仍相容於尚未回傳 usage envelope 的測試 provider。
+- MainAgent 為每次 task 建立 `TASK-*`，記錄能力建立／重用、outcome、task success、
+  總延遲及 capability execution time。
+- EvolutionService 與 TestingService 分別記錄 generation、testing interaction、延遲、
+  success/error 與 provider usage。
+- SQLite 新增 `llm_interactions`、`task_cost_metrics` 及查詢索引，與既有 Capability、
+  Report、Approval、Audit 共用 database path，重啟或另一 app 可讀回。
+- 新增 `/api/research/tasks`、`/api/research/interactions`、`/api/research/summary`；
+  summary 可在提供明確 `baseline_tokens_per_task` 時計算 average、saving rate 與
+  break-even reuse count。
+- 首次建立只到 pending approval，沒有完成原始輸入，因此 `task_success=false`；
+  核准後實際執行並回傳 `completed` 才算成功重用，避免成功率失真。
+
+### 資料完整性決策
+
+- Provider 未回報的 token 一律保存 `null/unavailable`，不以字元、單字或估算 tokenizer
+  取代；reasoning token 尤其不可推估。
+- MockLLMProvider 沒有真實模型或 tokenizer：記錄兩次 call 與可靠的費用 0.0，token
+  保持 unavailable。資料不完整時不產生 cumulative token、saving 或 break-even。
+- `baseline_tokens_per_task` 必須由研究設定或實測提供，系統不自行猜測。
+- Metric API 暫無認證／tenant scope，已加 `TODO(security)`，沿用開發階段安全限制。
+
+### 驗證
+
+- 新增 `tests/test_research_metrics.py` 三項測試。
+- Mock 測試確認 token 不被虛構、interaction 與 task ID 可追溯、重啟後資料仍存在。
+- 完整 usage 測試 provider 確認首次建立 100 tokens、重用 0 LLM tokens，於
+  60 tokens/task baseline 下累積 CEAA 100 對 baseline 120，第一次重用達 break-even；
+  provider cost 合計 0.01 USD。
+- 另驗證 generation 失敗仍保存 interaction、error、建立嘗試與未知 token，不誤算成功。
+- 既有 25 項回歸先通過；加入新測試後完整套件為
+  **28 passed, 1 warning in 6.42s**。警告仍為 Starlette／AnyIO alias 棄用。
+
+詳細語意與後續邊界見 [TOKEN_COST_RESEARCH.md](docs/TOKEN_COST_RESEARCH.md)。真實 provider
+usage、static baseline runner、reuse similarity、adaptation/revision cost 與長序列正式
+研究仍未完成，不能以本輪 mock 數據宣稱 CEAA 已證明節省 token。

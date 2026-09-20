@@ -594,6 +594,7 @@ The current CEAA implementation can later map into platform components without r
 | SQLite Repository | Persistence prototype |
 | MockLLMProvider | Model Gateway placeholder |
 | AuditService | Governance / Observability |
+| ResearchMetricsService | Token/cost observability and experiment data foundation |
 
 This mapping is directional, not a commitment to preserve the current implementation unchanged.
 

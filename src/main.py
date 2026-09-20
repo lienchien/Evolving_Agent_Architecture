@@ -15,6 +15,7 @@ from src.infrastructure.memory_queue import InMemoryEvolutionQueue
 from src.infrastructure.mock_llm import MockLLMProvider
 from src.infrastructure.sqlite_repository import SqliteCapabilityRepository
 from src.infrastructure.subprocess_sandbox import SubprocessSandbox
+from src.interfaces.llm import LLMProvider
 from src.services.approval_service import ApprovalService
 from src.services.audit_service import AuditService
 from src.services.capability_service import CapabilityService
@@ -23,6 +24,7 @@ from src.services.execution_service import CapabilityExecutionService
 from src.services.gap_detection_service import GapDetectionService
 from src.services.notification_service import NotificationService
 from src.services.report_store import TestReportStore
+from src.services.research_metrics_service import ResearchMetricsService
 from src.services.testing_service import TestingService
 from src.services.validation_service import ValidationService
 
@@ -34,24 +36,37 @@ class Container:
     without touching services, agents, or API routes.
     """
 
-    def __init__(self, database_path: str | None = None, report_directory: str = "capability_library") -> None:
+    def __init__(
+        self,
+        database_path: str | None = None,
+        report_directory: str = "capability_library",
+        llm_provider: LLMProvider | None = None,
+    ) -> None:
         repository = SqliteCapabilityRepository(
             database_path if database_path is not None else settings.database_path
         )
-        llm_provider = MockLLMProvider()
+        llm_provider = llm_provider or MockLLMProvider()
         sandbox = SubprocessSandbox()
         notification_provider = ConsoleNotificationProvider()
 
         self.queue = InMemoryEvolutionQueue()
         self.report_store = TestReportStore(repository)
         self.audit_service = AuditService(repository)
+        self.research_metrics_service = ResearchMetricsService(repository)
 
         self.capability_service = CapabilityService(repository)
         self.gap_detection_service = GapDetectionService(self.capability_service)
-        self.evolution_service = EvolutionService(llm_provider, self.capability_service)
+        self.evolution_service = EvolutionService(
+            llm_provider, self.capability_service, self.research_metrics_service
+        )
         self.validation_service = ValidationService(sandbox, self.capability_service)
         self.testing_service = TestingService(
-            llm_provider, sandbox, self.capability_service, self.report_store, report_directory
+            llm_provider,
+            sandbox,
+            self.capability_service,
+            self.report_store,
+            report_directory,
+            self.research_metrics_service,
         )
         self.notification_service = NotificationService(notification_provider)
         self.approval_service = ApprovalService(
@@ -72,10 +87,11 @@ class Container:
             self.execution_service,
             self.evolution_agent,
             self.queue,
+            self.research_metrics_service,
         )
 
 
-from src.api.routes import approvals, audit, capabilities, evolution, tasks  # noqa: E402
+from src.api.routes import approvals, audit, capabilities, evolution, research, tasks  # noqa: E402
 
 
 def create_app(container: Container | None = None) -> FastAPI:
@@ -100,6 +116,7 @@ def create_app(container: Container | None = None) -> FastAPI:
     app.include_router(evolution.router)
     app.include_router(approvals.router)
     app.include_router(audit.router)
+    app.include_router(research.router)
     return app
 
 

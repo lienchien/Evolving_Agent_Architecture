@@ -25,6 +25,10 @@
 
 詳見[專案狀態](PROJECT_STATUS.md)、[開發紀錄](DEVELOPMENT_LOG.md)及[API 併發行為](docs/API_CONCURRENCY.md)。下方架構圖包含長期設計：目前同步演化直接處理自己的 gap，queue 預留給未來背景 worker；報告、核准與 audit 已共用 SQLite 儲存。
 
+[Token／費用研究契約](docs/TOKEN_COST_RESEARCH.md)已同步到 `dev`。程式實作及其 28 項
+測試證據仍位於 `feature/token-cost-research`（`ca08851`），尚未合併；目前 `dev`
+runtime 仍為 25 項測試，沒有 `/api/research/*` 路由。
+
 目前狀態：
 
 ```text
@@ -46,7 +50,8 @@ End-to-end test definition      ✓
 pytest 實際執行                  25 passed
 FastAPI TestClient 測試          Passed
 Mock 核心循環                   Passed
-獨立 Uvicorn / HTTP             Pending
+獨立 Uvicorn / HTTP             Passed
+Token／費用研究契約              已文件化（feature 程式待合併）
 真實 LLM 整合                    Pending
 PostgreSQL runtime adapter      Pending
 Docker sandbox                  Pending
@@ -57,11 +62,11 @@ Capability sharing              Future Reserved
 Marketplace                     Future Reserved
 ```
 
-下一個驗證里程碑是：
+下一個開發決策是：
 
-> **獨立 API 執行與 runtime 證據留存**
+> **審查 Token／費用量測 feature 是否納入 runtime，再繼續 production hardening**
 
-以下流程已通過自動化 mock 測試；Phase 1 仍需完成獨立伺服器驗證：
+以下核心流程已通過自動化 mock 測試與獨立伺服器驗證：
 
 ```text
 Task

@@ -450,6 +450,11 @@ Measure:
 - regression rate,
 - review burden.
 
+Phase 1 的量測契約與 feature 候選實作見
+[`TOKEN_COST_RESEARCH.md`](TOKEN_COST_RESEARCH.md)。該文件已同步到 `dev`，但研究 API
+與 SQLite metrics schema 仍留在 `feature/token-cost-research`，不得視為 v0.5 runtime
+已完成。正式 Gate B 實驗仍需真實 provider usage、static baseline 與相似度任務序列。
+
 ### 6.7 Exit Criterion
 
 > **The capability library improves future execution rather than merely accumulating artifacts and technical debt.**

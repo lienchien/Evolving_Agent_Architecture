@@ -679,3 +679,33 @@ loopback 連接埠確認不再接受連線。
 Phase 1 定義的核心、HTTP、併發、跨程序持久化及獨立伺服器驗證均已有執行證據。
 這不代表 production-ready：認證／授權、tenant/owner/scope 控制、可信 reviewer、
 restrictions 強制執行、真正 sandbox、生成租約復原、長時間負載與跨主機部署仍未完成。
+
+---
+
+## 2026-09-21 — Token／費用研究文件合併至 dev
+
+### 遠端基準
+
+- 合併前先取得 `origin/dev`，發現遠端由 `6f2fd1d` 前進至 `8ad9075`。
+- 本機 `dev` 以 fast-forward 更新，保留 `95c56da` 的 event-driven／long-running vision
+  與 `8ad9075` 的 v0.2→v1.0 roadmap，沒有覆寫遠端文件。
+
+### 文件限定合併
+
+`feature/token-cost-research` 已有兩筆本機提交：
+
+- `ca08851` — `feat: add token cost research instrumentation`；
+- `d3270fc` — `docs: record token cost feature delivery`。
+
+本輪依要求只將研究設計、API／資料契約、測試證據與 roadmap 對應同步到 `dev`。
+沒有帶入 `src/`、`tests/` 或 SQLite schema 變更，也沒有 merge／cherry-pick feature commit。
+
+為避免文件誤導，`dev` 明確維持以下狀態：
+
+- runtime 測試基準仍為 **25 passed**；
+- `/api/research/*`、`llm_interactions`、`task_cost_metrics` 尚不存在於 `dev`；
+- Feature 的 **28 passed, 1 warning in 6.42s** 只代表候選實作驗證；
+- Mock token 保持 unavailable、不推估，以及 baseline／break-even 規則已先成為研究契約。
+
+新增 [TOKEN_COST_RESEARCH.md](docs/TOKEN_COST_RESEARCH.md)，並同步 System Design v1.7、
+Future Vision、平台 roadmap、README、PROJECT_STATUS、DEV_PLAN 與 API concurrency 說明。

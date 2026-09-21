@@ -25,6 +25,10 @@ The latest full test run passed **25 tests**, with one existing Starlette/AnyIO 
 
 See [project status](PROJECT_STATUS.md), [development log](DEVELOPMENT_LOG.md) and [API concurrency behavior](docs/API_CONCURRENCY.md). Architecture diagrams below describe the broader design: the current synchronous implementation handles each request's own gap directly; the queue is reserved for future background workers. Reports, approvals and audit records now share SQLite storage.
 
+The [token/cost research contract](docs/TOKEN_COST_RESEARCH.md) is documented on `dev`.
+Its implementation and 28-test evidence remain on `feature/token-cost-research` (`ca08851`) and
+have not been merged; the current `dev` runtime still has 25 tests and no `/api/research/*` routes.
+
 Current status:
 
 ```text
@@ -46,7 +50,8 @@ End-to-end test definition   ✓
 pytest execution             25 passed
 FastAPI TestClient tests     Passed
 Mock core loop               Passed
-Standalone Uvicorn / HTTP    Pending
+Standalone Uvicorn / HTTP    Passed
+Token/cost research contract Documented (feature code pending)
 Real LLM integration         Pending
 PostgreSQL runtime adapter   Pending
 Docker sandbox               Pending
@@ -57,11 +62,11 @@ Capability sharing           Future Reserved
 Marketplace                  Future Reserved
 ```
 
-The next validation milestone is:
+The next development decision is:
 
-> **Standalone API Run with Recorded Runtime Evidence**
+> **Review the token/cost measurement feature for runtime integration, then continue production hardening**
 
-The following flow has passed automated mock tests; Phase 1 still requires standalone server verification:
+The following core flow has passed automated mock tests and standalone server verification:
 
 ```text
 Task

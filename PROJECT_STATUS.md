@@ -2,7 +2,7 @@
 
 更新日期：2026-09-20
 
-開發分支：`dev`（與 `origin/dev` 同步，`773df54`）
+開發分支：`dev`（本次文件合併基於 `8ad9075`）
 
 ## Current Stage
 
@@ -15,6 +15,19 @@
 
 歷史過程見 [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md)；API 行為及升級條件見
 [API_CONCURRENCY.md](docs/API_CONCURRENCY.md)。
+
+## Token／費用研究文件同步
+
+Token efficiency／cost amortization 的研究契約已同步到
+[TOKEN_COST_RESEARCH.md](docs/TOKEN_COST_RESEARCH.md)，並與 System Design、Future Vision
+及平台 roadmap 對齊。程式實作仍只存在於 `feature/token-cost-research`：
+
+- `ca08851` — Token／費用量測模型、SQLite、service、API 與測試；
+- `d3270fc` — 功能交付紀錄文件。
+
+這兩筆提交**尚未合併至 `dev`**。因此目前 `dev` 仍以 25 項測試為 runtime 基準，沒有
+`/api/research/*`、`llm_interactions` 或 `task_cost_metrics`。Feature 的 28 項測試結果只
+作為候選實作證據，不能列為 `dev` 已完成能力。
 
 ## 已實作與驗證
 

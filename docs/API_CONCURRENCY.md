@@ -47,6 +47,13 @@
 不會自行刪除或選擇勝出版本。需先備份，明確處理重複紀錄，再啟動升級。
 所有 worker 應一起升級，避免舊版程式繞過新版 revision 檢查。
 
+## Token／費用研究候選
+
+`dev` 目前的持久化資料表仍只有本文件前述 Capability、Report、Approval 與 Audit。
+Token／費用量測的 `llm_interactions`、`task_cost_metrics` 與 `/api/research/*` 已在
+`feature/token-cost-research` 實作，但尚未合併。研究契約、unavailable 規則與驗證證據
+見 [TOKEN_COST_RESEARCH.md](TOKEN_COST_RESEARCH.md)。
+
 ## 驗證
 
 `tests/test_concurrency.py` 涵蓋：

@@ -6,7 +6,7 @@
 
 **Phase 1 — 驗證退出條件完成；進入 production hardening / Phase 1.5 準備。**
 
-目前 `dev` 與 `origin/dev` 同步於 `773df54`，已完成 API feature、四項併發修復、
+本次文件合併以最新遠端 `dev` 的 `8ad9075` 為基準；現有 runtime 已完成 API feature、四項併發修復、
 完整 pytest 及獨立 Uvicorn/HTTP 重啟驗證。最近完整測試為
 **25 passed, 1 warning in 6.82s**。實作仍採 Mock LLM、SQLite、Python subprocess
 與 Console Notification。
@@ -28,6 +28,20 @@
 
 上述行為與資料庫升級細節以 [API_CONCURRENCY.md](docs/API_CONCURRENCY.md) 為準。
 授權與資料控制本輪不啟用；既有安全註記需保留。
+
+## 候選增量：Token／費用研究量測
+
+研究契約已納入 Phase 1 文件，詳見
+[TOKEN_COST_RESEARCH.md](docs/TOKEN_COST_RESEARCH.md)。候選實作位於
+`feature/token-cost-research` 的 `ca08851`，文件紀錄為 `d3270fc`，尚未合併 `dev`。
+
+在決定合併程式前應重新檢查：
+
+1. task／LLM interaction 指標是否符合真實 provider adapter 的 usage envelope；
+2. unavailable token 不估算、首次待核准 task 不誤算成功的研究語意；
+3. metrics API 的認證／tenant scope 風險是否接受於目前開發階段；
+4. SQLite 新表、摘要查詢與 failure observation 對既有併發及 migration 的影響；
+5. Feature 的 28 項測試及獨立 Uvicorn research endpoint 驗證是否需在合併前重跑。
 
 ## 已完成里程碑：獨立 API Runtime 驗證
 

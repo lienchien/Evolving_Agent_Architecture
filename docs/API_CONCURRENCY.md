@@ -31,7 +31,8 @@
 
 ## 多實例與資料庫
 
-- capabilities、版本化 test_reports、approval_records、audit_entries
+- capabilities、版本化 test_reports、approval_records、audit_entries、
+  llm_interactions、task_cost_metrics
   都儲存在同一 SQLite 檔案。多個 app／程序必須設定相同的絕對 database path。
 - 報告 API 直接讀 SQLite；`capability_library/<id>/test_report.*` 是輸出副本，
   其他 worker 不需要相同的報告目錄。此次不會自動匯入既有報告副本；升級前
@@ -47,12 +48,11 @@
 不會自行刪除或選擇勝出版本。需先備份，明確處理重複紀錄，再啟動升級。
 所有 worker 應一起升級，避免舊版程式繞過新版 revision 檢查。
 
-## Token／費用研究候選
+## Token／費用研究
 
-`dev` 目前的持久化資料表仍只有本文件前述 Capability、Report、Approval 與 Audit。
-Token／費用量測的 `llm_interactions`、`task_cost_metrics` 與 `/api/research/*` 已在
-`feature/token-cost-research` 實作，但尚未合併。研究契約、unavailable 規則與驗證證據
-見 [TOKEN_COST_RESEARCH.md](TOKEN_COST_RESEARCH.md)。
+`llm_interactions`、`task_cost_metrics` 與 `/api/research/*` 已納入 `dev`。
+Token／費用研究資料的欄位語意、查詢 API 與 unavailable 規則見
+[TOKEN_COST_RESEARCH.md](TOKEN_COST_RESEARCH.md)。
 
 ## 驗證
 

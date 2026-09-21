@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import uuid
+from time import perf_counter
 from typing import Any, TypedDict
 
 from langgraph.graph import END, StateGraph
@@ -12,15 +14,20 @@ from src.interfaces.queue import QueueInterface
 from src.services.capability_service import CapabilityService
 from src.services.execution_service import CapabilityExecutionService
 from src.services.gap_detection_service import GapDetectionService
+from src.services.research_metrics_service import ResearchMetricsService
 
 
 class TaskState(TypedDict, total=False):
+    task_id: str
     task_family: str
     description: str
     input: dict
     capability_id: str | None
     output: dict | None
     status: str
+    capability_created: bool
+    capability_reused: bool
+    capability_execution_ms: float
 
 
 class MainAgent:
@@ -37,12 +44,14 @@ class MainAgent:
         execution_service: CapabilityExecutionService,
         evolution_agent: EvolutionAgent,
         queue: QueueInterface,
+        research_metrics: ResearchMetricsService | None = None,
     ) -> None:
         self._capability_service = capability_service
         self._gap_detection_service = gap_detection_service
         self._execution_service = execution_service
         self._evolution_agent = evolution_agent
         self._queue = queue
+        self._research_metrics = research_metrics
         self._graph = self._build_graph()
 
     def _build_graph(self):
@@ -65,14 +74,21 @@ class MainAgent:
         capability = self._capability_service.find_active_by_task_family(state["task_family"])
         if capability is None:
             return {"capability_id": None}
-        return {"capability_id": capability.capability_id}
+        return {"capability_id": capability.capability_id, "capability_reused": True}
 
     def _execute(self, state: TaskState) -> dict[str, Any]:
         capability = self._capability_service.get(state["capability_id"])
         if capability is None or capability.status != CapabilityStatus.ACTIVE:
             raise CapabilityConflictError("Capability is no longer active; retry the task")
+        started = perf_counter()
         output = self._execution_service.execute(capability, state["input"])
-        return {"output": output, "status": "completed", "capability_id": capability.capability_id}
+        return {
+            "output": output,
+            "status": "completed",
+            "capability_id": capability.capability_id,
+            "capability_reused": True,
+            "capability_execution_ms": (perf_counter() - started) * 1000,
+        }
 
     def _evolve(self, state: TaskState) -> dict[str, Any]:
         capability, owns_generation = self._capability_service.reserve_for_task(
@@ -87,7 +103,9 @@ class MainAgent:
             )
             # Synchronous evolution handles its own gap, never a shared dequeue.
             try:
-                capability = self._evolution_agent.run(gap, capability)["capability"]
+                capability = self._evolution_agent.run(
+                    gap, capability, state.get("task_id")
+                )["capability"]
             except Exception:
                 current = self._capability_service.get(capability.capability_id)
                 if current is not None and current.status in {
@@ -105,9 +123,51 @@ class MainAgent:
             "output": None,
             "status": f"capability_{capability.status.value}",
             "capability_id": capability.capability_id,
+            "capability_created": owns_generation,
+            "capability_reused": False,
         }
 
     def run_task(self, task_family: str, description: str, input_data: dict) -> TaskState:
-        return self._graph.invoke(
-            {"task_family": task_family, "description": description, "input": input_data}
-        )
+        task_id = f"TASK-{uuid.uuid4().hex[:12]}"
+        started = perf_counter()
+        try:
+            result = self._graph.invoke({
+                "task_id": task_id,
+                "task_family": task_family,
+                "description": description,
+                "input": input_data,
+            })
+        except Exception as exc:
+            if self._research_metrics is not None:
+                self._research_metrics.complete_task(
+                    task_id=task_id,
+                    task_family=task_family,
+                    capability_id=None,
+                    capability_version=None,
+                    capability_created=False,
+                    capability_reused=False,
+                    latency_ms=(perf_counter() - started) * 1000,
+                    capability_execution_ms=None,
+                    outcome_status="error",
+                    task_success=False,
+                    error=str(exc),
+                )
+            raise
+
+        capability_id = result.get("capability_id")
+        capability = self._capability_service.get(capability_id) if capability_id else None
+        if self._research_metrics is not None:
+            self._research_metrics.complete_task(
+                task_id=task_id,
+                task_family=task_family,
+                capability_id=capability_id,
+                capability_version=capability.capability_version if capability else None,
+                capability_created=result.get("capability_created", False),
+                capability_reused=result.get("capability_reused", False),
+                latency_ms=(perf_counter() - started) * 1000,
+                capability_execution_ms=result.get("capability_execution_ms"),
+                outcome_status=result.get("status", "unknown"),
+                task_success=result.get("status") == "completed",
+            )
+        result["task_id"] = task_id
+        return result

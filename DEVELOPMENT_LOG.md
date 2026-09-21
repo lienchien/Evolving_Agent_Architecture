@@ -682,6 +682,68 @@ restrictions 強制執行、真正 sandbox、生成租約復原、長時間負�
 
 ---
 
+## 2026-09-20 — 將 Token／費用研究量測納入 Phase 1
+
+### 來源與範圍
+
+`Capability-Evolving Agent Architecture — System Design v1.7.md` 將 H-cost 定義為目前
+CEAA 研究範圍：首次建立 Capability 的成本可能較高，但後續重用可能降低 cumulative
+token 與 average cost。正式跨模型／baseline 實驗仍屬 Phase 3；本輪先把可靠量測、
+持久化、查詢與衍生計算基礎納入已開發的 Phase 1。
+
+功能分支依規則從乾淨 `dev` 的 `6f2fd1d` 建立為 `feature/token-cost-research`。
+
+### 實作
+
+- 新增 `TokenUsage`、`LLMInteractionMetric`、`TaskCostMetric`、`TokenCostSummary` 等模型。
+- `LLMProvider` response 可攜帶 provider/model、input/output/reasoning/total tokens 與
+  provider cost；仍相容於尚未回傳 usage envelope 的測試 provider。
+- MainAgent 為每次 task 建立 `TASK-*`，記錄能力建立／重用、outcome、task success、
+  總延遲及 capability execution time。
+- EvolutionService 與 TestingService 分別記錄 generation、testing interaction、延遲、
+  success/error 與 provider usage。
+- SQLite 新增 `llm_interactions`、`task_cost_metrics` 及查詢索引，與既有 Capability、
+  Report、Approval、Audit 共用 database path，重啟或另一 app 可讀回。
+- 新增 `/api/research/tasks`、`/api/research/interactions`、`/api/research/summary`；
+  summary 可在提供明確 `baseline_tokens_per_task` 時計算 average、saving rate 與
+  break-even reuse count。
+- 首次建立只到 pending approval，沒有完成原始輸入，因此 `task_success=false`；
+  核准後實際執行並回傳 `completed` 才算成功重用，避免成功率失真。
+
+### 資料完整性決策
+
+- Provider 未回報的 token 一律保存 `null/unavailable`，不以字元、單字或估算 tokenizer
+  取代；reasoning token 尤其不可推估。
+- MockLLMProvider 沒有真實模型或 tokenizer：記錄兩次 call 與可靠的費用 0.0，token
+  保持 unavailable。資料不完整時不產生 cumulative token、saving 或 break-even。
+- `baseline_tokens_per_task` 必須由研究設定或實測提供，系統不自行猜測。
+- Metric API 暫無認證／tenant scope，已加 `TODO(security)`，沿用開發階段安全限制。
+
+### 驗證
+
+- 新增 `tests/test_research_metrics.py` 三項測試。
+- Mock 測試確認 token 不被虛構、interaction 與 task ID 可追溯、重啟後資料仍存在。
+- 完整 usage 測試 provider 確認首次建立 100 tokens、重用 0 LLM tokens，於
+  60 tokens/task baseline 下累積 CEAA 100 對 baseline 120，第一次重用達 break-even；
+  provider cost 合計 0.01 USD。
+- 另驗證 generation 失敗仍保存 interaction、error、建立嘗試與未知 token，不誤算成功。
+- 既有 25 項回歸先通過；加入新測試後完整套件為
+  **28 passed, 1 warning in 6.42s**。警告仍為 Starlette／AnyIO alias 棄用。
+
+詳細語意與後續邊界見 [TOKEN_COST_RESEARCH.md](docs/TOKEN_COST_RESEARCH.md)。真實 provider
+usage、static baseline runner、reuse similarity、adaptation/revision cost 與長序列正式
+研究仍未完成，不能以本輪 mock 數據宣稱 CEAA 已證明節省 token。
+
+### 提交與分支狀態
+
+- 功能提交：`ca08851` — `feat: add token cost research instrumentation`。
+- 提交包含 24 個檔案，新增研究模型、service、API、測試與專用說明文件，並同步更新
+  System Design、Future Vision、README、Project Status 與 Development Plan。
+- 提交完成後工作樹乾淨；目前仍停留在 `feature/token-cost-research`。
+- `dev` 保持於 `6f2fd1d`，本功能尚未合併至 `dev`，也尚未推送遠端 feature 分支。
+
+---
+
 ## 2026-09-21 — Token／費用研究文件合併至 dev
 
 ### 遠端基準
@@ -697,15 +759,21 @@ restrictions 強制執行、真正 sandbox、生成租約復原、長時間負�
 - `ca08851` — `feat: add token cost research instrumentation`；
 - `d3270fc` — `docs: record token cost feature delivery`。
 
-本輪依要求只將研究設計、API／資料契約、測試證據與 roadmap 對應同步到 `dev`。
-沒有帶入 `src/`、`tests/` 或 SQLite schema 變更，也沒有 merge／cherry-pick feature commit。
-
-為避免文件誤導，`dev` 明確維持以下狀態：
-
-- runtime 測試基準仍為 **25 passed**；
-- `/api/research/*`、`llm_interactions`、`task_cost_metrics` 尚不存在於 `dev`；
-- Feature 的 **28 passed, 1 warning in 6.42s** 只代表候選實作驗證；
-- Mock token 保持 unavailable、不推估，以及 baseline／break-even 規則已先成為研究契約。
+本輪先只將研究設計、API／資料契約、測試證據與 roadmap 對應同步到 `dev`，沒有帶入
+`src/`、`tests/` 或 SQLite schema 變更。當時 `dev` runtime 維持 25 項測試，研究契約先行。
 
 新增 [TOKEN_COST_RESEARCH.md](docs/TOKEN_COST_RESEARCH.md)，並同步 System Design v1.7、
 Future Vision、平台 roadmap、README、PROJECT_STATUS、DEV_PLAN 與 API concurrency 說明。
+
+### 完整功能合併
+
+後續依要求將 `feature/token-cost-research` 完整合併至 `dev`，納入：
+
+- `/api/research/tasks`、`/api/research/interactions`、`/api/research/summary`；
+- `llm_interactions`、`task_cost_metrics` SQLite schema 與查詢；
+- task／interaction 成本觀測、衍生 summary 與完整回歸測試；
+- 原 feature 文件提交 `d3270fc` 的交付紀錄。
+
+衝突解決保留遠端新增的 event-driven／long-running vision 與 roadmap，並將所有狀態文件
+更新為功能已納入 `dev`。合併後完整測試為 **28 passed, 1 warning in 7.12s**；既有限制仍包括
+真實 provider usage、認證／tenant scope、static baseline runner 與正式 Phase 3 實驗。

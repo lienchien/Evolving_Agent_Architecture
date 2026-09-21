@@ -1,10 +1,21 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any
+from dataclasses import dataclass, field
+from typing import Any, Generic, TypeVar
 
 from src.domain.capability import Capability
 from src.domain.gap import CapabilityGap
+from src.domain.research import TokenUsage
+
+
+T = TypeVar("T")
+
+
+@dataclass(slots=True)
+class LLMResponse(Generic[T]):
+    value: T
+    usage: TokenUsage = field(default_factory=TokenUsage)
 
 
 class GeneratedCapability:
@@ -29,7 +40,9 @@ class GeneratedCapability:
 
 class LLMProvider(ABC):
     @abstractmethod
-    def generate_capability(self, gap: CapabilityGap) -> GeneratedCapability: ...
+    def generate_capability(self, gap: CapabilityGap) -> LLMResponse[GeneratedCapability]: ...
 
     @abstractmethod
-    def generate_boundary_tests(self, capability: Capability) -> list[dict[str, Any]]: ...
+    def generate_boundary_tests(
+        self, capability: Capability
+    ) -> LLMResponse[list[dict[str, Any]]]: ...

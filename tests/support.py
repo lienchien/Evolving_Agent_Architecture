@@ -16,6 +16,7 @@ from src.services.execution_service import CapabilityExecutionService
 from src.services.gap_detection_service import GapDetectionService
 from src.services.notification_service import NotificationService
 from src.services.report_store import TestReportStore
+from src.services.research_metrics_service import ResearchMetricsService
 from src.services.testing_service import TestingService
 from src.services.validation_service import ValidationService
 
@@ -26,12 +27,18 @@ def build_main_agent(tmp_path, llm_provider: LLMProvider | None = None):
     sandbox = SubprocessSandbox()
 
     capability_service = CapabilityService(repository)
+    research_metrics = ResearchMetricsService(repository)
     gap_detection_service = GapDetectionService(capability_service)
-    evolution_service = EvolutionService(llm_provider, capability_service)
+    evolution_service = EvolutionService(llm_provider, capability_service, research_metrics)
     validation_service = ValidationService(sandbox, capability_service)
     report_store = TestReportStore(repository)
     testing_service = TestingService(
-        llm_provider, sandbox, capability_service, report_store, tmp_path / "reports"
+        llm_provider,
+        sandbox,
+        capability_service,
+        report_store,
+        tmp_path / "reports",
+        research_metrics,
     )
     notification_service = NotificationService(ConsoleNotificationProvider())
     audit_service = AuditService(repository)
@@ -47,6 +54,11 @@ def build_main_agent(tmp_path, llm_provider: LLMProvider | None = None):
         capability_service,
     )
     main_agent = MainAgent(
-        capability_service, gap_detection_service, execution_service, evolution_agent, queue
+        capability_service,
+        gap_detection_service,
+        execution_service,
+        evolution_agent,
+        queue,
+        research_metrics,
     )
     return main_agent, capability_service, approval_service

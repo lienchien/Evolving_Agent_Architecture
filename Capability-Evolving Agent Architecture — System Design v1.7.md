@@ -1812,22 +1812,22 @@ Test Report
 Capability Registry
 Notification Interface
 Approval API
+Token / Cost Measurement Foundation
 ```
 
-Phase 1 的下一個候選增量是 **Token / Cost Measurement Foundation**：
+Phase 1 的 Token / Cost Measurement Foundation 包含：
 
 - 為每個 task 建立不可重複的 `task_id`；
 - 持久化每次 LLM interaction 的 phase、provider/model、token usage、可靠的 provider cost、
   latency、success 與 error；
 - 持久化 task 是否建立／重用 Capability、最終 outcome、LLM call count、總延遲與
   capability execution time；
-- 提供 task、interaction 與 summary API，並支援以明確 static baseline 計算
+- 提供 task、interaction 與 summary API，並支援以明確的 static baseline 計算
   average tokens、saving rate 與 break-even reuse count；
-- Provider 未回報的 token（尤其 reasoning token）保存為 unavailable，不得推估。
+- Provider 未回報的 token（尤其 reasoning token）必須保存為 unavailable，不得推估。
 
-此候選已在 `feature/token-cost-research` 的 `ca08851` 實作並通過 28 項測試，但程式尚未
-合併至 `dev`；`dev` 目前只同步研究契約。Phase 1 建立量測管線，不宣稱 Mock LLM 已
-提供真實 token 證據，也不取代 Phase 3 的跨模型、跨相似度與長任務序列正式實驗。
+此量測基礎已合併至 `dev`。Phase 1 建立可驗證的量測管線，不宣稱 Mock LLM 已提供真實 token 證據，也不取代
+Phase 3 的跨模型、跨相似度與長任務序列正式實驗。
 
 ---
 
@@ -1856,7 +1856,7 @@ Reuse
 - DeepEval
 - MLflow
 
-Phase 3 在 Phase 1 的量測與持久化基礎上正式執行
+Phase 3 在 Phase 1 已建立的量測與持久化基礎上，正式執行
 **Token Efficiency / Cost Amortization Experiment**，並與既有正確率、Reuse、
 Generalization、Regression 等指標一起分析。
 

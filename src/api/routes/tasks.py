@@ -20,6 +20,7 @@ class TaskRequest(BaseModel):
 
 
 class TaskResponse(BaseModel):
+    task_id: str
     status: str
     capability_id: str | None = None
     output: dict | None = None
@@ -29,6 +30,7 @@ class TaskResponse(BaseModel):
 def submit_task(task: TaskRequest, container: Container = Depends(get_container)) -> TaskResponse:
     result = container.main_agent.run_task(task.task_family, task.description, task.input)
     return TaskResponse(
+        task_id=result["task_id"],
         status=result.get("status", "unknown"),
         capability_id=result.get("capability_id"),
         output=result.get("output"),

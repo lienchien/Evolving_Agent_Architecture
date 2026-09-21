@@ -4,7 +4,8 @@ from typing import Any
 
 from src.domain.capability import Capability
 from src.domain.gap import CapabilityGap
-from src.interfaces.llm import GeneratedCapability, LLMProvider
+from src.domain.research import TokenUsage, UsageSource
+from src.interfaces.llm import GeneratedCapability, LLMProvider, LLMResponse
 
 _CSV_CODE = '''
 import csv
@@ -51,11 +52,25 @@ class MockLLMProvider(LLMProvider):
     end-to-end before a real LiteLLM-backed provider is wired in.
     """
 
-    def generate_capability(self, gap: CapabilityGap) -> GeneratedCapability:
+    @staticmethod
+    def _response(value):
+        # This deterministic adapter does not call a tokenizer or bill a model.
+        # Token values therefore remain unavailable rather than being guessed.
+        return LLMResponse(
+            value=value,
+            usage=TokenUsage(
+                provider="mock",
+                model="deterministic-template",
+                source=UsageSource.UNAVAILABLE,
+                provider_cost_usd=0.0,
+            ),
+        )
+
+    def generate_capability(self, gap: CapabilityGap) -> LLMResponse[GeneratedCapability]:
         haystack = f"{gap.task_family} {gap.description}".lower()
 
         if "csv" in haystack:
-            return GeneratedCapability(
+            return self._response(GeneratedCapability(
                 name="csv_column_summary",
                 description="Summarize numeric columns of a CSV file.",
                 code=_CSV_CODE,
@@ -74,9 +89,9 @@ class MockLLMProvider(LLMProvider):
                         },
                     }
                 ],
-            )
+            ))
 
-        return GeneratedCapability(
+        return self._response(GeneratedCapability(
             name="text_word_count",
             description="Count words and characters in a text input.",
             code=_WORD_COUNT_CODE,
@@ -90,21 +105,23 @@ class MockLLMProvider(LLMProvider):
                     "expected_output": {"word_count": 2, "char_count": 11},
                 }
             ],
-        )
+        ))
 
-    def generate_boundary_tests(self, capability: Capability) -> list[dict[str, Any]]:
+    def generate_boundary_tests(
+        self, capability: Capability
+    ) -> LLMResponse[list[dict[str, Any]]]:
         if capability.name == "csv_column_summary":
-            return [
+            return self._response([
                 {
                     "name": "empty_csv",
                     "input": {"csv_text": "a,b\n"},
                     "expected_output": {"statistics": {}},
                 }
-            ]
-        return [
+            ])
+        return self._response([
             {
                 "name": "empty_text",
                 "input": {"text": ""},
                 "expected_output": {"word_count": 0, "char_count": 0},
             }
-        ]
+        ])

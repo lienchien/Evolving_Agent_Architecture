@@ -4,7 +4,7 @@
 
 ![Status](https://img.shields.io/badge/status-experimental-orange)
 ![Phase](https://img.shields.io/badge/phase-1--verified-blue)
-![Validation](https://img.shields.io/badge/automated%20tests-25%20passed-green)
+![Validation](https://img.shields.io/badge/automated%20tests-28%20passed-green)
 
 > [!WARNING]
 > This experimental research prototype has passed automated core, API, concurrency, and standalone Uvicorn/HTTP validation. Authentication, data-access controls, enforced execution restrictions, and production hardening remain pending; it is not production-ready.
@@ -17,11 +17,11 @@ The long-term goal is to study whether Agent performance can scale through **cap
 
 ## Project Status
 
-> **Current Stage (2026-09-20): Phase 1 Verification Complete; Production Hardening Pending**
+> **Current Stage (2026-09-20): Phase 1 Verified; Token/Cost Research Instrumentation Added**
 
 The repository currently contains the architecture skeleton, core domain models, services, interfaces, Agent orchestration, API routes, and test code for the Phase 1 MVP.
 
-The latest full test run passed **25 tests**, with one existing Starlette/AnyIO deprecation warning. TestClient HTTP flows, SQLite transactions, subprocess execution and cross-process persistence have been exercised. An independent Uvicorn process also completed the task, report, approval, reuse and restart-persistence HTTP flow successfully.
+The latest full test run passed **28 tests**, with one existing Starlette/AnyIO deprecation warning. In addition to the verified HTTP and persistence flows, Phase 1 now records task-level cost observations and individual LLM interactions for the token-efficiency/cost-amortization research hypothesis. Missing provider token usage remains explicitly unavailable rather than estimated.
 
 See [project status](PROJECT_STATUS.md), [development log](DEVELOPMENT_LOG.md) and [API concurrency behavior](docs/API_CONCURRENCY.md). Architecture diagrams below describe the broader design: the current synchronous implementation handles each request's own gap directly; the queue is reserved for future background workers. Reports, approvals and audit records now share SQLite storage.
 
@@ -47,11 +47,12 @@ FastAPI routes               ✓
 Unit / lifecycle tests       ✓
 End-to-end test definition   ✓
 
-pytest execution             25 passed
+pytest execution             28 passed
 FastAPI TestClient tests     Passed
 Mock core loop               Passed
 Standalone Uvicorn / HTTP    Passed
-Token/cost research contract Documented (feature code pending)
+Token/cost metric foundation Passed
+Real provider usage data     Pending
 Real LLM integration         Pending
 PostgreSQL runtime adapter   Pending
 Docker sandbox               Pending
@@ -62,11 +63,11 @@ Capability sharing           Future Reserved
 Marketplace                  Future Reserved
 ```
 
-The next development decision is:
+The next research milestone is:
 
-> **Review the token/cost measurement feature for runtime integration, then continue production hardening**
+> **Real-provider token/cost capture and controlled baseline comparison**
 
-The following core flow has passed automated mock tests and standalone server verification:
+The complete mock flow and standalone server path have passed. Phase 1 now also preserves the measurement data needed to compare capability creation against later reuse:
 
 ```text
 Task
@@ -80,7 +81,12 @@ Task
 → Human Approval
 → Activate
 → Reuse
+→ Persist LLM interactions and task cost metrics
+→ Compare cumulative CEAA usage with an explicit baseline
 ```
+
+See [token/cost research instrumentation](docs/TOKEN_COST_RESEARCH.md) for metric semantics,
+API endpoints and the boundary between Phase 1 measurement foundations and Phase 3 experiments.
 
 ---
 
@@ -611,7 +617,7 @@ Planned technologies include:
 
 # 11. Phase 1 Runtime Validation
 
-Automated tests have been executed successfully: 25 passed, 1 existing dependency warning. This includes controlled races, 24 concurrent requests across two apps, and independent Python processes. It is not a production load benchmark.
+Automated tests have been executed successfully: 28 passed, 1 existing dependency warning. This includes controlled races, 24 concurrent requests across two apps, independent Python processes, and token/cost metric persistence plus amortization calculations. It is not a production load benchmark or evidence that the current Mock provider saves real tokens.
 
 Validation commands (in an environment with requirements installed):
 

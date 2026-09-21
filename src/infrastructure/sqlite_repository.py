@@ -10,6 +10,7 @@ from src.domain.capability import Capability, CapabilityStatus, Implementation
 from src.domain.errors import CapabilityConflictError
 from src.domain.approval import ApprovalRecord
 from src.domain.report import TestReport
+from src.domain.research import LLMInteractionMetric, TaskCostMetric
 from src.interfaces.repository import CapabilityRepository
 
 
@@ -88,6 +89,38 @@ class SqliteCapabilityRepository(CapabilityRepository):
                     sequence INTEGER PRIMARY KEY AUTOINCREMENT,
                     data TEXT NOT NULL
                 )"""
+            )
+            conn.execute(
+                """CREATE TABLE IF NOT EXISTS llm_interactions (
+                    interaction_id TEXT PRIMARY KEY,
+                    task_id TEXT NOT NULL,
+                    task_family TEXT NOT NULL,
+                    capability_id TEXT,
+                    phase TEXT NOT NULL,
+                    recorded_at TEXT NOT NULL,
+                    data TEXT NOT NULL
+                )"""
+            )
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS ix_llm_interactions_task_id "
+                "ON llm_interactions(task_id)"
+            )
+            conn.execute(
+                """CREATE TABLE IF NOT EXISTS task_cost_metrics (
+                    task_id TEXT PRIMARY KEY,
+                    task_family TEXT NOT NULL,
+                    capability_id TEXT,
+                    recorded_at TEXT NOT NULL,
+                    data TEXT NOT NULL
+                )"""
+            )
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS ix_task_cost_metrics_family "
+                "ON task_cost_metrics(task_family)"
+            )
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS ix_task_cost_metrics_capability "
+                "ON task_cost_metrics(capability_id)"
             )
 
     def create(self, capability: Capability) -> None:
@@ -220,3 +253,65 @@ class SqliteCapabilityRepository(CapabilityRepository):
         if row is None:
             return None
         return Capability.model_validate_json(row[0])
+
+    def save_llm_interaction(self, metric: LLMInteractionMetric) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                """INSERT INTO llm_interactions
+                (interaction_id, task_id, task_family, capability_id, phase, recorded_at, data)
+                VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    metric.interaction_id,
+                    metric.task_id,
+                    metric.task_family,
+                    metric.capability_id,
+                    metric.phase.value,
+                    metric.recorded_at.isoformat(),
+                    metric.model_dump_json(),
+                ),
+            )
+
+    def list_llm_interactions(self, task_id: str | None = None) -> list[LLMInteractionMetric]:
+        query = "SELECT data FROM llm_interactions"
+        params: tuple[str, ...] = ()
+        if task_id is not None:
+            query += " WHERE task_id = ?"
+            params = (task_id,)
+        query += " ORDER BY recorded_at, rowid"
+        with self._connect() as conn:
+            rows = conn.execute(query, params).fetchall()
+        return [LLMInteractionMetric.model_validate_json(row[0]) for row in rows]
+
+    def save_task_cost(self, metric: TaskCostMetric) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                """INSERT INTO task_cost_metrics
+                (task_id, task_family, capability_id, recorded_at, data)
+                VALUES (?, ?, ?, ?, ?)""",
+                (
+                    metric.task_id,
+                    metric.task_family,
+                    metric.capability_id,
+                    metric.recorded_at.isoformat(),
+                    metric.model_dump_json(),
+                ),
+            )
+
+    def list_task_costs(
+        self, task_family: str | None = None, capability_id: str | None = None,
+    ) -> list[TaskCostMetric]:
+        clauses: list[str] = []
+        params: list[str] = []
+        if task_family is not None:
+            clauses.append("task_family = ?")
+            params.append(task_family)
+        if capability_id is not None:
+            clauses.append("capability_id = ?")
+            params.append(capability_id)
+        query = "SELECT data FROM task_cost_metrics"
+        if clauses:
+            query += " WHERE " + " AND ".join(clauses)
+        query += " ORDER BY recorded_at, rowid"
+        with self._connect() as conn:
+            rows = conn.execute(query, tuple(params)).fetchall()
+        return [TaskCostMetric.model_validate_json(row[0]) for row in rows]

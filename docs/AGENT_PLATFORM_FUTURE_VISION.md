@@ -1,7 +1,7 @@
 # Agent Platform — Future Productization Vision
 
 > **Document Status:** Future Direction / Conceptual Target Architecture  
-> **Version:** v0.1  
+> **Version:** v0.2  
 > **Current Relationship to CEAA:** This document does **not** redefine the current CEAA research scope. It describes a possible platform architecture that may be developed **after** the current research validates the capability-evolution hypothesis.
 
 ---
@@ -642,7 +642,397 @@ These applications should consume platform capabilities rather than duplicate th
 
 ---
 
-## 8. Research-to-Platform Development Path
+## 8. Event-Driven Long-Running Agent Runtime
+
+### 8.1 Why This Matters
+
+As Agent systems evolve from short request/response interactions into long-running autonomous workflows, the platform must support execution that may last minutes, hours, or longer.
+
+A simple synchronous pattern:
+
+```text
+External System
+      ↓
+Request
+      ↓
+Agent
+      ↓
+Final Response
+```
+
+is not sufficient for tasks that involve:
+
+- multi-step planning,
+- multiple tool calls,
+- background execution,
+- human approval,
+- retries,
+- partial failures,
+- checkpoint / resume,
+- multi-agent coordination,
+- asynchronous external events,
+- and long-running research or operational workflows.
+
+The future platform should therefore treat Agent execution as an **event-driven runtime**, not merely an API request.
+
+Conceptually:
+
+```text
+External System
+      │
+      ├── Control API / SDK / MCP
+      │        │
+      │        ▼
+      │   Submit / Cancel / Resume Task
+      │
+      ▼
+Agent Control Plane
+      │
+      ▼
+Agent Runtime
+      │
+      ├── task.started
+      ├── plan.created
+      ├── tool.requested
+      ├── tool.completed
+      ├── approval.required
+      ├── checkpoint.created
+      ├── retry.scheduled
+      ├── partial.result
+      ├── task.failed
+      └── task.completed
+               │
+               ▼
+         Event Stream
+               │
+               ▼
+        External Systems
+```
+
+The platform should separate:
+
+```text
+Control Interface
+= submit, cancel, pause, resume, approve
+
+Event Interface
+= observe what is happening during execution
+```
+
+This allows external applications to interact with long-running Agents without blocking on a single synchronous response.
+
+---
+
+### 8.2 Event Stream as a First-Class Platform Interface
+
+REST API, SDK, and MCP remain appropriate for task submission and control.
+
+However, long-running execution may require additional runtime communication mechanisms such as:
+
+- WebSocket,
+- Server-Sent Events,
+- gRPC streaming,
+- message queues,
+- event buses,
+- or durable event logs.
+
+The platform should not commit prematurely to one transport.
+
+Instead, it should define a stable internal **Agent Event Model** and allow multiple transport adapters.
+
+Example event envelope:
+
+```json
+{
+  "event_id": "EVT-123",
+  "task_id": "TASK-456",
+  "trace_id": "TRACE-789",
+  "agent_id": "research_agent",
+  "type": "tool.completed",
+  "timestamp": "2026-09-21T10:00:00Z",
+  "payload": {}
+}
+```
+
+Potential event categories:
+
+```text
+Lifecycle
+  task.created
+  task.started
+  task.paused
+  task.resumed
+  task.cancelled
+  task.completed
+  task.failed
+
+Planning
+  plan.created
+  plan.updated
+
+Execution
+  step.started
+  step.completed
+  tool.requested
+  tool.completed
+  tool.failed
+
+Governance
+  policy.checked
+  approval.required
+  approval.granted
+  approval.denied
+
+Reliability
+  checkpoint.created
+  retry.scheduled
+  recovery.started
+  rollback.started
+  rollback.completed
+
+Output
+  partial.result
+  artifact.created
+  final.result
+```
+
+The event model should remain implementation-independent so that the runtime can later move between local execution, containers, distributed workers, or cloud-native infrastructure.
+
+---
+
+### 8.3 Durable State and Checkpointing
+
+Long-running Agents should not depend on one in-memory process surviving for the entire task.
+
+The platform should eventually support durable state transitions:
+
+```text
+Task State
+   ↓
+Checkpoint
+   ↓
+Persist
+   ↓
+Process Failure / Restart
+   ↓
+Recover
+   ↓
+Resume From Safe State
+```
+
+Potential checkpoint contents:
+
+- current workflow node,
+- completed steps,
+- pending tool calls,
+- Agent memory snapshot,
+- intermediate artifacts,
+- policy decisions,
+- approval state,
+- model / capability versions,
+- retry metadata.
+
+This creates a foundation for:
+
+- crash recovery,
+- worker migration,
+- pause / resume,
+- human-in-the-loop workflows,
+- long-running jobs,
+- reproducibility,
+- audit,
+- and controlled rollback.
+
+---
+
+### 8.4 Human Approval as an Asynchronous Runtime Event
+
+Human approval should not be implemented as a blocking prompt inside an Agent process.
+
+Preferred model:
+
+```text
+Agent proposes high-risk action
+        ↓
+Runtime emits approval.required
+        ↓
+Task enters WAITING_FOR_APPROVAL
+        ↓
+Human / Policy System responds
+        ↓
+approval.granted or approval.denied
+        ↓
+Runtime resumes from checkpoint
+```
+
+This makes approval compatible with:
+
+- mobile interfaces,
+- enterprise dashboards,
+- asynchronous operations,
+- external workflow systems,
+- delayed human decisions,
+- and distributed execution.
+
+The same architecture can later support machine approval, organizational policy approval, or multi-party approval.
+
+---
+
+### 8.5 Reliability as a Research and Product Direction
+
+The long-term research question is not only:
+
+> Can an Agent autonomously complete a task?
+
+A more important platform-level question is:
+
+> **How can long-running autonomous Agents be executed as reliable, observable, controllable, and recoverable event-driven systems?**
+
+This creates several future research directions:
+
+1. **Event Model Design**  
+   What is the minimum event schema required to represent Agent execution across heterogeneous runtimes?
+
+2. **State and Checkpoint Semantics**  
+   Which Agent states must be durable, and when is a checkpoint safe to resume?
+
+3. **Failure Recovery and Rollback**  
+   How should an Agent recover from model errors, tool failures, partial side effects, or worker crashes?
+
+4. **Human-in-the-Loop Orchestration**  
+   How should approval and intervention be represented without tightly coupling the runtime to a UI?
+
+5. **Multi-Agent Event Coordination**  
+   How should parent / child tasks, shared state, dependency events, and cancellation propagate across Agents?
+
+6. **Observability and Replay**  
+   Can event traces support debugging, reproducibility, post-incident analysis, and deterministic or semi-deterministic replay?
+
+7. **Security Boundaries**  
+   How should untrusted external events, tool outputs, and Agent-generated actions be validated before they influence future execution?
+
+---
+
+### 8.6 Relationship to Distributed Systems
+
+This direction moves the platform into the intersection of:
+
+```text
+Agent Systems
+      +
+Workflow Engines
+      +
+Distributed Systems
+      +
+Security / Governance
+      +
+Event-Driven Architecture
+```
+
+The long-term differentiation of the platform does not need to be:
+
+> "a smarter Agent."
+
+It may instead be:
+
+> **an infrastructure layer that allows autonomous Agents to run for long periods while remaining observable, governable, resumable, and safe.**
+
+This is especially relevant once external systems depend on the platform for operational tasks rather than one-shot generation.
+
+---
+
+### 8.7 Possible Future Architecture Extension
+
+The high-level architecture may eventually evolve from:
+
+```text
+External System
+      ↓
+API
+      ↓
+Agent
+      ↓
+Result
+```
+
+toward:
+
+```text
+                    External Systems
+                     │            ▲
+                     │            │
+          Control API / SDK / MCP │ Event Stream
+                     │            │
+                     ▼            │
+              Agent Control Plane
+                     │
+                     ▼
+                 Runtime
+           ┌─────────┼─────────┐
+           │         │         │
+       State     Checkpoint   Events
+           │         │         │
+           └─────────┼─────────┘
+                     │
+              Security / Policy
+                     │
+                     ▼
+              Tool / Data Gateway
+```
+
+Possible technology candidates include:
+
+- REST / MCP for control,
+- gRPC streaming / WebSocket / SSE for live runtime events,
+- Kafka / NATS / RabbitMQ / cloud queues for durable asynchronous events,
+- PostgreSQL or event stores for durable state,
+- distributed workers for runtime execution.
+
+These are **technology candidates**, not current implementation decisions.
+
+The platform should first define the required semantics and only then select infrastructure.
+
+---
+
+### 8.8 Reference Application Validation
+
+The existing reference applications can validate this event-driven runtime from different angles.
+
+**Horizon**
+
+```text
+Long-running research
+→ multiple data sources
+→ partial analysis
+→ scenario updates
+→ resumable execution
+```
+
+**News Map**
+
+```text
+Continuous external events
+→ ingestion
+→ classification
+→ cross-event linking
+→ map updates
+```
+
+**Cybersecurity Evolution Agent**
+
+```text
+Continuous monitoring
+→ adversarial events
+→ policy decisions
+→ approval / containment
+→ rollback / recovery
+```
+
+These use cases can serve as practical validation environments for the same shared runtime rather than creating separate execution models.
+
+---
+
+## 9. Research-to-Platform Development Path
 
 ### Stage 1 — Research Validation
 
@@ -757,7 +1147,7 @@ All imported capabilities remain untrusted until locally validated.
 
 ---
 
-## 9. Scope Boundary
+## 10. Scope Boundary
 
 This document must not be used to claim that the current CEAA implementation already provides an Agent Platform.
 
@@ -780,7 +1170,7 @@ The current project should continue to prioritize research validation.
 
 ---
 
-## 10. Decision Gate for Platformization
+## 11. Decision Gate for Platformization
 
 Platform development should begin only after sufficient evidence exists that the CEAA mechanism is worth productizing.
 
@@ -799,7 +1189,7 @@ If the answers are not satisfactory, research should continue before platform ex
 
 ---
 
-## 11. Long-Term Architectural Summary
+## 12. Long-Term Architectural Summary
 
 The long-term product concept can be summarized as:
 
@@ -845,7 +1235,7 @@ Enterprise Productization
 
 ---
 
-## 12. Current Recommendation
+## 13. Current Recommendation
 
 For now:
 

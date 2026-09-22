@@ -1109,3 +1109,15 @@ The project is currently focused on one thing:
 > **Run the existing Phase 1 skeleton and obtain the first verified end-to-end result.**
 
 No major architecture expansion should take priority over proving that the current core loop actually works in runtime.
+
+---
+
+## License and Use
+
+This repository is publicly visible primarily for **portfolio review, research discussion, technical evaluation, and educational inspection**.
+
+The project is **source-available, not open source**. You may view, study, and run the code locally for personal, educational, research, or evaluation purposes. Commercial production use, redistribution, sublicensing, hosted-service use, or use as the basis of a competing commercial product requires separate written permission.
+
+See [LICENSE](LICENSE) for the complete terms.
+
+Third-party libraries, models, APIs, datasets, and other dependencies remain subject to their own licenses and terms.

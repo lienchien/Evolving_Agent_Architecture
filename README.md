@@ -1123,3 +1123,17 @@ The project is currently focused on one thing:
 > **Verify the standalone API and retain runtime evidence for the already-tested core loop.**
 
 See [DEV_PLAN.md](DEV_PLAN.md) for the remaining Phase 1 work before real infrastructure integration.
+
+
+---
+
+## License and Use
+
+This repository is publicly visible primarily for **portfolio review, research discussion, technical evaluation, and educational inspection**.
+
+The project is **source-available, not open source**. You may view, study, and run the code locally for personal, educational, research, or evaluation purposes. Commercial production use, redistribution, sublicensing, hosted-service use, or use as the basis of a competing commercial product requires separate written permission.
+
+See [LICENSE](LICENSE) for the complete terms.
+
+Third-party libraries, models, APIs, datasets, and other dependencies remain subject to their own licenses and terms.
+

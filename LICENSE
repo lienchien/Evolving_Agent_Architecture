@@ -1,0 +1,68 @@
+CEAA Source-Available Portfolio License
+
+Copyright (c) 2026 lienchien. All rights reserved.
+
+1. Purpose
+
+This repository is made publicly available primarily for portfolio review,
+academic/research discussion, technical evaluation, and educational inspection.
+
+2. Permitted Use
+
+You may:
+
+- view and study the source code and documentation;
+- reference the public repository in technical discussion, research, or hiring evaluation;
+- run the software locally for personal, educational, research, or evaluation purposes;
+- create temporary local modifications solely for those permitted purposes.
+
+3. Restrictions
+
+Unless you obtain prior written permission from the copyright holder, you may not:
+
+- use this software, its substantial portions, or derivative works in commercial production;
+- sell, sublicense, redistribute, repackage, or offer this software as a commercial product or service;
+- use the repository as the basis of a competing commercial product or hosted service;
+- remove or alter copyright, attribution, or license notices;
+- represent the project, research results, or authorship as your own.
+
+Public availability of this repository does not constitute a grant of ownership,
+patent rights, trademark rights, or rights to unpublished research beyond the
+permissions expressly stated here.
+
+4. Contributions
+
+Unless a separate contributor agreement is provided, contributions submitted to
+this repository may be reviewed but are not automatically accepted under any
+additional commercial licensing terms.
+
+5. Third-Party Components
+
+Third-party libraries, frameworks, models, datasets, APIs, and other dependencies
+remain subject to their respective licenses and terms. This license applies only
+to original material in this repository for which the copyright holder has the
+right to grant permission.
+
+6. No Warranty
+
+THE SOFTWARE AND DOCUMENTATION ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, NON-INFRINGEMENT, CORRECTNESS, SECURITY, OR
+FITNESS FOR PRODUCTION USE.
+
+IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
+LIABILITY ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR ITS USE.
+
+7. GitHub Platform Rights
+
+Nothing in this license limits rights that must be granted to GitHub under the
+GitHub Terms of Service for hosting, displaying, and technically operating the
+repository.
+
+8. Commercial Licensing
+
+For commercial use, redistribution, hosted-service use, integration into a
+commercial product, or other uses outside the permissions above, obtain separate
+written permission from the copyright holder.
+
+This is a source-available license, not an OSI-approved open-source license.

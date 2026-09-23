@@ -1,7 +1,7 @@
 # Agent Platform — Future Productization Vision
 
 > **Document Status:** Future Direction / Conceptual Target Architecture  
-> **Version:** v0.3  
+> **Version:** v0.4  
 > **Current Relationship to CEAA:** This document does **not** redefine the current CEAA research scope. It describes a possible platform architecture that may be developed **after** the current research validates the capability-evolution hypothesis.
 
 ---
@@ -1902,7 +1902,32 @@ The robotics direction should only be pursued after the general capability-evolu
 
 ---
 
-## 10. Research-to-Platform Development Path
+## 10. Recursive Multi-Agent Organization
+
+After capability generation, validation, activation, and reuse are sufficiently validated, the next major development line is **Multi-Agent Evolution**.
+
+The detailed design is maintained in:
+
+- [Recursive Multi-Agent Organization Design](MULTI_AGENT_ORGANIZATION_DESIGN.md)
+
+It covers:
+
+- recursive child-Agent creation;
+- parent/root permission ceilings;
+- delegated governance by Branch Main Agents;
+- branch-local data ownership and cross-branch access approval;
+- Data Gateway enforcement;
+- Audit Agent and performance governance;
+- lifecycle management, pruning, suspension, and resource reclamation;
+- enterprise accountability chains and traceability.
+
+Core long-term principle:
+
+> **Autonomous where possible, governed where necessary, auditable everywhere.**
+
+---
+
+## 11. Research-to-Platform Development Path
 
 ### Stage 1 — Research Validation
 
@@ -2017,7 +2042,7 @@ All imported capabilities remain untrusted until locally validated.
 
 ---
 
-## 11. Scope Boundary
+## 12. Scope Boundary
 
 This document must not be used to claim that the current CEAA implementation already provides an Agent Platform.
 
@@ -2040,7 +2065,7 @@ The current project should continue to prioritize research validation.
 
 ---
 
-## 12. Decision Gate for Platformization
+## 13. Decision Gate for Platformization
 
 Platform development should begin only after sufficient evidence exists that the CEAA mechanism is worth productizing.
 
@@ -2059,7 +2084,7 @@ If the answers are not satisfactory, research should continue before platform ex
 
 ---
 
-## 13. Long-Term Architectural Summary
+## 14. Long-Term Architectural Summary
 
 The long-term product concept can be summarized as:
 
@@ -2105,7 +2130,7 @@ Enterprise Productization
 
 ---
 
-## 14. Current Recommendation
+## 15. Current Recommendation
 
 For now:
 

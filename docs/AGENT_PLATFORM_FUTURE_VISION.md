@@ -1,7 +1,7 @@
 # Agent Platform — Future Productization Vision
 
 > **Document Status:** Future Direction / Conceptual Target Architecture  
-> **Version:** v0.4  
+> **Version:** v0.5  
 > **Current Relationship to CEAA:** This document does **not** redefine the current CEAA research scope. It describes a possible platform architecture that may be developed **after** the current research validates the capability-evolution hypothesis.
 
 ---
@@ -417,7 +417,9 @@ Potential responsibilities:
 
 - Task Router
 - Agent Registry
+- Data Sensitivity Classifier
 - Model Router
+- Execution Placement / Model Policy Resolver
 - Workflow Registry
 - Multi-Agent Orchestration
 - Session / State ownership
@@ -1034,7 +1036,553 @@ These use cases can serve as practical validation environments for the same shar
 ---
 
 
-## 9. Future Vertical — Continuous Robot Capability Evolution Platform
+
+## 9. Hybrid Model Governance and Data-Sensitivity-Aware Routing
+
+### 9.1 Strategic Objective
+
+The platform should not assume that every task requires the strongest available model.
+
+For enterprise deployment, the more useful objective is:
+
+> **Use the lowest-cost, lowest-risk model that can satisfy the required task-quality threshold.**
+
+This is especially important for organizations that need to keep proprietary or regulated data inside their own infrastructure.
+
+The platform should therefore treat **data sensitivity, execution location, model capability, cost, latency, and policy** as joint routing constraints.
+
+Conceptually:
+
+~~~text
+Incoming Task
+      ↓
+Data / Context Classification
+      ↓
+Confidentiality & Policy Check
+      ↓
+Capability Requirement
+      ↓
+Quality / Latency / Cost Requirement
+      ↓
+Model Router
+      ↓
+┌─────────────────────────┬─────────────────────────┐
+│ Local / On-Prem Models  │ External Cloud Models   │
+│ Private Data            │ Public / Exportable Data│
+└─────────────────────────┴─────────────────────────┘
+~~~
+
+Privacy should therefore be treated as a **routing constraint**, not only as a deployment-mode choice.
+
+---
+
+### 9.2 Data Sensitivity Classification
+
+A future enterprise deployment may classify task context into policy-defined levels.
+
+Example:
+
+~~~text
+PUBLIC
+→ External or Local
+
+INTERNAL
+→ Prefer Local / On-Prem
+
+CONFIDENTIAL
+→ Local / On-Prem Only
+
+RESTRICTED / CRITICAL
+→ Local Only
+→ Stronger Policy
+→ Restricted Tools
+→ Optional Human Approval
+~~~
+
+Possible signals used for classification may include:
+
+- source system,
+- document label,
+- tenant policy,
+- data owner,
+- PII / financial / manufacturing / R&D content,
+- project classification,
+- customer contract,
+- user-selected sensitivity,
+- automated classifier,
+- tool provenance.
+
+Automatic classification must remain overridable by enterprise policy.
+
+A model should never be allowed to lower the confidentiality level of its own input.
+
+---
+
+### 9.3 Hybrid Model Routing
+
+The Model Router should consider more than model quality.
+
+Potential routing dimensions:
+
+~~~text
+Task Complexity
+Data Sensitivity
+Required Capability
+Allowed Data Egress
+Latency Requirement
+Cost Budget
+Model Availability
+Local Hardware
+Context Size
+Tool Requirements
+Confidence Threshold
+Compliance Policy
+~~~
+
+A possible routing hierarchy:
+
+~~~text
+Tier 1
+Local Small Model
+→ high-frequency
+→ repetitive
+→ structured
+→ low-complexity tasks
+
+Tier 2
+Local Medium Model
+→ confidential tasks
+→ enterprise-specific workflows
+→ moderate reasoning
+
+Tier 3
+External Frontier Model
+→ non-sensitive tasks
+→ high-complexity reasoning
+→ exceptional cases
+~~~
+
+The goal is not to maximize model size.
+
+The goal is to maximize:
+
+> **Task success under cost, privacy, latency, and governance constraints.**
+
+---
+
+### 9.4 Capability-Augmented Local Models
+
+A central hypothesis of the platform is that enterprise-specific capability accumulation may reduce dependence on frontier models.
+
+Instead of:
+
+~~~text
+Large Model
+→ solve every task from general reasoning
+~~~
+
+the platform may use:
+
+~~~text
+Small / Medium Local Model
+        +
+Enterprise Skill Library
+        +
+RAG / Memory
+        +
+Validated Tools
+        +
+Workflow Knowledge
+        +
+Capability Reuse
+~~~
+
+For recurring enterprise tasks, specialized capabilities may compensate for lower general-model intelligence.
+
+This produces an important research and product hypothesis:
+
+> **A medium or small local model augmented by validated enterprise capabilities may approach the task-level performance of stronger frontier models at substantially lower deployment cost.**
+
+The relevant target is not benchmark superiority.
+
+It is sufficient real-world performance within a bounded enterprise task distribution.
+
+---
+
+### 9.5 Enterprise-Specific Capability Advantage
+
+The platform is not designed primarily as a universal consumer Agent.
+
+Its long-term advantage may come from continuously adapting to one organization's:
+
+- SOPs,
+- ERP / MES / CRM workflows,
+- internal terminology,
+- manufacturing parameters,
+- equipment behavior,
+- business rules,
+- permission structure,
+- failure history,
+- maintenance procedures,
+- validated tools,
+- internal datasets.
+
+Over time, the organization may accumulate a:
+
+> **Company-Specific Capability Graph**
+
+Example:
+
+~~~text
+Generic Model Knowledge
+       +
+Company SOP
+       +
+Private RAG
+       +
+Validated Skills
+       +
+Workflow History
+       +
+Failure Evidence
+       ↓
+Enterprise-Specific Agent Behavior
+~~~
+
+This means two companies using the same base model may develop materially different capability ecosystems.
+
+---
+
+### 9.6 Confidentiality-Aware Escalation
+
+Low-confidence local execution should not automatically send data to an external model.
+
+Preferred logic:
+
+~~~text
+Local Model
+    ↓
+Confidence / Validation Insufficient
+    ↓
+Can data leave the organization?
+    │
+ ┌──┴──┐
+Yes   No
+ │     │
+ ▼     ▼
+External Stronger Model
+      Stronger Local Model
+      Additional Capability Retrieval
+      Human Review
+      or Task Refusal
+~~~
+
+This creates a safe escalation path while preserving confidentiality.
+
+External escalation may also use:
+
+- redacted context,
+- abstracted problem representation,
+- synthetic examples,
+- metadata-only queries,
+- policy-approved summaries,
+
+when enterprise policy permits.
+
+However, sensitive source data should remain protected by default.
+
+---
+
+### 9.7 Model Governance Policy
+
+Model routing should be policy-driven.
+
+Example:
+
+~~~yaml
+data_classification:
+  confidential:
+    allowed_execution:
+      - local
+      - on_prem
+    external_model: false
+
+  internal:
+    preferred_execution:
+      - local
+    external_model:
+      allowed_with_redaction: true
+
+  public:
+    allowed_execution:
+      - local
+      - external
+
+routing:
+  max_cost_per_task: 0.10
+  target_success_rate: 0.85
+  max_latency_ms: 5000
+~~~
+
+Policies may be defined at:
+
+- organization level,
+- department level,
+- application level,
+- workflow level,
+- task level,
+- data-source level.
+
+The Policy Engine should remain authoritative over the Model Router.
+
+---
+
+### 9.8 On-Prem Model Deployment
+
+For organizations that prohibit data egress, the platform should support fully disconnected or restricted-network deployment.
+
+Conceptually:
+
+~~~text
+Enterprise Network
+      │
+      ├── Internal Documents
+      ├── ERP / MES / CRM
+      ├── Private Databases
+      ├── Skill Registry
+      ├── Local Models
+      └── Audit / Evaluation Data
+               │
+               ▼
+        On-Prem Agent Platform
+               │
+               ▼
+       Local GPU / Accelerator
+~~~
+
+Possible deployment characteristics:
+
+- no external model API,
+- no public internet requirement,
+- internal model registry,
+- internal package mirrors,
+- local vector store,
+- private capability registry,
+- local observability,
+- controlled update process.
+
+This mode is especially relevant for manufacturing, semiconductor, finance, healthcare, defense, and other sensitive environments.
+
+---
+
+### 9.9 Hybrid Deployment Model
+
+Organizations that allow selective external access can operate in hybrid mode.
+
+Example:
+
+~~~text
+Sensitive Enterprise Task
+→ On-Prem Model
+
+Public Research Task
+→ External Frontier Model
+
+Private Data + Public Knowledge Need
+→ Local processing
+→ redact / abstract
+→ external query if policy permits
+→ merge locally
+
+Heavy Simulation
+→ Private Cloud / Approved Cloud
+
+Final Sensitive Decision
+→ Local Runtime
+~~~
+
+This model allows organizations to obtain frontier-model capability without requiring all enterprise data to leave the internal environment.
+
+---
+
+### 9.10 Cost per Successful Task
+
+Raw model accuracy should not be the only optimization target.
+
+A more useful enterprise metric is:
+
+> **Cost per Successful Task**
+
+Conceptually:
+
+~~~text
+Cost per Successful Task
+=
+Total Inference + Infrastructure + Human Review Cost
+----------------------------------------------------
+Number of Successfully Completed Tasks
+~~~
+
+Evaluation should include:
+
+- task success rate,
+- model inference cost,
+- GPU / server cost,
+- latency,
+- energy usage,
+- human intervention,
+- retry count,
+- capability reuse,
+- privacy exposure,
+- failure cost.
+
+Illustrative comparison:
+
+~~~text
+Frontier Model
+Success Rate: 95%
+Relative Cost: 1.0
+
+Local Medium Model + Capability System
+Success Rate: 85–93%
+Relative Cost: potentially much lower
+~~~
+
+The exact acceptable performance threshold is application-specific.
+
+For many bounded internal workflows, an enterprise may prefer lower-cost private execution even if it is not the globally strongest model.
+
+---
+
+### 9.11 Research Validation Framework
+
+The platform should eventually evaluate at least four configurations:
+
+~~~text
+A. Frontier Model Only
+
+B. Local Model Only
+
+C. Local Model + Capability Evolution
+
+D. Hybrid Routing
+   Local + External Frontier Model
+~~~
+
+Recommended metrics:
+
+~~~text
+Task Success Rate
+Cost per Successful Task
+Latency
+Token Usage
+GPU / Compute Usage
+Capability Reuse Rate
+Human Intervention Rate
+Failure / Regression Rate
+Privacy Exposure
+External Data Egress
+Escalation Rate
+~~~
+
+Important research questions include:
+
+1. How much performance can capability reuse recover relative to a stronger model?
+2. Does capability accumulation reduce token usage or reasoning depth over time?
+3. At what task complexity should the router escalate to a stronger model?
+4. What success-rate threshold makes local deployment economically attractive?
+5. How much does local execution reduce total cost of ownership?
+6. Can confidentiality-aware routing maintain quality without exposing sensitive data?
+7. Does enterprise-specific capability accumulation improve smaller-model performance over time?
+
+---
+
+### 9.12 Relationship to Capability Evolution
+
+Capability Evolution is central to this strategy.
+
+Without reusable capabilities, a smaller model must repeatedly solve the same enterprise problem through general reasoning.
+
+With validated skills:
+
+~~~text
+First Task
+→ Reason
+→ Build Capability
+→ Validate
+→ Store
+
+Later Similar Task
+→ Retrieve
+→ Reuse
+→ Adapt if necessary
+~~~
+
+The expected long-term effect is:
+
+~~~text
+Capability Reuse ↑
+General Reasoning Requirement ↓
+Token Usage ↓
+Latency ↓
+External Model Dependence ↓
+Cost per Successful Task ↓
+~~~
+
+This creates a direct connection between the CEAA research hypothesis and enterprise deployment economics.
+
+---
+
+### 9.13 Product Value Proposition
+
+If validated experimentally, the enterprise value proposition becomes:
+
+> **Use smaller, cheaper, controllable models for most internal work while preserving access to frontier models only where policy and task complexity justify them.**
+
+This may provide simultaneous benefits in:
+
+- privacy,
+- cost,
+- latency,
+- data sovereignty,
+- vendor independence,
+- offline operation,
+- infrastructure control,
+- auditability.
+
+The platform therefore does not force customers to choose between:
+
+~~~text
+Cloud AI
+or
+On-Prem AI
+~~~
+
+Instead, it provides:
+
+> **Policy-governed hybrid intelligence.**
+
+---
+
+### 9.14 Scope Boundary
+
+This section defines a future enterprise-platform capability.
+
+It does not imply that the current CEAA implementation already provides:
+
+- automatic confidentiality classification,
+- production Model Router,
+- model confidence calibration,
+- hybrid cloud routing,
+- air-gapped deployment,
+- enterprise policy enforcement,
+- model-cost optimization.
+
+These capabilities should be added only after the core capability-evolution mechanism and platform runtime have been sufficiently validated.
+
+---
+
+## 10. Future Vertical — Continuous Robot Capability Evolution Platform
 
 ### 9.1 Strategic Positioning
 
@@ -1902,7 +2450,7 @@ The robotics direction should only be pursued after the general capability-evolu
 
 ---
 
-## 10. Recursive Multi-Agent Organization
+## 11. Recursive Multi-Agent Organization
 
 After capability generation, validation, activation, and reuse are sufficiently validated, the next major development line is **Multi-Agent Evolution**.
 
@@ -1927,7 +2475,7 @@ Core long-term principle:
 
 ---
 
-## 11. Research-to-Platform Development Path
+## 12. Research-to-Platform Development Path
 
 ### Stage 1 — Research Validation
 
@@ -2042,7 +2590,7 @@ All imported capabilities remain untrusted until locally validated.
 
 ---
 
-## 12. Scope Boundary
+## 13. Scope Boundary
 
 This document must not be used to claim that the current CEAA implementation already provides an Agent Platform.
 
@@ -2065,7 +2613,7 @@ The current project should continue to prioritize research validation.
 
 ---
 
-## 13. Decision Gate for Platformization
+## 14. Decision Gate for Platformization
 
 Platform development should begin only after sufficient evidence exists that the CEAA mechanism is worth productizing.
 
@@ -2084,7 +2632,7 @@ If the answers are not satisfactory, research should continue before platform ex
 
 ---
 
-## 14. Long-Term Architectural Summary
+## 15. Long-Term Architectural Summary
 
 The long-term product concept can be summarized as:
 
@@ -2130,7 +2678,7 @@ Enterprise Productization
 
 ---
 
-## 15. Current Recommendation
+## 16. Current Recommendation
 
 For now:
 

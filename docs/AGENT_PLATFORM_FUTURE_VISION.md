@@ -1734,7 +1734,7 @@ In an enterprise deployment, this distinction also supports smaller local models
 > **Combined hypothesis: Knowledge retrieval + hierarchical capability retrieval may allow smaller models to solve bounded enterprise tasks more efficiently by narrowing both what the model must know and what the model must choose to do.**
 
 ---
-### 10.4 Tree for Human Understanding, DAG for System Representation
+### 10.3 Tree for Human Understanding, DAG for System Representation
 
 The RPG skill-tree metaphor is useful for explaining the platform, but the underlying data structure should not be restricted to a strict tree. Some capabilities may share prerequisites or dependencies.
 

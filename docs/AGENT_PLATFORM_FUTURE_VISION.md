@@ -1,7 +1,7 @@
 # Agent Platform — Future Productization Vision
 
 > **Document Status:** Future Direction / Conceptual Target Architecture  
-> **Version:** v0.6  
+> **Version:** v0.7  
 > **Current Relationship to CEAA:** This document does **not** redefine the current CEAA research scope. It describes a possible platform architecture that may be developed **after** the current research validates the capability-evolution hypothesis.
 
 ---
@@ -1629,7 +1629,112 @@ This structure is intended to improve routing accuracy, token efficiency, tool-s
 
 ---
 
-### 10.2 Tree for Human Understanding, DAG for System Representation
+### 10.2 Relationship to Retrieval-Augmented Generation (RAG)
+
+The Skill Tree can be understood intuitively as a retrieval system for executable capabilities.
+
+Traditional Retrieval-Augmented Generation (RAG) narrows a large knowledge space before the model reasons over it:
+
+~~~text
+User Query
+ ↓
+Retrieve Relevant Documents
+ ↓
+Provide Context to LLM
+ ↓
+Generate Answer
+~~~
+
+The Skill Tree applies a similar principle to the capability space:
+
+~~~text
+Task
+ ↓
+Retrieve Relevant Domain / Branch
+ ↓
+Retrieve Candidate Skills
+ ↓
+Apply Policy / Scope Constraints
+ ↓
+Execute Capability
+~~~
+
+The key distinction is:
+
+> **RAG retrieves knowledge; the Skill Tree retrieves executable capabilities.**
+
+This means both approaches reduce the search space before model reasoning, but their outputs and objectives are different.
+
+| Dimension | Traditional RAG | Hierarchical Skill Tree |
+|---|---|---|
+| Retrieval target | Documents / chunks / knowledge | Capability branches / skills / tools |
+| Primary goal | Improve knowledge grounding | Improve action and execution selection |
+| Retrieved result | Context for generation | Executable capability candidates |
+| Typical next step | Generate an answer | Execute, compose, or validate a skill |
+| Missing result | Retrieve less-relevant evidence or report insufficient knowledge | Detect a capability gap |
+| System growth | Add or update knowledge | Generate, validate, and attach new capabilities |
+| Governance focus | Source quality / access | Permission / scope / execution risk / validation |
+
+This analogy is especially useful because both systems solve a similar scaling problem:
+
+~~~text
+Too Much Knowledge
+→ Retrieve only relevant knowledge
+
+Too Many Capabilities
+→ Retrieve only relevant capabilities
+~~~
+
+However, the platform extends beyond retrieval because the capability space can evolve.
+
+~~~text
+No Relevant Skill Found
+        ↓
+Capability Gap Detected
+        ↓
+Generate Candidate Capability
+        ↓
+Validate / Test
+        ↓
+Policy / Human Approval
+        ↓
+Attach to Correct Skill-Tree Branch
+        ↓
+Reusable in Future Tasks
+~~~
+
+Traditional RAG generally assumes that the retrieval corpus already contains the required knowledge. In contrast, Capability Evolution allows the platform to modify its own executable capability space when the required skill does not yet exist.
+
+This produces a useful conceptual distinction:
+
+> **RAG = retrieve from an existing knowledge space.**
+>
+> **Capability Retrieval = retrieve from an existing action space.**
+>
+> **Capability Evolution = expand the action space when retrieval is insufficient.**
+
+The platform can therefore use both mechanisms together:
+
+~~~text
+Task
+ ↓
+Knowledge Retrieval (RAG)
+ ↓
+Capability Retrieval (Skill Tree)
+ ↓
+Reasoning / Planning
+ ↓
+Skill Execution
+ ↓
+Capability Evolution if required
+~~~
+
+In an enterprise deployment, this distinction also supports smaller local models. RAG reduces the knowledge search space, while the Skill Tree reduces the action search space. Together, they can reduce the amount of open-ended reasoning required from the model.
+
+> **Combined hypothesis: Knowledge retrieval + hierarchical capability retrieval may allow smaller models to solve bounded enterprise tasks more efficiently by narrowing both what the model must know and what the model must choose to do.**
+
+---
+### 10.4 Tree for Human Understanding, DAG for System Representation
 
 The RPG skill-tree metaphor is useful for explaining the platform, but the underlying data structure should not be restricted to a strict tree. Some capabilities may share prerequisites or dependencies.
 
@@ -1643,7 +1748,7 @@ The tree view provides intuitive navigation; the DAG provides realistic system s
 
 ---
 
-### 10.3 Branch Isolation
+### 10.4 Branch Isolation
 
 A capability selected inside one branch should, by default, only access capabilities within its authorized subtree.
 
@@ -1669,7 +1774,7 @@ This creates both a reasoning boundary and a security boundary.
 
 ---
 
-### 10.4 Controlled Cross-Branch Execution
+### 10.5 Controlled Cross-Branch Execution
 
 Complex tasks may legitimately require multiple capability branches. Branch isolation therefore should not prohibit cross-branch execution; it should require the Control Plane to explicitly orchestrate it.
 
@@ -1705,7 +1810,7 @@ An Agent should not independently jump into another branch merely because that c
 
 ---
 
-### 10.5 Capability Gate
+### 10.6 Capability Gate
 
 The platform should introduce a Capability Gate between the Agent and the executable capability surface. Its purpose is to reduce a large global capability set into a small task-relevant subset.
 
@@ -1735,7 +1840,7 @@ The Agent may therefore see only a handful of skills even when the platform cont
 
 ---
 
-### 10.6 Skill Metadata and Preconditions
+### 10.7 Skill Metadata and Preconditions
 
 Each capability should expose structured routing metadata in addition to a natural-language description.
 
@@ -1778,7 +1883,7 @@ A skill should only become eligible when required dependencies exist, versions a
 
 ---
 
-### 10.7 Capability Evolution Inside a Branch
+### 10.8 Capability Evolution Inside a Branch
 
 Capability Evolution should occur in the relevant branch rather than adding new skills to a flat global registry.
 
@@ -1833,7 +1938,7 @@ This provides controlled capability growth instead of unbounded tool accumulatio
 
 ---
 
-### 10.8 Branch-Aware Gap Detection
+### 10.9 Branch-Aware Gap Detection
 
 Capability-gap detection should identify not only that a capability is missing, but also which domain owns it, which capability family should contain it, which existing skills are prerequisites, whether it extends an existing branch, and whether a new branch is justified.
 
@@ -1857,7 +1962,7 @@ Creating a new top-level branch should require stronger validation than adding a
 
 ---
 
-### 10.9 Routing as a Learned Platform Capability
+### 10.10 Routing as a Learned Platform Capability
 
 Routing quality itself should become measurable and improvable.
 
@@ -1879,7 +1984,7 @@ The platform therefore improves not only by acquiring more skills, but also by b
 
 ---
 
-### 10.10 Relationship to Model Efficiency
+### 10.11 Relationship to Model Efficiency
 
 Hierarchical capability routing directly supports the hybrid-model strategy. A smaller model does not need to reason over the entire platform capability space.
 
@@ -1901,7 +2006,7 @@ This can reduce prompt size, tool-schema tokens, ambiguity, model reasoning burd
 
 ---
 
-### 10.11 Evaluation
+### 10.12 Evaluation
 
 Future experiments should compare:
 
@@ -1932,7 +2037,7 @@ If the latter approaches the former on bounded enterprise workflows, the result 
 
 ---
 
-### 10.12 Relationship to the Capability Registry
+### 10.13 Relationship to the Capability Registry
 
 The Capability Registry should evolve from a flat inventory into a structured capability graph containing Capability Nodes, Capability Branches, Dependency Edges, Prerequisite Edges, Composition Edges, Validation Evidence, Policy Scope, Compatibility Metadata, Execution History, Versions, and Trust Levels.
 
@@ -1940,7 +2045,7 @@ The registry therefore becomes both a storage system for validated skills and a 
 
 ---
 
-### 10.13 Long-Term Interpretation
+### 10.14 Long-Term Interpretation
 
 The Agent Core should remain relatively stable while the capability graph grows around it.
 

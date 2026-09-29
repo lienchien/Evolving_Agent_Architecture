@@ -1,7 +1,7 @@
 # Agent Platform — Future Productization Vision
 
 > **Document Status:** Future Direction / Conceptual Target Architecture  
-> **Version:** v0.8  
+> **Version:** v0.9  
 > **Current Relationship to CEAA:** This document does **not** redefine the current CEAA research scope. It describes a possible platform architecture that may be developed **after** the current research validates the capability-evolution hypothesis.
 
 ---
@@ -2589,7 +2589,562 @@ Remember
 > **The platform should become more effective with use because every validated problem-solving episode becomes reusable organizational knowledge and capability evidence.**
 
 ---
-## 12. Future Vertical — Continuous Robot Capability Evolution Platform
+## 12. Capability Governance and Organizational Skill Scoping
+
+### 12.1 Core Principle
+
+The platform should separate capability existence from execution authority.
+
+> **An Agent knowing that a capability exists does not mean that the Agent is allowed to execute it.**
+
+This distinction is essential as the Skill Tree grows and Agents become more capable over time.
+
+Conceptually:
+
+~~~text
+Capability Exists
+≠ Capability Visible
+≠ Capability Enabled
+≠ Capability Executable
+~~~
+
+Capability growth should therefore be paired with explicit governance so that the platform can increase Agent capability without increasing uncontrolled execution risk.
+
+---
+
+### 12.2 Capability Governance Console
+
+The Skill Tree should eventually be visualized as an operational governance interface rather than only as an internal routing structure.
+
+A future Capability Governance Console may allow authorized engineers and administrators to inspect:
+
+- Skill Tree branches,
+- capability status,
+- owner / responsible team,
+- version,
+- success rate,
+- failure rate,
+- recent executions,
+- approval history,
+- rollback history,
+- prerequisite dependencies,
+- validation evidence,
+- model compatibility,
+- allowed departments / roles,
+- execution environments,
+- current policy state.
+
+Example:
+
+~~~text
+Skill: repository.modify_code
+Branch: Software Engineering / Repository
+
+Status: Enabled
+Owner: Platform Engineering
+Approved by: Alice Chen
+Last state change by: Bob Lin
+
+Success rate: 96.2%
+Failure rate: 3.8%
+Executions: 12,480
+Rollback count: 2
+
+Allowed units:
+  Platform Engineering
+  DevOps
+
+Denied units:
+  Finance
+  HR
+~~~
+
+The goal is to let engineers answer:
+
+> What can this Agent do, why can it do it, who enabled it, and how has it performed?
+
+---
+
+### 12.3 Skill and Branch Lifecycle States
+
+A binary ON / OFF state is insufficient for enterprise governance.
+
+Recommended lifecycle states include:
+
+~~~text
+Enabled
+→ may execute automatically within policy
+
+Approval Required
+→ may be discovered, but execution requires approval
+
+Disabled
+→ unavailable for routing and execution
+
+Quarantined
+→ isolated due to failure, anomaly, or security concern
+~~~
+
+Newly generated capabilities should not enter production as Enabled by default.
+
+Preferred flow:
+
+~~~text
+Generated
+ ↓
+Testing
+ ↓
+Validated
+ ↓
+Engineer / Policy Review
+ ↓
+Enabled
+~~~
+
+If runtime evidence later indicates abnormal failure or security risk:
+
+~~~text
+Telemetry / Experience
+ ↓
+Failure Rate Increase
+ ↓
+Health Degradation Detected
+ ↓
+Quarantine Proposed
+ ↓
+Engineer Review
+ ↓
+Disable / Roll Back / Revalidate
+~~~
+
+---
+
+### 12.4 Branch-Level Governance
+
+Governance should operate at both individual-skill and branch levels.
+
+Disabling a parent branch should recursively remove its descendant capabilities from the effective execution scope unless an explicit exception exists.
+
+Conceptually:
+
+~~~text
+Enabled(skill)
+=
+AncestorEnabled
+AND SkillEnabled
+AND PermissionAllowed
+AND ValidationPassed
+AND EnvironmentAllowed
+~~~
+
+This allows administrators to manage large capability sets without individually editing hundreds of skills.
+
+---
+
+### 12.5 Organizational Skill Tree
+
+The enterprise Skill Tree should be able to reflect organizational boundaries.
+
+Example:
+
+~~~text
+Company Skill Tree
+│
+├─ Shared
+│  ├─ Web Search
+│  ├─ Document Read
+│  ├─ Basic Analysis
+│  └─ Common Reporting
+│
+├─ Finance
+│  ├─ Budget Analysis
+│  ├─ Invoice Processing
+│  └─ Payment Request
+│
+├─ Engineering
+│  ├─ Repository Read
+│  ├─ Code Modification
+│  └─ Deployment
+│
+└─ Manufacturing
+   ├─ Equipment Diagnosis
+   ├─ Process Analysis
+   └─ Robot Control
+~~~
+
+Different Agents should receive different views of this tree.
+
+~~~text
+Finance Agent
+= Finance subtree + Shared subtree
+
+Engineering Agent
+= Engineering subtree + Shared subtree
+
+Manufacturing Agent
+= Manufacturing subtree + Shared subtree
+~~~
+
+This limits both visibility and execution scope.
+
+---
+
+### 12.6 Department, Role, and Agent-Level Capability Scope
+
+Capability scope should support multiple organizational levels.
+
+At minimum:
+
+~~~text
+Company Shared
+     ↓
+Department
+     ↓
+Role
+     ↓
+Agent Instance
+~~~
+
+Effective capability scope may be defined as:
+
+~~~text
+Effective Capability Scope
+=
+Shared Skills
++ Department Skills
++ Role Skills
++ Project / Temporary Grants
+~~~
+
+subject to policy, validation status, environment, and data-sensitivity constraints.
+
+Example:
+
+~~~text
+Finance Analyst
+→ Read Financial Data
+→ Analyze Budget
+→ Generate Report
+
+Finance Manager
+→ inherits Analyst capabilities
+→ Approve Budget
+→ Submit Payment Request
+~~~
+
+This allows different Agents to be created according to job responsibility rather than exposing the same global capability set to all Agents.
+
+---
+
+### 12.7 Shared Capability Branch
+
+Common capabilities should be placed in a Shared branch so they do not need to be duplicated for every department.
+
+Typical Shared capabilities may include:
+
+- document parsing,
+- search,
+- summarization,
+- generic data cleaning,
+- reporting,
+- format conversion,
+- common notification primitives.
+
+Shared does not mean unrestricted.
+
+Shared capabilities should still be governed by:
+
+- organization policy,
+- role permissions,
+- environment constraints,
+- data classification,
+- approval rules.
+
+---
+
+### 12.8 Capability Inheritance
+
+The platform should support capability inheritance so that Agent definitions do not need to duplicate all permissions and skills.
+
+Example:
+
+~~~text
+Shared
+ └─ document.read
+
+Engineering
+ └─ inherits Shared
+    + repository.read
+
+Senior Developer
+ └─ inherits Engineering
+    + repository.write
+    + deployment.request
+~~~
+
+This inheritance should remain explainable.
+
+For example, when asked why an Agent can request deployment, the platform should be able to trace:
+
+~~~text
+Agent Instance
+ ↓
+Role: Senior Developer
+ ↓
+Department: Engineering
+ ↓
+Inherited Branch
+ ↓
+Engineering / Deployment / Request
+ ↓
+Policy: Enabled
+ ↓
+Approval Required: Yes
+~~~
+
+---
+
+### 12.9 RBAC + ABAC for Capability Governance
+
+Traditional role-based access control alone may not be sufficiently expressive for Agent execution.
+
+The platform should support a combination of RBAC and ABAC-style constraints.
+
+Conceptually:
+
+~~~text
+Who
+→ user / team / department / role / agent
+
+Can do what
+→ view / invoke / approve / modify / disable / publish
+
+On which capability
+→ skill / branch / subtree
+
+Under what condition
+→ environment / data sensitivity / time / task type / tenant policy
+~~~
+
+Example:
+
+~~~yaml
+subject:
+  department: manufacturing
+
+resource:
+  branch: robot.motion
+
+permissions:
+  - view
+  - invoke
+
+conditions:
+  environment:
+    - simulation
+    - test_robot
+
+production_execution:
+  approval_required: true
+~~~
+
+This allows the same capability to be freely used in simulation while requiring explicit approval in production.
+
+---
+
+### 12.10 Capability Ownership
+
+Branches should have explicit organizational owners.
+
+Examples:
+
+~~~text
+Finance Branch
+→ Finance Team owns
+
+Security Branch
+→ SOC owns
+
+Manufacturing Branch
+→ Manufacturing Engineering owns
+
+Robot Motion Branch
+→ Robotics / Safety Team owns
+~~~
+
+Owners may be responsible for:
+
+- approving new capabilities,
+- reviewing validation evidence,
+- changing skill state,
+- handling deprecation,
+- reviewing failure trends,
+- granting cross-department access.
+
+This creates a direct mapping between capability structure and organizational accountability.
+
+---
+
+### 12.11 Approval and Audit as First-Class Events
+
+High-risk executions should produce explicit approval and audit records.
+
+Each relevant execution may record:
+
+~~~text
+Execution ID
+Task ID
+Agent ID
+Skill ID
+Skill Version
+Requested By
+Approved By
+Approval Time
+Policy Decision
+Input Classification
+Execution Result
+Rollback Status
+~~~
+
+The platform should be able to reconstruct:
+
+~~~text
+Task
+→ Branch Routing
+→ Experience Retrieval
+→ Skill Selection
+→ Policy Decision
+→ Approval
+→ Execution
+→ Outcome
+→ Experience Write-back
+~~~
+
+This supports auditability, compliance, incident review, and accountability.
+
+---
+
+### 12.12 Capability Exposure View
+
+Administrators should be able to inspect the effective capabilities of a department, role, or Agent.
+
+Example:
+
+~~~text
+Finance Agent currently can:
+✓ Read ERP financial data
+✓ Generate reports
+✓ Compare budgets
+△ Submit payment request
+✕ Approve payment
+✕ Delete accounting records
+~~~
+
+Manufacturing Agent:
+
+~~~text
+✓ Read machine telemetry
+✓ Diagnose anomaly
+✓ Run digital twin simulation
+△ Deploy new robot skill
+✕ Modify safety controller
+~~~
+
+This provides a human-readable answer to:
+
+> **What can this Agent currently do?**
+
+---
+
+### 12.13 Capability Posture
+
+The governance console may eventually summarize capability posture at organization or department level.
+
+Example:
+
+~~~text
+Department: Manufacturing
+
+Active Skills: 142
+Approval-required Skills: 27
+Disabled Skills: 18
+Quarantined Skills: 3
+
+30-day Success Rate: 97.1%
+Human Intervention Rate: 6.4%
+New Skills Added: 11
+Skills Rolled Back: 2
+~~~
+
+This turns the Skill Tree into an operational management surface rather than only a developer artifact.
+
+---
+
+### 12.14 Controlled Capability Evolution
+
+The governance model should ensure that increasing Agent capability does not automatically increase operational risk.
+
+Conceptually:
+
+~~~text
+Capability Growth ↑
+
+while
+
+Uncontrolled Execution ≠ ↑
+~~~
+
+The target is:
+
+> **Controlled Capability Evolution**
+
+where every new capability can be:
+
+- discovered,
+- validated,
+- reviewed,
+- scoped,
+- enabled,
+- disabled,
+- quarantined,
+- versioned,
+- audited,
+- rolled back.
+
+This creates a platform where Agents can evolve while enterprise engineers retain operational control.
+
+---
+
+### 12.15 Relationship to the Broader Platform
+
+The governance model connects several existing architectural components:
+
+~~~text
+Skill Tree
+= Capability Structure
+
+Capability Governance Console
+= Human Control Surface
+
+Policy Engine
+= Runtime Enforcement
+
+Audit Log
+= Historical Evidence
+
+Experience RAG
+= Operational Memory
+
+Capability Evolution
+= Controlled Capability Growth
+~~~
+
+Together, these components allow the enterprise to understand not only whether an Agent works, but:
+
+> **what it can do, who authorized it, which organization owns the capability, how reliably it performs, and how quickly that capability can be revoked.**
+
+---
+## 13. Future Vertical — Continuous Robot Capability Evolution Platform
 
 ### 9.1 Strategic Positioning
 
@@ -3457,7 +4012,7 @@ The robotics direction should only be pursued after the general capability-evolu
 
 ---
 
-## 13. Recursive Multi-Agent Organization
+## 14. Recursive Multi-Agent Organization
 
 After capability generation, validation, activation, and reuse are sufficiently validated, the next major development line is **Multi-Agent Evolution**.
 
@@ -3482,7 +4037,7 @@ Core long-term principle:
 
 ---
 
-## 14. Research-to-Platform Development Path
+## 15. Research-to-Platform Development Path
 
 ### Stage 1 — Research Validation
 
@@ -3597,7 +4152,7 @@ All imported capabilities remain untrusted until locally validated.
 
 ---
 
-## 15. Scope Boundary
+## 16. Scope Boundary
 
 This document must not be used to claim that the current CEAA implementation already provides an Agent Platform.
 
@@ -3620,7 +4175,7 @@ The current project should continue to prioritize research validation.
 
 ---
 
-## 16. Decision Gate for Platformization
+## 17. Decision Gate for Platformization
 
 Platform development should begin only after sufficient evidence exists that the CEAA mechanism is worth productizing.
 
@@ -3639,7 +4194,7 @@ If the answers are not satisfactory, research should continue before platform ex
 
 ---
 
-## 17. Long-Term Architectural Summary
+## 18. Long-Term Architectural Summary
 
 The long-term product concept can be summarized as:
 
@@ -3685,7 +4240,7 @@ Enterprise Productization
 
 ---
 
-## 18. Current Recommendation
+## 19. Current Recommendation
 
 For now:
 

@@ -1,7 +1,7 @@
 # Agent Platform — Future Productization Vision
 
 > **Document Status:** Future Direction / Conceptual Target Architecture  
-> **Version:** v0.7  
+> **Version:** v0.8  
 > **Current Relationship to CEAA:** This document does **not** redefine the current CEAA research scope. It describes a possible platform architecture that may be developed **after** the current research validates the capability-evolution hypothesis.
 
 ---
@@ -2054,7 +2054,542 @@ The Agent Core should remain relatively stable while the capability graph grows 
 This model connects capability routing, capability evolution, security boundaries, enterprise specialization, smaller-model efficiency, skill reuse, and long-term organizational learning.
 
 ---
-## 11. Future Vertical — Continuous Robot Capability Evolution Platform
+## 11. Experience Inheritance and Organizational Learning
+
+### 11.1 Core Principle
+
+A central long-term principle of the platform is that every successfully handled problem should leave behind reusable organizational experience.
+
+The platform should not become more capable only because a larger model is introduced. It should improve because it remembers how previous problems were solved, which capabilities worked, which failures occurred, and which validated workflows should be reused.
+
+> **The model may change, but the organization should not forget.**
+
+This creates a form of:
+
+> **Experience Compounding / Organizational Learning**
+
+where each completed task contributes evidence that can improve future routing, skill selection, capability reuse, validation, and execution efficiency.
+
+---
+
+### 11.2 Experience as a First-Class Platform Asset
+
+The platform should record more than the final answer or output.
+
+A completed execution may produce an Experience Record containing:
+
+~~~text
+Problem / Task
+Context
+Data Sensitivity
+Selected Domain
+Selected Skill-Tree Branch
+Selected Skill(s)
+Knowledge Retrieved
+Model Used
+Tool Sequence
+Workflow / Plan
+Policy Decisions
+Success / Failure
+Validation Evidence
+Human Correction
+Cost
+Latency
+Retries
+Environment
+Final Outcome
+~~~
+
+Conceptually:
+
+~~~text
+Task Execution
+    ↓
+Execution Trace
+    ↓
+Outcome Evaluation
+    ↓
+Experience Record
+    ↓
+Experience Memory
+~~~
+
+Experience records should remain inspectable, versioned, and governed rather than being compressed only into model weights.
+
+---
+
+### 11.3 Knowledge RAG and Experience RAG
+
+The platform should distinguish between at least two retrieval roles.
+
+**Knowledge RAG** answers:
+
+> What information does the Agent need to know?
+
+It retrieves documents, records, facts, policies, manuals, previous reports, and other knowledge context.
+
+**Experience RAG** answers:
+
+> How were similar problems solved before?
+
+It retrieves prior execution episodes, routing decisions, successful capability sequences, failures, corrections, and validation outcomes.
+
+Conceptually:
+
+~~~text
+                    New Task
+                       ↓
+          ┌────────────┴────────────┐
+          ↓                         ↓
+    Knowledge RAG              Experience RAG
+          ↓                         ↓
+ Relevant Knowledge         Similar Past Cases
+          └────────────┬────────────┘
+                       ↓
+                  Branch Router
+~~~
+
+The two retrieval systems are complementary rather than interchangeable.
+
+Knowledge RAG narrows the knowledge space.
+
+Experience RAG narrows the historical solution space.
+
+---
+
+### 11.4 Experience-Guided Skill-Tree Routing
+
+Experience RAG should help the platform determine which Skill Tree branch is most likely to contain the correct capability.
+
+Instead of routing only from current task semantics:
+
+~~~text
+Task
+ ↓
+Semantic Classification
+ ↓
+Skill Branch
+~~~
+
+the platform can use:
+
+~~~text
+Task
+ ↓
+Retrieve Similar Experience
+ ↓
+Observe Previously Successful Branches / Skills
+ ↓
+Estimate Branch Prior
+ ↓
+Skill Tree Gate
+ ↓
+Candidate Skills
+~~~
+
+Example:
+
+~~~text
+New Problem:
+Analyze a company's recent supply-chain risk
+
+Retrieved Experience:
+
+Case A
+→ Research / Supply Chain
+→ relationship_analysis
+→ success
+
+Case B
+→ Research / News Analysis
+→ entity_relationship_mapping
+→ success
+
+Case C
+→ Finance / Valuation
+→ low relevance
+~~~
+
+The router may use this evidence to assign a stronger prior to the Research / Supply Chain branch before performing skill retrieval.
+
+This reduces dependence on a one-shot model decision and can lower the probability of choosing the wrong capability branch.
+
+---
+
+### 11.5 Skill Tree as the Executable Capability Structure
+
+Experience RAG should not directly execute actions.
+
+It provides evidence about what worked before.
+
+The Skill Tree / Capability DAG remains the authoritative structure describing what executable capabilities currently exist.
+
+The relationship is therefore:
+
+~~~text
+Experience RAG
+= What worked before?
+
+Skill Tree
+= What can be executed now?
+~~~
+
+A retrieved historical solution may reference a skill that has since been:
+
+- deprecated,
+- revoked,
+- replaced,
+- restricted by policy,
+- made incompatible with the current environment.
+
+Therefore, retrieved experience should guide routing but must not bypass current capability, compatibility, validation, or policy checks.
+
+---
+
+### 11.6 Capability Evolution When Experience and Skills Are Insufficient
+
+When Experience RAG cannot identify a sufficiently similar successful solution, or the relevant Skill Tree branch does not contain a suitable capability, the platform should enter the Capability Evolution path.
+
+~~~text
+New Task
+ ↓
+Knowledge RAG
+ ↓
+Experience RAG
+ ↓
+Skill Tree Routing
+ ↓
+No Suitable Validated Skill
+ ↓
+Capability Gap Detection
+ ↓
+Generate Candidate Capability
+ ↓
+Validate / Test
+ ↓
+Policy / Human Approval
+ ↓
+Attach to Correct Skill-Tree Branch
+ ↓
+Execute
+ ↓
+Record New Experience
+~~~
+
+This closes the loop between retrieval and evolution.
+
+The platform does not merely search an existing capability space. It can expand that capability space when necessary.
+
+---
+
+### 11.7 The Organizational Learning Loop
+
+The combined system forms a compounding loop:
+
+~~~text
+Solve Problem
+    ↓
+Record Experience
+    ↓
+Retrieve Similar Experience
+    ↓
+Improve Branch Selection
+    ↓
+Improve Skill Selection
+    ↓
+Reuse Validated Capabilities
+    ↓
+Reduce Trial-and-Error
+    ↓
+Lower Cost / Latency
+    ↓
+Higher Task Success
+    ↓
+Create Better Experience
+    ↓
+Repeat
+~~~
+
+This is the mechanism behind the platform becoming more effective over time.
+
+The intended effect is not that the underlying LLM necessarily becomes more intelligent.
+
+Instead, the platform becomes better at:
+
+- recognizing problem patterns,
+- selecting the correct branch,
+- retrieving proven skills,
+- avoiding known failures,
+- reusing validated workflows,
+- selecting appropriate models,
+- choosing lower-cost execution paths,
+- identifying genuine capability gaps.
+
+---
+
+### 11.8 Expected Compounding Effect
+
+For recurring or structurally similar enterprise tasks, the platform should test whether experience accumulation produces measurable improvement over time.
+
+Possible hypotheses include:
+
+~~~text
+T_solve(t+1) < T_solve(t)
+
+Cost_per_success(t+1) < Cost_per_success(t)
+
+Routing_Error_Rate(t+1) < Routing_Error_Rate(t)
+
+Capability_Reuse_Rate(t+1) > Capability_Reuse_Rate(t)
+~~~
+
+These relationships are hypotheses rather than guaranteed outcomes and should be evaluated empirically.
+
+The strongest effect is expected in bounded enterprise environments where task patterns, workflows, systems, and operating constraints repeat over time.
+
+---
+
+### 11.9 Experience Quality and Negative Experience
+
+Organizational learning should not record only successful executions.
+
+Failures may be equally valuable.
+
+The Experience Memory should capture:
+
+- wrong branch selection,
+- wrong skill selection,
+- invalid tool calls,
+- policy denials,
+- failed capability versions,
+- environment incompatibility,
+- human corrections,
+- rollback causes,
+- known anti-patterns.
+
+This allows the platform to learn not only:
+
+> What should be done?
+
+but also:
+
+> What should not be repeated?
+
+Negative experience can therefore reduce repeated failure and unnecessary exploration.
+
+---
+
+### 11.10 Experience Confidence and Evidence
+
+Not every historical execution should have equal influence.
+
+Experience records should include evidence such as:
+
+~~~text
+success_count
+failure_count
+validation_status
+human_verified
+environment_match
+recency
+skill_version
+model_version
+policy_version
+confidence
+~~~
+
+Routing should prefer experience that is:
+
+- validated,
+- recent enough for the task,
+- compatible with the current environment,
+- based on approved capability versions,
+- repeated successfully rather than observed only once.
+
+This prevents low-quality or obsolete experience from becoming organizational folklore.
+
+---
+
+### 11.11 Relationship to Model Replacement
+
+Experience Memory and the Capability Graph should be external to any single foundation model.
+
+This allows the organization to replace:
+
+- model providers,
+- model versions,
+- local model families,
+- inference infrastructure,
+
+without discarding accumulated operational knowledge.
+
+Conceptually:
+
+~~~text
+Model A
+   ↓
+Experience Memory + Skill Tree + Validation Evidence
+   ↑
+Model B
+~~~
+
+The organizational memory survives the model transition.
+
+This creates an important enterprise property:
+
+> **Agents can be replaced; validated organizational experience remains.**
+
+---
+
+### 11.12 Relationship to Smaller Local Models
+
+Experience inheritance also supports the platform's local-model strategy.
+
+A smaller model that receives:
+
+- relevant knowledge,
+- similar prior cases,
+- a narrowed Skill Tree branch,
+- a small candidate skill set,
+- validated workflow patterns,
+
+faces a substantially smaller open-ended reasoning problem than a model starting from scratch.
+
+Conceptually:
+
+~~~text
+Open-Ended Task
+     ↓
+Knowledge RAG reduces what must be known
+     ↓
+Experience RAG reduces what must be rediscovered
+     ↓
+Skill Tree reduces what actions must be considered
+     ↓
+Capability Reuse reduces what must be regenerated
+     ↓
+Smaller Local Model Executes Bounded Decision
+~~~
+
+This leads to a combined research hypothesis:
+
+> **Accumulated organizational experience may compensate for part of the general reasoning advantage of larger models on bounded enterprise workflows.**
+
+---
+
+### 11.13 Enterprise-Specific Organizational Memory
+
+Each enterprise is expected to accumulate a different experience base even when using the same platform and the same foundation models.
+
+Examples of organization-specific experience include:
+
+- internal SOP execution patterns,
+- ERP / MES / CRM workflows,
+- approval paths,
+- manufacturing failure modes,
+- maintenance decisions,
+- customer handling patterns,
+- security incident responses,
+- validated robot behaviors,
+- preferred tool sequences,
+- cost / latency tradeoffs.
+
+Over time, this creates a private organizational asset composed of:
+
+~~~text
+Experience Memory
++
+Company-Specific Capability Graph
++
+Validation Evidence
++
+Execution History
++
+Policy Knowledge
+~~~
+
+This is difficult to reproduce by simply switching to a stronger general-purpose model.
+
+---
+
+### 11.14 Evaluation Framework
+
+Future experiments should compare at least:
+
+~~~text
+A. No Experience Retrieval
+   Semantic routing only
+
+B. Knowledge RAG Only
+
+C. Knowledge RAG + Skill Tree
+
+D. Knowledge RAG + Experience RAG + Skill Tree
+
+E. Knowledge RAG + Experience RAG + Skill Tree + Capability Evolution
+~~~
+
+Recommended metrics include:
+
+- task success rate,
+- branch-selection accuracy,
+- skill-selection accuracy,
+- capability reuse rate,
+- invalid tool-call rate,
+- number of reasoning / planning steps,
+- token usage,
+- latency,
+- cost per successful task,
+- human intervention rate,
+- repeated-failure rate,
+- capability-generation frequency,
+- performance improvement over accumulated experience.
+
+A particularly important longitudinal experiment is to evaluate whether the same platform improves on a stable enterprise task distribution as validated experience accumulates.
+
+---
+
+### 11.15 Long-Term Interpretation
+
+The long-term system can be summarized as:
+
+~~~text
+RAG
+→ remembers knowledge and experience
+
+Skill Tree
+→ organizes and retrieves executable capabilities
+
+Capability Evolution
+→ creates missing capabilities
+
+Execution
+→ produces new evidence
+
+Experience Memory
+→ preserves what the organization learned
+~~~
+
+Together they form a continuously improving organizational intelligence loop:
+
+~~~text
+Remember
+  ↓
+Retrieve
+  ↓
+Act
+  ↓
+Learn
+  ↓
+Evolve
+  ↓
+Remember
+~~~
+
+> **The platform should become more effective with use because every validated problem-solving episode becomes reusable organizational knowledge and capability evidence.**
+
+---
+## 12. Future Vertical — Continuous Robot Capability Evolution Platform
 
 ### 9.1 Strategic Positioning
 
@@ -2922,7 +3457,7 @@ The robotics direction should only be pursued after the general capability-evolu
 
 ---
 
-## 12. Recursive Multi-Agent Organization
+## 13. Recursive Multi-Agent Organization
 
 After capability generation, validation, activation, and reuse are sufficiently validated, the next major development line is **Multi-Agent Evolution**.
 
@@ -2947,7 +3482,7 @@ Core long-term principle:
 
 ---
 
-## 13. Research-to-Platform Development Path
+## 14. Research-to-Platform Development Path
 
 ### Stage 1 — Research Validation
 
@@ -3062,7 +3597,7 @@ All imported capabilities remain untrusted until locally validated.
 
 ---
 
-## 14. Scope Boundary
+## 15. Scope Boundary
 
 This document must not be used to claim that the current CEAA implementation already provides an Agent Platform.
 
@@ -3085,7 +3620,7 @@ The current project should continue to prioritize research validation.
 
 ---
 
-## 15. Decision Gate for Platformization
+## 16. Decision Gate for Platformization
 
 Platform development should begin only after sufficient evidence exists that the CEAA mechanism is worth productizing.
 
@@ -3104,7 +3639,7 @@ If the answers are not satisfactory, research should continue before platform ex
 
 ---
 
-## 16. Long-Term Architectural Summary
+## 17. Long-Term Architectural Summary
 
 The long-term product concept can be summarized as:
 
@@ -3150,7 +3685,7 @@ Enterprise Productization
 
 ---
 
-## 17. Current Recommendation
+## 18. Current Recommendation
 
 For now:
 

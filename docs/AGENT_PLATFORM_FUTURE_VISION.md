@@ -1,7 +1,7 @@
 # Agent Platform — Future Productization Vision
 
 > **Document Status:** Future Direction / Conceptual Target Architecture  
-> **Version:** v0.5  
+> **Version:** v0.6  
 > **Current Relationship to CEAA:** This document does **not** redefine the current CEAA research scope. It describes a possible platform architecture that may be developed **after** the current research validates the capability-evolution hypothesis.
 
 ---
@@ -418,6 +418,7 @@ Potential responsibilities:
 - Task Router
 - Agent Registry
 - Data Sensitivity Classifier
+- Hierarchical Capability Router / Skill Tree Gate
 - Model Router
 - Execution Placement / Model Policy Resolver
 - Workflow Registry
@@ -1582,7 +1583,373 @@ These capabilities should be added only after the core capability-evolution mech
 
 ---
 
-## 10. Future Vertical — Continuous Robot Capability Evolution Platform
+## 10. Hierarchical Skill Tree and Capability-Gated Routing
+
+### 10.1 Conceptual Model
+
+As the platform accumulates hundreds or thousands of capabilities, exposing every tool and skill to every Agent invocation becomes inefficient, difficult to govern, and increasingly error-prone.
+
+The platform should therefore organize capabilities using a hierarchical model inspired by an RPG skill tree.
+
+~~~text
+                         Agent Core
+                            │
+        ┌───────────────────┼───────────────────┐
+        │                   │                   │
+     Research            Software           Robotics
+        │                   │                   │
+   ┌────┼────┐         ┌────┼────┐         ┌────┼────┐
+   │    │    │         │    │    │         │    │    │
+ Web  Data  News      Code  Test Deploy   Vision Move Control
+   │                   │                   │
+ Search              Repo Search         Object Detect
+ Extract             Patch Code          Pose Estimate
+ Verify              Refactor            Grasp
+~~~
+
+The Agent Core does not need direct visibility into every executable skill. Instead, task execution should progressively narrow the capability search space:
+
+~~~text
+Task
+ ↓
+Domain Gate
+ ↓
+Capability Family / Toolbox Gate
+ ↓
+Relevant Branch
+ ↓
+Skill Retrieval
+ ↓
+Policy Gate
+ ↓
+Execution
+~~~
+
+This structure is intended to improve routing accuracy, token efficiency, tool-selection precision, permission isolation, Capability Registry scalability, and explainability.
+
+---
+
+### 10.2 Tree for Human Understanding, DAG for System Representation
+
+The RPG skill-tree metaphor is useful for explaining the platform, but the underlying data structure should not be restricted to a strict tree. Some capabilities may share prerequisites or dependencies.
+
+Therefore, the implementation should be treated as a:
+
+> **Hierarchical Capability DAG**
+
+Parent nodes represent domains or capability families, child nodes represent more specialized capability groups, leaf nodes represent executable skills, and edges may represent hierarchy, dependency, prerequisite, compatibility, or composition relationships.
+
+The tree view provides intuitive navigation; the DAG provides realistic system semantics.
+
+---
+
+### 10.3 Branch Isolation
+
+A capability selected inside one branch should, by default, only access capabilities within its authorized subtree.
+
+~~~text
+Software
+  └─ Repository
+      ├─ read_code
+      ├─ search_code
+      └─ modify_code
+~~~
+
+If a task is routed to the Repository branch, the runtime should not automatically expose unrelated capabilities such as Finance → Payment → Transfer or Communication → Email → Send.
+
+Conceptually:
+
+~~~text
+Allowed Capability Scope
+=
+Authorized Descendants(Current Branch)
+~~~
+
+This creates both a reasoning boundary and a security boundary.
+
+---
+
+### 10.4 Controlled Cross-Branch Execution
+
+Complex tasks may legitimately require multiple capability branches. Branch isolation therefore should not prohibit cross-branch execution; it should require the Control Plane to explicitly orchestrate it.
+
+~~~text
+Task
+ ↓
+Research Branch
+ ↓
+Research Result
+ ↓
+Control Plane
+ ↓
+Policy / Permission Check
+ ↓
+Communication Branch
+ ↓
+Email Skill
+~~~
+
+The operating rule is:
+
+~~~text
+Within Branch
+→ Local Capability Routing
+
+Across Branches
+→ Control Plane Orchestration
+→ Policy Check
+→ New Scoped Execution Grant
+~~~
+
+An Agent should not independently jump into another branch merely because that capability exists.
+
+---
+
+### 10.5 Capability Gate
+
+The platform should introduce a Capability Gate between the Agent and the executable capability surface. Its purpose is to reduce a large global capability set into a small task-relevant subset.
+
+~~~text
+Global Capability Registry
+        ↓
+Task Classification
+        ↓
+Domain Gate
+        ↓
+Capability Family Gate
+        ↓
+Branch Scope
+        ↓
+Semantic / Metadata Retrieval
+        ↓
+Policy Filter
+        ↓
+Candidate Skills
+        ↓
+Agent Selection
+~~~
+
+Potential routing signals include domain, intent, capability family, semantic relevance, prerequisite satisfaction, tenant policy, user permissions, data sensitivity, cost, latency, environment compatibility, historical success rate, risk level, and model capability.
+
+The Agent may therefore see only a handful of skills even when the platform contains thousands.
+
+---
+
+### 10.6 Skill Metadata and Preconditions
+
+Each capability should expose structured routing metadata in addition to a natural-language description.
+
+~~~yaml
+skill_id: repository.patch_code
+domain:
+  - software_engineering
+capability_family:
+  - repository
+intent:
+  - fix_bug
+  - modify_code
+prerequisites:
+  - repository.read_code
+  - repository.search_code
+risk_level: medium
+permissions:
+  - repository.read
+  - repository.write
+cost_class: low
+latency_class: fast
+validation:
+  status: approved
+  success_rate: 0.94
+~~~
+
+The router should not depend only on skill names or embeddings. Structured metadata allows routing to consider relevance, policy, cost, compatibility, and validation evidence.
+
+Some capabilities may also require prerequisite capabilities before they can be executed safely or successfully.
+
+~~~text
+robot.precision_grasp
+requires:
+  robot.object_detection
+  robot.pose_estimation
+  robot.force_control
+~~~
+
+A skill should only become eligible when required dependencies exist, versions are compatible, permissions are granted, environment constraints are satisfied, and validation status meets policy requirements.
+
+---
+
+### 10.7 Capability Evolution Inside a Branch
+
+Capability Evolution should occur in the relevant branch rather than adding new skills to a flat global registry.
+
+Example:
+
+~~~text
+Research
+  └─ News Analysis
+      └─ Entity Analysis
+          ├─ Entity Extraction
+          └─ Entity Classification
+~~~
+
+If a task requires relationship mapping and no suitable capability exists:
+
+~~~text
+Task
+ ↓
+Research
+ ↓
+News Analysis
+ ↓
+Entity Analysis
+ ↓
+No Suitable Skill
+ ↓
+Capability Gap Detected
+ ↓
+Generate Candidate Skill
+ ↓
+Validate / Test
+ ↓
+Policy / Human Approval
+ ↓
+Attach to Entity Analysis Branch
+~~~
+
+The branch becomes:
+
+~~~text
+Research
+  └─ News Analysis
+      └─ Entity Analysis
+          ├─ Entity Extraction
+          ├─ Entity Classification
+          └─ Relationship Mapping   ← New Capability
+~~~
+
+> **New capabilities should grow from the correct branch of the existing capability structure.**
+
+This provides controlled capability growth instead of unbounded tool accumulation.
+
+---
+
+### 10.8 Branch-Aware Gap Detection
+
+Capability-gap detection should identify not only that a capability is missing, but also which domain owns it, which capability family should contain it, which existing skills are prerequisites, whether it extends an existing branch, and whether a new branch is justified.
+
+~~~text
+Task Failure / Missing Capability
+        ↓
+Locate Relevant Branch
+        ↓
+Search Descendants
+        ↓
+No Valid Candidate
+        ↓
+Classify Gap
+        ↓
+Extend Existing Branch
+or
+Propose New Branch
+~~~
+
+Creating a new top-level branch should require stronger validation than adding a specialized leaf skill, reducing uncontrolled taxonomy growth.
+
+---
+
+### 10.9 Routing as a Learned Platform Capability
+
+Routing quality itself should become measurable and improvable.
+
+~~~text
+Skill Score
+=
+Semantic Relevance
++ Historical Success
++ Environment Fit
++ Reuse Evidence
+- Cost
+- Risk
+- Latency Penalty
+~~~
+
+Over time, the platform can accumulate evidence about which skills work best for which task types, which capability sequences succeed, which branches frequently require escalation, and which skills should be deprecated or merged.
+
+The platform therefore improves not only by acquiring more skills, but also by becoming better at selecting them.
+
+---
+
+### 10.10 Relationship to Model Efficiency
+
+Hierarchical capability routing directly supports the hybrid-model strategy. A smaller model does not need to reason over the entire platform capability space.
+
+~~~text
+Task
+ ↓
+Control Plane narrows domain
+ ↓
+Capability Gate narrows branch
+ ↓
+Retriever returns small candidate set
+ ↓
+Local Model selects / executes
+~~~
+
+This can reduce prompt size, tool-schema tokens, ambiguity, model reasoning burden, latency, and tool-selection errors.
+
+> **Research hypothesis: Hierarchical capability gating may allow smaller local models to achieve stronger task-level performance by reducing the decision space presented to the model.**
+
+---
+
+### 10.11 Evaluation
+
+Future experiments should compare:
+
+~~~text
+A. Flat Tool Exposure
+   All tools visible
+
+B. Semantic Tool Retrieval
+   Retrieve top-k tools globally
+
+C. Hierarchical Capability Routing
+   Domain → Branch → Skill
+
+D. Hierarchical Routing + Learned Historical Ranking
+~~~
+
+Recommended metrics include task success rate, tool-selection accuracy, invalid tool-call rate, token usage, latency, routing overhead, retrieval precision/recall, human intervention rate, policy violations, cost per successful task, and performance by model size.
+
+A particularly important experiment is:
+
+~~~text
+Large Model + Flat Tool Set
+vs
+Small / Medium Local Model + Hierarchical Capability Routing
+~~~
+
+If the latter approaches the former on bounded enterprise workflows, the result would directly support lower-cost enterprise deployment.
+
+---
+
+### 10.12 Relationship to the Capability Registry
+
+The Capability Registry should evolve from a flat inventory into a structured capability graph containing Capability Nodes, Capability Branches, Dependency Edges, Prerequisite Edges, Composition Edges, Validation Evidence, Policy Scope, Compatibility Metadata, Execution History, Versions, and Trust Levels.
+
+The registry therefore becomes both a storage system for validated skills and a navigable organizational model of what the platform knows how to do.
+
+---
+
+### 10.13 Long-Term Interpretation
+
+The Agent Core should remain relatively stable while the capability graph grows around it.
+
+> **The Agent does not become capable by carrying every tool at once. It becomes capable by knowing which branch to enter, which validated skills to retrieve, and when a missing skill must be created.**
+
+This model connects capability routing, capability evolution, security boundaries, enterprise specialization, smaller-model efficiency, skill reuse, and long-term organizational learning.
+
+---
+## 11. Future Vertical — Continuous Robot Capability Evolution Platform
 
 ### 9.1 Strategic Positioning
 
@@ -2450,7 +2817,7 @@ The robotics direction should only be pursued after the general capability-evolu
 
 ---
 
-## 11. Recursive Multi-Agent Organization
+## 12. Recursive Multi-Agent Organization
 
 After capability generation, validation, activation, and reuse are sufficiently validated, the next major development line is **Multi-Agent Evolution**.
 
@@ -2475,7 +2842,7 @@ Core long-term principle:
 
 ---
 
-## 12. Research-to-Platform Development Path
+## 13. Research-to-Platform Development Path
 
 ### Stage 1 — Research Validation
 
@@ -2590,7 +2957,7 @@ All imported capabilities remain untrusted until locally validated.
 
 ---
 
-## 13. Scope Boundary
+## 14. Scope Boundary
 
 This document must not be used to claim that the current CEAA implementation already provides an Agent Platform.
 
@@ -2613,7 +2980,7 @@ The current project should continue to prioritize research validation.
 
 ---
 
-## 14. Decision Gate for Platformization
+## 15. Decision Gate for Platformization
 
 Platform development should begin only after sufficient evidence exists that the CEAA mechanism is worth productizing.
 
@@ -2632,7 +2999,7 @@ If the answers are not satisfactory, research should continue before platform ex
 
 ---
 
-## 15. Long-Term Architectural Summary
+## 16. Long-Term Architectural Summary
 
 The long-term product concept can be summarized as:
 
@@ -2678,7 +3045,7 @@ Enterprise Productization
 
 ---
 
-## 16. Current Recommendation
+## 17. Current Recommendation
 
 For now:
 

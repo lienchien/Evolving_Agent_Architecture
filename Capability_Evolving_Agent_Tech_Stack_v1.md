@@ -598,7 +598,7 @@ Redis / RQ
 ## Phase 1 — MVP 必裝
 
 ### 目標
-先讓 Agent 能建立一項新能力。
+完成可驗證的 Core MVP，並建立 Execution Experience & Evolution Telemetry Foundation，使平台從 Phase 1 起即可保存未來 Experience Memory、系統診斷與 Capability / Agent / Organization Evolution 所需的歷史證據。
 
 ### 建議新增
 - LiteLLM
@@ -611,12 +611,18 @@ Redis / RQ
 
 FastAPI 通常已經依賴 Pydantic，但仍建議確認版本。
 
+目前 Core Baseline 已驗證為 **28 passed, 1 warning**；Phase 1 仍為 In Progress，必須完成上述 Telemetry Foundation 後才進入 Phase 1.5。
+
 ### 開發內容
 - Capability Schema
 - Main Agent
 - Evolution Agent
 - Validator
 - 基礎 Capability Library
+- SQLite task / LLM interaction metrics persistence
+- Execution Experience & Evolution Telemetry schema
+- routing / candidate / selected target / failure / retry / fallback / outcome evidence
+- task / trace identity linkage
 
 ---
 

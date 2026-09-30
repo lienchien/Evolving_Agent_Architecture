@@ -30,13 +30,11 @@
 上述行為與資料庫升級細節以 [API_CONCURRENCY.md](docs/API_CONCURRENCY.md) 為準。
 授權與資料控制本輪不啟用；既有安全註記需保留。
 
-## 候選增量：Token／費用研究量測
+## 已整合基礎：Token／費用研究量測
 
-研究契約已納入 Phase 1 文件，詳見
-[TOKEN_COST_RESEARCH.md](docs/TOKEN_COST_RESEARCH.md)。候選實作位於
-`feature/token-cost-research` 的 `ca08851`，文件紀錄為 `d3270fc`，尚未合併 `dev`。
+研究契約與實作均已納入 `dev`，詳見 [TOKEN_COST_RESEARCH.md](docs/TOKEN_COST_RESEARCH.md)。目前 Core Baseline 為 **28 passed, 1 warning**；此量測基礎保留為 Phase 1 已驗證能力，下一個必做項目是 Execution Experience & Evolution Telemetry Foundation。
 
-在決定合併程式前應重新檢查：
+後續接入真實 provider 前仍應重新檢查：
 
 1. task／LLM interaction 指標是否符合真實 provider adapter 的 usage envelope；
 2. unavailable token 不估算、首次待核准 task 不誤算成功的研究語意；

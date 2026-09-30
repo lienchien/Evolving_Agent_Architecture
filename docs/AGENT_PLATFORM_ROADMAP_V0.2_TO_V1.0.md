@@ -917,7 +917,8 @@ Control Plane
     │
     ▼
 v0.7
-Multi-Agent Runtime
+Agent Organization Layer
++ Multi-Agent Runtime
     │
     ▼
 v0.8

@@ -39,9 +39,11 @@ Token efficiency／cost amortization 的研究契約與實作已合併至 `dev`�
 Exact／Near-Similar／Generalized 長序列實驗仍屬下一階段研究工作，不能以目前 mock 測試結果
 宣稱 CEAA 已證明節省 Token。
 
-## 新增必要基礎：Routing / Failure Telemetry
+## 新增必要基礎：Execution Experience & Evolution Telemetry
 
 Adaptive Agent Organization 已被列為長期主力研究方向，但**自動組織演化本身尚未進入目前實作範圍**。
+
+本次概念修正：Telemetry 不應只被視為「錯誤紀錄」。完整 operational history 本身就是平台資產。大量重複 exception 即使尚未被 root-cause resolved，也可透過 frequency、clustering、trend、routing path、environment、retry outcome 與 failure-rate denominator 找出 systemic problems。
 
 現階段新增的必要工作是先建立可持續累積的錯誤與 routing evidence。原因是未來要比較 Flat Routing、Skill Routing、Sub-Agent、Manager Hierarchy 與 Adaptive Organization，必須有長期且結構化的 baseline，而不能只依賴 application log 或最終 task success。
 
@@ -55,7 +57,9 @@ Adaptive Agent Organization 已被列為長期主力研究方向，但**自動�
 - [ ] task / trace / routing correlation
 - [ ] routing success / failure summary API
 - [ ] restart-persistent routing / failure evidence
-- [ ] longitudinal dataset for future organization experiments
+- [ ] durable raw operational history（success / failure / retry / fallback）
+- [ ] repeated-exception aggregation / systemic-pattern analysis foundation
+- [ ] longitudinal dataset for future Experience Memory、Evolution Signal 與 organization experiments
 
 預定資料鏈：
 
@@ -75,7 +79,17 @@ Task
 Root → Manager → Agent → Sub-Agent → Skill → Tool
 ~~~
 
-因此這項工作不是提前實作未來 hierarchy，而是建立**現在開始就不能缺少的 longitudinal telemetry**。
+因此這項工作不是提前實作未來 hierarchy，而是建立**現在開始就不能缺少的 longitudinal operational history**。
+
+未來同一批資料可走兩條路：
+
+~~~text
+Raw History
+├─→ Individual Episode → Resolution → Validated Experience
+└─→ Population Analysis → Repeated/Systemic Pattern → Evolution Signal
+~~~
+
+也就是失敗資料不需要先被整理成「好經驗」才值得保存。
 
 ---
 
@@ -130,7 +144,7 @@ Queue 保留擴充介面，Phase 1 不透過它執行背景任務。
 
 ## 尚未完成與已接受限制
 
-- [ ] Routing / Failure Telemetry：routing decision、candidate set、selected target、failure taxonomy、retry/fallback 與 outcome correlation。
+- [ ] Execution Experience & Evolution Telemetry：routing decision、candidate set、selected target、failure taxonomy、retry/fallback 與 outcome correlation。
 - [ ] 長時間負載、吞吐量、延遲、鎖定逾時及故障復原驗證。
 - [ ] 程序強制終止後的生成名額自動復原／租約。
 - [ ] 認證、管理員角色與 tenant/owner/scope 資料控制。
@@ -160,7 +174,7 @@ Docker sandbox、認證／授權、租約復原與負載／故障測試。詳見
 
 | 階段 | 規劃與狀態 |
 |---|---|
-| Phase 1.5 | 下一步：Routing / Failure Telemetry Evidence Foundation；之後整合 LiteLLM、NVIDIA NIM/OpenRouter、PostgreSQL adapter/migration、Docker sandbox、更多邊界與安全測試 |
+| Phase 1.5 | 下一步：Execution Experience & Evolution Telemetry Evidence Foundation；之後整合 LiteLLM、NVIDIA NIM/OpenRouter、PostgreSQL adapter/migration、Docker sandbox、更多邊界與安全測試 |
 | Phase 2 | 規劃：pgvector、embedding、語意檢索、相容性篩選與排序；目前僅完成 task_family 精確去重 |
 | Phase 3 | 規劃：在 Phase 1 量測基礎上，以 tracing、Phoenix/DeepEval/MLflow 執行跨模型 baseline、token amortization、相似度、重用與回歸實驗 |
 | Phase 4 | 規劃：Redis/RQ、Evolution/Testing/Notification workers |

@@ -4,9 +4,9 @@
 
 ## 目前基準
 
-**Phase 1 — 核心驗證完成；現階段新增必要基礎：Execution Experience & Evolution Telemetry Foundation。**
+**Phase 1 — In Progress：Core Baseline 已驗證；Execution Experience & Evolution Telemetry Foundation 納入 Phase 1 必做項目。**
 
-目前分支為 `dev`；Token／費用研究功能已完整納入，包含 task／LLM interaction
+目前分支為 `dev`；既有 Core Baseline 與 Token／費用研究功能已完成驗證，但 **Phase 1 尚未退出**。Phase 1 現在必須補齊 Execution Experience & Evolution Telemetry Foundation。既有量測包含 task／LLM interaction
 成本觀測、SQLite 持久化與研究 API。最近完整測試為 **28 passed, 1 warning in 7.12s**。
 實作仍採 Mock LLM、SQLite、Python subprocess 與 Console Notification。
 本輪實際過程見 [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md)，完成度見
@@ -60,7 +60,7 @@
 隔離 SQLite 保存 1 Capability、1 TestReport、1 ApprovalRecord、2 AuditEntry。
 完整執行紀錄見 [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md)。
 
-## 現階段必要功能：Execution Experience & Evolution Telemetry Foundation
+## Phase 1 必做功能：Execution Experience & Evolution Telemetry Foundation
 
 這不是未來才做的 Adaptive Agent Organization 功能，而是**現在就必須建立的研究資料基礎**。
 
@@ -173,7 +173,28 @@ Raw data 不因為重複而失去價值；大量重複本身可能正是需要�
 
 ---
 
-## 下一個里程碑：Telemetry、真實 Usage 與 Production Hardening
+## Phase 1 更新後退出條件
+
+Phase 1 不再以既有 28-test Core Baseline 作為完整退出點。既有結果保留為 **Core Baseline Verified**，但必須完成以下 telemetry foundation 才能正式標記 Phase 1 Complete：
+
+- [x] Core capability evolution loop、approval、reuse、persistence 與 concurrency baseline。
+- [x] Task / LLM interaction token-cost measurement foundation。
+- [ ] Durable execution observation schema，可保存 success / failure / retry / fallback。
+- [ ] Task / trace / routing decision correlation。
+- [ ] Candidate set、selected target、routing depth / parent decision（適用時）持久化。
+- [ ] Normalized failure stage / category，同時保留可分析的 raw exception metadata。
+- [ ] Retry / fallback 與原始 failure 關聯。
+- [ ] Success denominator 與 failure recurrence / failure-rate 聚合。
+- [ ] 可依 task family / capability / target / exception type / time window 查詢 operational history。
+- [ ] Restart 後 telemetry 仍可讀回。
+- [ ] 成功、失敗、retry、缺失 metrics、持久化與 correlation 測試。
+- [ ] Telemetry 與既有 `llm_interactions` / `task_cost_metrics` 使用一致 task / trace identity。
+
+完成後 Phase 1 才可重新標記為 **Complete**，並進入 Phase 1.5 的 real infrastructure / hardening。
+
+---
+
+## 下一個里程碑：完成 Phase 1 Telemetry，再進入真實 Usage 與 Production Hardening
 
 1. 建立 Execution Experience & Evolution Telemetry Foundation，開始累積成功與錯誤 routing / execution 資料。
 2. 讓 LiteLLM／NVIDIA NIM／OpenRouter adapter 回傳 provider 原生 token usage 與可靠費用.
@@ -217,7 +238,7 @@ API、併發與成本研究測試分別位於 `tests/test_api.py`、`tests/test_
 
 ## Phase 1.5 與後續
 
-在 Phase 1 驗證收尾後依序評估：
+在上述 Phase 1 Telemetry 退出條件完成後，再依序評估：
 
 1. LiteLLM adapter、NVIDIA NIM/OpenRouter、provider fallback/health check；保留 Mock 測試。
 2. PostgreSQL repository、migration 與 runtime configuration。

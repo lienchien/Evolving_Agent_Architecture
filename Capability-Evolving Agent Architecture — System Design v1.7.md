@@ -1813,6 +1813,7 @@ Capability Registry
 Notification Interface
 Approval API
 Token / Cost Measurement Foundation
+Execution Experience & Evolution Telemetry Foundation
 ```
 
 Phase 1 的 Token / Cost Measurement Foundation 包含：
@@ -1828,6 +1829,18 @@ Phase 1 的 Token / Cost Measurement Foundation 包含：
 
 此量測基礎已合併至 `dev`。Phase 1 建立可驗證的量測管線，不宣稱 Mock LLM 已提供真實 token 證據，也不取代
 Phase 3 的跨模型、跨相似度與長任務序列正式實驗。
+
+Phase 1 同時必須建立 **Execution Experience & Evolution Telemetry Foundation**。這不是 Adaptive Agent Organization 本身，而是未來 Experience Memory、system diagnosis、Capability / Agent / Organization Evolution 所依賴的歷史證據層。最低應保存：
+
+- task / trace identity；
+- routing decision 與 parent decision；
+- candidate set、selected target、node type 與 routing depth；
+- execution success / failure、raw exception 與 normalized failure category；
+- retry / fallback / recovery outcome；
+- latency、token、cost 與 final outcome correlation；
+- restart-persistent evidence，並與既有 token / cost metrics 使用一致 identity。
+
+因此目前狀態為 **Phase 1 In Progress / Core Baseline Verified**。既有 28-test baseline 不再代表整個 Phase 1 Complete；Telemetry Foundation 完成並驗證後才進入 Phase 1.5。
 
 ---
 

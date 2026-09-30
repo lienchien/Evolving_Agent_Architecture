@@ -55,7 +55,7 @@ Real LLM integration         Pending
 PostgreSQL runtime adapter   Pending
 Docker sandbox               Pending
 Semantic retrieval           Pending
-Routing/failure telemetry    Required Next
+Execution/evolution telemetry    Required Next
 Observability                Partial / Expanding
 Background workers           Pending
 Capability sharing           Future Reserved
@@ -64,7 +64,7 @@ Marketplace                  Future Reserved
 
 The next engineering/research milestone is:
 
-> **Build the Routing / Failure Telemetry Evidence Foundation, then connect real-provider usage and controlled baselines.**
+> **Build the Execution Experience & Evolution Telemetry Foundation, then connect real-provider usage and controlled baselines.**
 
 This is now a current requirement because the long-term research direction includes hierarchical and adaptive Agent organization. The project must begin collecting structured success and failure evidence before those layers exist.
 
@@ -197,7 +197,9 @@ Reuse
 
 ## Current Telemetry Requirement
 
-The platform should start collecting routing and execution evidence **now**, even though recursive Manager / Sub-Agent organization is a later-stage feature.
+The platform should start collecting complete routing and execution history **now**, even though recursive Manager / Sub-Agent organization is a later-stage feature.
+
+This history is valuable before root-cause resolution. A large population of repeated exceptions can reveal systemic defects through frequency, clustering, temporal patterns, routing paths, environment correlation, retry outcomes, and failure-rate analysis. Raw failures should therefore not be discarded merely because they are repetitive or not yet curated into reusable experiences.
 
 Minimum evidence path:
 
@@ -214,7 +216,15 @@ Task / Trace
 
 The schema should support recursive decisions through fields such as parent decision, routing depth, node type, selected target, candidate count, normalized failure category, and recovery outcome.
 
-The purpose is to create a longitudinal dataset for future experiments comparing:
+The evidence layer has two future consumers:
+
+~~~text
+Raw Operational History
+├─→ Episode Resolution → Curated Experience Memory
+└─→ Population Analysis → Systemic Pattern → Evolution Signal
+~~~
+
+The purpose is both to support self-diagnosis/evolution and to create a longitudinal dataset for future experiments comparing:
 
 ~~~text
 Flat Routing
@@ -224,7 +234,11 @@ Flat Routing
 → Adaptive Agent Organization
 ~~~
 
-The project is **not** implementing autonomous organization restructuring at this stage. It is implementing the evidence foundation required to evaluate that direction later.
+The project is **not** implementing autonomous organization restructuring at this stage. It is implementing the historical evidence foundation required for future Experience Memory, repeated-failure diagnosis, Evolution Signals, and organization experiments.
+
+A key principle is:
+
+> **Success shows what can be reused; failures and repeated exceptions reveal what may need to change.**
 
 See [DEV_PLAN.md](DEV_PLAN.md), [PROJECT_STATUS.md](PROJECT_STATUS.md), and [Future Productization Vision](docs/AGENT_PLATFORM_FUTURE_VISION.md).
 

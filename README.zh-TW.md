@@ -25,9 +25,7 @@
 
 詳見[專案狀態](PROJECT_STATUS.md)、[開發紀錄](DEVELOPMENT_LOG.md)及[API 併發行為](docs/API_CONCURRENCY.md)。下方架構圖包含長期設計：目前同步演化直接處理自己的 gap，queue 預留給未來背景 worker；報告、核准與 audit 已共用 SQLite 儲存。
 
-[Token／費用研究契約](docs/TOKEN_COST_RESEARCH.md)已同步到 `dev`。程式實作及其 28 項
-測試證據仍位於 `feature/token-cost-research`（`ca08851`），尚未合併；目前 `dev`
-runtime 仍為 25 項測試，沒有 `/api/research/*` 路由。
+[Token／費用研究契約](docs/TOKEN_COST_RESEARCH.md)及其實作已整合至 `dev`。目前完整 Core Baseline 為 **28 passed, 1 warning**，並包含 `/api/research/*` 量測端點；Phase 1 目前尚待完成 Execution Experience & Evolution Telemetry Foundation。
 
 目前狀態：
 

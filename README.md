@@ -507,7 +507,7 @@ Future notification providers may include:
 Evolving_Agent_Architecture/
 ├── README.md
 ├── README.zh-TW.md
-├── Capability-Evolving Agent Architecture — System Design v1.6.md
+├── Capability-Evolving Agent Architecture — System Design v1.7.md
 ├── Capability_Evolving_Agent_Tech_Stack_v1.md
 ├── DEV_PLAN.md
 ├── PROJECT_STATUS.md
@@ -1077,7 +1077,8 @@ The repository uses separate documents for different project-management purposes
 |---|---|
 | `README.md` | English project overview and entry point |
 | `README.zh-TW.md` | Traditional Chinese project overview and entry point |
-| `Capability-Evolving Agent Architecture — System Design v1.6.md` | Long-term system architecture and design principles |
+| `Capability-Evolving Agent Architecture — System Design v1.7.md` | Current long-term system architecture and design principles |
+| `Capability-Evolving Agent Architecture — System Design v1.6.md` | Historical design snapshot retained for architecture evolution traceability |
 | `Capability_Evolving_Agent_Tech_Stack_v1.md` | Technology stack and phased adoption plan |
 | `DEV_PLAN.md` | Current implementation plan and replacement paths |
 | `PROJECT_STATUS.md` | Current development stage, completion state, and milestones |

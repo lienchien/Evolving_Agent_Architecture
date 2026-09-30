@@ -38,12 +38,17 @@ Capability Evolution Mechanism Confirmed
 Architecture Stabilization
         ↓
 Agent Platform Productization
+        ↓
+Hierarchical Agent Organization
+        ↓
+Adaptive / Self-Organizing Agent System
 ```
 
 Therefore:
 
 - **CEAA now = research and validation of capability evolution**
 - **Agent Platform later = productization and system-level scaling of the validated mechanism**
+- **Primary long-term direction = scalable Agent organization and experience-guided organizational evolution**
 
 This separation is intentional.
 
@@ -77,6 +82,8 @@ Access Layer
       ↓
 Control Plane
       ↓
+Agent Organization Layer
+      ↓
 Agent Runtime
       ↓
 Security & Governance
@@ -87,6 +94,8 @@ Models / Tools / Data
 ```
 
 CEAA may later become the platform's **Capability Evolution Engine**.
+
+Beyond capability evolution, the platform's primary long-term scaling direction is an **Adaptive Agent Organization** that recursively organizes Managers, Agents, Sub-Agents, skills, and tools into bounded local decision spaces. Execution experience may eventually improve not only capability selection but also the organization topology itself.
 
 ---
 
@@ -243,21 +252,22 @@ Structured risk assessment.
 
 ---
 
-### 4.2 Control Plane and Runtime Must Remain Separate
+### 4.2 Control Plane, Agent Organization, and Runtime Must Remain Separate
 
-The Control Plane determines **how a task should be executed**.
-
-The Runtime performs the actual execution.
+The platform should separate global control, recursive responsibility routing, and execution.
 
 ```text
 Control Plane
-= decide what should happen
+= global policy, placement, lifecycle, and organization entry point
+
+Agent Organization Layer
+= decide which bounded Manager / Agent / Sub-Agent / capability branch owns the work
 
 Runtime
 = perform the work
 ```
 
-This separation allows future scale-out into multiple workers and heterogeneous runtimes.
+This separation prevents the Control Plane from becoming a flat global router and allows the Agent organization to grow recursively without changing external platform contracts. It also supports future scale-out into multiple workers and heterogeneous runtimes.
 
 ---
 
@@ -699,8 +709,8 @@ The current CEAA implementation can later map into platform components without r
 
 | Current CEAA Component | Possible Future Platform Role |
 |---|---|
-| MainAgent | Runtime / early Control Plane boundary |
-| EvolutionAgent | Capability Evolution Engine |
+| MainAgent | Runtime / early Control Plane boundary; possible future leaf/specialized Agent |
+| EvolutionAgent | Capability Evolution Engine; future source of organization-evolution proposals |
 | CapabilityService | Capability Registry |
 | TestingService | Capability Validation / Testing |
 | ApprovalService | Governance Plane |
@@ -710,7 +720,7 @@ The current CEAA implementation can later map into platform components without r
 | SQLite Repository | Persistence prototype |
 | MockLLMProvider | Model Gateway placeholder |
 | AuditService | Governance / Observability |
-| ResearchMetricsService | Token/cost observability and experiment data foundation |
+| ResearchMetricsService | Token/cost observability, routing telemetry, and future organization-evolution evidence foundation |
 
 This mapping is directional, not a commitment to preserve the current implementation unchanged.
 
@@ -726,6 +736,8 @@ Primary validation areas:
 
 - complex reasoning,
 - multi-agent orchestration,
+- hierarchical Agent organization,
+- adaptive responsibility routing,
 - model routing,
 - long-running analysis,
 - structured decision output.
@@ -2196,6 +2208,8 @@ Problem / Task
 Context
 Data Sensitivity
 Selected Domain
+Organization Routing Path
+Candidate / Selected Agent Nodes
 Selected Skill-Tree Branch
 Selected Skill(s)
 Knowledge Retrieved
@@ -2270,9 +2284,9 @@ Experience RAG narrows the historical solution space.
 
 ---
 
-### 11.4 Experience-Guided Skill-Tree Routing
+### 11.4 Experience-Guided Agent and Skill Routing
 
-Experience RAG should help the platform determine which Skill Tree branch is most likely to contain the correct capability.
+Experience RAG should help the platform determine both which Agent organization path should own a task and which Skill Tree branch is most likely to contain the correct capability.
 
 Instead of routing only from current task semantics:
 
@@ -2291,9 +2305,11 @@ Task
  ↓
 Retrieve Similar Experience
  ↓
-Observe Previously Successful Branches / Skills
+Observe Previously Successful Agents / Branches / Skills
  ↓
-Estimate Branch Prior
+Estimate Organization + Branch Priors
+ ↓
+Agent Organization Routing
  ↓
 Skill Tree Gate
  ↓
@@ -2406,6 +2422,8 @@ Record Experience
     ↓
 Retrieve Similar Experience
     ↓
+Improve Agent / Manager Routing
+    ↓
 Improve Branch Selection
     ↓
 Improve Skill Selection
@@ -2430,13 +2448,15 @@ The intended effect is not that the underlying LLM necessarily becomes more inte
 Instead, the platform becomes better at:
 
 - recognizing problem patterns,
+- selecting the correct Manager / Agent / Sub-Agent path,
 - selecting the correct branch,
 - retrieving proven skills,
 - avoiding known failures,
 - reusing validated workflows,
 - selecting appropriate models,
 - choosing lower-cost execution paths,
-- identifying genuine capability gaps.
+- identifying genuine capability gaps,
+- identifying routing bottlenecks and organization-topology pressure.
 
 ---
 
@@ -2640,11 +2660,17 @@ C. Knowledge RAG + Skill Tree
 D. Knowledge RAG + Experience RAG + Skill Tree
 
 E. Knowledge RAG + Experience RAG + Skill Tree + Capability Evolution
+
+F. E + Hierarchical Agent Organization
+
+G. F + Experience-Guided Adaptive Organization
 ~~~
 
 Recommended metrics include:
 
 - task success rate,
+- Agent / Manager routing accuracy,
+- route-retention accuracy,
 - branch-selection accuracy,
 - skill-selection accuracy,
 - capability reuse rate,
@@ -2656,7 +2682,11 @@ Recommended metrics include:
 - human intervention rate,
 - repeated-failure rate,
 - capability-generation frequency,
-- performance improvement over accumulated experience.
+- performance improvement over accumulated experience,
+- Span-of-Control sensitivity,
+- topology-change frequency,
+- routing recovery rate,
+- and organization-level load balance.
 
 A particularly important longitudinal experiment is to evaluate whether the same platform improves on a stable enterprise task distribution as validated experience accumulates.
 
@@ -2670,11 +2700,17 @@ The long-term system can be summarized as:
 RAG
 → remembers knowledge and experience
 
+Agent Organization
+→ organizes responsibility into bounded local decision spaces
+
 Skill Tree
 → organizes and retrieves executable capabilities
 
 Capability Evolution
 → creates missing capabilities
+
+Organization Evolution
+→ restructures Agent responsibility when scale or routing evidence requires it
 
 Execution
 → produces new evidence
@@ -3259,7 +3295,7 @@ Together, these components allow the enterprise to understand not only whether a
 ---
 ## 13. Future Vertical — Continuous Robot Capability Evolution Platform
 
-### 9.1 Strategic Positioning
+### 13.1 Strategic Positioning
 
 Robotics should be treated as a **future vertical built on top of the general Agent Platform Core**, not as a replacement for the current platform direction.
 
@@ -3301,7 +3337,7 @@ The resulting concept is:
 
 ---
 
-### 9.2 Core Closed-Loop Vision
+### 13.2 Core Closed-Loop Vision
 
 ~~~text
 Production Robot Fleet
@@ -3354,7 +3390,7 @@ Production robots should execute only approved artifacts. Learning and evolution
 
 ---
 
-### 9.3 Learning Plane vs Production Plane
+### 13.3 Learning Plane vs Production Plane
 
 ~~~text
 Production Plane
@@ -3391,7 +3427,7 @@ This separation allows continuous improvement without allowing unverified Agent-
 
 ---
 
-### 9.4 Robot Skill as a Capability
+### 13.4 Robot Skill as a Capability
 
 The existing Capability Evolution concept can be extended into embodied systems.
 
@@ -3438,7 +3474,7 @@ If a capability is missing or insufficient, the platform can trigger capability 
 
 ---
 
-### 9.5 Experience-Backed Capability Registry
+### 13.5 Experience-Backed Capability Registry
 
 A robotics-capable registry should record not only whether a skill exists, but **where and under what conditions it is reliable**.
 
@@ -3474,7 +3510,7 @@ The platform should eventually answer:
 
 ---
 
-### 9.6 Skill Growth and Compounding Learning
+### 13.6 Skill Growth and Compounding Learning
 
 Early stage:
 
@@ -3533,7 +3569,7 @@ The long-term strategic asset is:
 
 ---
 
-### 9.7 Digital Twin as the Primary Validation Funnel
+### 13.7 Digital Twin as the Primary Validation Funnel
 
 Digital twin simulation should eliminate weak or unsafe candidates before physical testing.
 
@@ -3563,7 +3599,7 @@ Simulation should cover variation in payload, object pose, friction, lighting, s
 
 ---
 
-### 9.8 Massive Parallel Robot Simulation and Experiment Orchestration
+### 13.8 Massive Parallel Robot Simulation and Experiment Orchestration
 
 The platform should eventually support large-scale parallel parameter exploration.
 
@@ -3615,7 +3651,7 @@ Simulation therefore becomes part of the capability-development engine, not only
 
 ---
 
-### 9.9 FPGA and Hardware Capability Evolution
+### 13.9 FPGA and Hardware Capability Evolution
 
 Robotics may use heterogeneous execution across CPU, GPU, NPU, FPGA, and MCU.
 
@@ -3665,7 +3701,7 @@ This creates a possible long-term research direction:
 
 ---
 
-### 9.10 FPGA Safety Partitioning
+### 13.10 FPGA Safety Partitioning
 
 Agent-modifiable FPGA logic must remain isolated from immutable safety-critical logic.
 
@@ -3696,7 +3732,7 @@ Any reconfiguration path must remain subject to policy, synthesis verification, 
 
 ---
 
-### 9.11 Heterogeneous Execution Placement
+### 13.11 Heterogeneous Execution Placement
 
 The Control Plane may evolve beyond model selection and decide **where a capability should execute**.
 
@@ -3744,7 +3780,7 @@ This extends Model Routing into:
 
 ---
 
-### 9.12 Cloud, On-Prem, and Hybrid Deployment
+### 13.12 Cloud, On-Prem, and Hybrid Deployment
 
 The robotics platform should support multiple deployment models without changing the core architecture.
 
@@ -3807,7 +3843,7 @@ Cloud, On-Prem, and Hybrid should share the same logical platform contracts.
 
 ---
 
-### 9.13 Organizational Robot Memory
+### 13.13 Organizational Robot Memory
 
 A mature deployment creates a form of organizational memory.
 
@@ -3853,7 +3889,7 @@ including validated skills, deployment history, failure modes, environmental ada
 
 ---
 
-### 9.14 Fleet-Level Learning
+### 13.14 Fleet-Level Learning
 
 The platform should reason over a fleet, not only individual robots.
 
@@ -3887,7 +3923,7 @@ This creates fleet-level learning rather than isolated robot learning.
 
 ---
 
-### 9.15 Robot Capability CI/CD
+### 13.15 Robot Capability CI/CD
 
 The deployment model can resemble software CI/CD while respecting physical safety constraints.
 
@@ -3934,7 +3970,7 @@ This creates a future concept of:
 
 ---
 
-### 9.16 Maintenance and Operational Cost Reduction
+### 13.16 Maintenance and Operational Cost Reduction
 
 Traditional pattern:
 
@@ -3977,7 +4013,7 @@ The platform can also unify predictive maintenance and capability improvement by
 
 ---
 
-### 9.17 Industrial Adoption Strategy
+### 13.17 Industrial Adoption Strategy
 
 The recommended adoption path begins in highly structured environments:
 
@@ -4003,7 +4039,7 @@ Once capability evolution is reliable, the platform can expand into higher-varia
 
 ---
 
-### 9.18 Industry Transformation Potential
+### 13.18 Industry Transformation Potential
 
 Traditional automation:
 
@@ -4040,7 +4076,7 @@ Human engineers can move toward process design, safety, optimization, exception 
 
 ---
 
-### 9.19 Productization and Deployment Models
+### 13.19 Productization and Deployment Models
 
 The robotics vertical may eventually support three product forms:
 
@@ -4052,7 +4088,7 @@ The product should maintain one platform architecture while allowing deployment 
 
 ---
 
-### 9.20 Long-Term Differentiation
+### 13.20 Long-Term Differentiation
 
 The platform does not need to own every underlying component.
 
@@ -4078,7 +4114,7 @@ This positions the platform as the:
 
 ---
 
-### 9.21 Research Questions
+### 13.21 Research Questions
 
 Potential long-term research directions include:
 
@@ -4093,7 +4129,7 @@ Potential long-term research directions include:
 
 ---
 
-### 9.22 Scope Boundary
+### 13.22 Scope Boundary
 
 This robotics section is a **future vertical vision**, not a current implementation commitment.
 
@@ -4650,25 +4686,28 @@ Potential work:
 
 Goal:
 
-> Build the minimum reusable platform around the validated evolution engine.
+> Build the minimum reusable platform around the validated evolution engine while preserving the boundaries required for later Agent-organization scaling.
 
 Suggested order:
 
 1. Access Layer
 2. Agent Control Plane
-3. Runtime abstraction
-4. Tool / Data Gateway
-5. Security & Governance Plane
-6. Observability
-7. Capability Evolution Engine integration
+3. Agent Organization interface / metadata model
+4. Runtime abstraction
+5. Tool / Data Gateway
+6. Security & Governance Plane
+7. Observability and routing telemetry
+8. Capability Evolution Engine integration
+
+At this stage, the Agent Organization Layer may remain mostly static. The important requirement is that routing traces, candidate sets, ownership, and responsibility boundaries are observable.
 
 ---
 
-### Stage 4 — Multi-Application Platform
+### Stage 4 — Multi-Application and Hierarchical Agent Platform
 
 Goal:
 
-> Let multiple applications consume the same platform.
+> Let multiple applications consume the same platform and validate whether hierarchical responsibility decomposition improves scaling.
 
 Reference applications:
 
@@ -4677,25 +4716,62 @@ Reference applications:
 - Cybersecurity Agent
 - other internal applications
 
+Research / engineering focus:
+
+- Sub-Agent specialization,
+- Manager-Agent routing,
+- hierarchical capability exposure,
+- bounded local context,
+- Span-of-Control experiments,
+- wrong-route / wrong-tool analysis,
+- cross-Agent handoff,
+- routing fallback and recovery.
+
 ---
 
-### Stage 5 — Enterprise Productization
+### Stage 5 — Adaptive Agent Organization
+
+Goal:
+
+> Move from a manually designed hierarchy toward an evidence-driven Agent Organization Graph.
+
+Potential work:
+
+- organization topology registry,
+- recursive Manager layers,
+- adaptive routing depth,
+- routing entropy and overload detection,
+- Agent specialization,
+- Split / Merge / Create / Retire / Re-route proposals,
+- experience-guided topology analysis,
+- human-governed topology changes,
+- topology rollback,
+- and fixed-vs-adaptive hierarchy experiments.
+
+This stage is the primary long-term research direction after the core capability-evolution and hierarchical-routing mechanisms are validated.
+
+---
+
+### Stage 6 — Enterprise Productization
 
 Possible future areas:
 
 - multi-tenant architecture,
+- tenant-specific Agent organizations,
 - tenant-specific policies,
 - SSO / IAM,
 - organization-level capability registries,
+- organization-graph governance,
 - billing / quotas,
 - SLA / reliability,
 - distributed runtime workers,
 - managed deployment,
-- enterprise connectors.
+- enterprise connectors,
+- topology observability and administrative controls.
 
 ---
 
-### Stage 6 — Capability Distribution
+### Stage 7 — Capability and Organization Distribution
 
 Long-term only.
 
@@ -4705,12 +4781,13 @@ Possible areas:
 - shared registry,
 - signed capability packages,
 - organization sharing,
+- reusable Agent-organization templates,
 - opt-in public sharing,
 - synchronization,
 - marketplace,
 - collective capability network.
 
-All imported capabilities remain untrusted until locally validated.
+All imported capabilities and organization templates remain untrusted until locally validated.
 
 ---
 
@@ -4722,6 +4799,10 @@ The following are **future concepts**, not current implementation claims:
 
 - full Control Plane,
 - Agent Registry,
+- Agent Organization Graph,
+- recursive Manager / Sub-Agent hierarchy,
+- adaptive organization topology,
+- automated Split / Merge / Create / Retire / Re-route,
 - Model Router,
 - multi-agent platform orchestration,
 - SDK,
@@ -4751,6 +4832,9 @@ Suggested decision questions:
 6. Can unsafe or low-quality capabilities be reliably blocked?
 7. Is the cost of capability creation recovered through later reuse?
 8. Does the capability library remain manageable as it grows?
+9. Does hierarchical routing outperform flat routing as the capability space grows?
+10. Can routing failures be localized and recovered without unacceptable latency or cost?
+11. Does organization adaptation improve measurable outcomes enough to justify added complexity?
 
 If the answers are not satisfactory, research should continue before platform expansion.
 
@@ -4760,7 +4844,7 @@ If the answers are not satisfactory, research should continue before platform ex
 
 The long-term product concept can be summarized as:
 
-```text
+~~~text
 External Applications
         │
         ▼
@@ -4770,10 +4854,23 @@ Access Layer
 Control Plane
         │
         ▼
+Agent Organization Layer
+Root / Managers / Agents / Sub-Agents
+        │
+        ▼
+Skill / Capability DAG
+        │
+        ▼
 Agent Runtime
         │
         ├──────── Capability Evolution Engine
         │
+        ├──────── Experience / Routing Evidence
+        │                    │
+        │                    ▼
+        │          Organization Evolution
+        │                    │
+        │          feedback to Organization
         ▼
 Security & Governance
         │
@@ -4781,24 +4878,38 @@ Security & Governance
 Tool / Data Gateway
         │
         ▼
-Models / Tools / Data
-```
+Models / Tools / Data / Legacy / Edge / Robots
+~~~
 
-And the project evolution as:
+The project evolution is:
 
-```text
+~~~text
 CEAA Research
       ↓
 Validated Capability Evolution
       ↓
 Capability Evolution Engine
       ↓
-Agent Platform
+Agent Platform Foundation
       ↓
-Reference Applications
+Hierarchical Agent Organization
       ↓
-Enterprise Productization
-```
+Adaptive Agent Organization
+      ↓
+Self-Organizing Agent System
+      ↓
+Enterprise / Edge / Robotics Applications
+~~~
+
+The long-term platform therefore contains two compounding forms of learning:
+
+~~~text
+Execution Experience
+   ├─→ improves capabilities
+   └─→ improves how capabilities and Agents are organized
+~~~
+
+The intended end state is not a single increasingly complex Agent. It is a governed system in which many bounded Agents and capabilities can be organized, observed, specialized, and eventually restructured as workload and capability space grow.
 
 ---
 
@@ -4809,5 +4920,7 @@ For now:
 > **Do not expand the current CEAA implementation into the entire platform.**
 
 Continue the current research until runtime, experimental, generalization, safety, and reuse evidence are strong enough to justify platformization.
+
+However, current implementation and experiments should preserve routing-path, candidate-set, failure-location, token, latency, cost, and outcome telemetry so that future hierarchical and organizational-evolution experiments can be performed without rebuilding the evidence pipeline.
 
 This document should serve as the **starting architecture reference** when that transition begins.

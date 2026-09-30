@@ -17,7 +17,7 @@ The long-term goal is to study whether Agent performance can scale through **cap
 
 ## Project Status
 
-> **Current Stage (2026-09-20): Phase 1 Verified; Token/Cost Research Instrumentation Added**
+> **Current Stage (2026-09-30): Phase 1 Verified; Telemetry Evidence Foundation Is the Next Required Build**
 
 The repository currently contains the architecture skeleton, core domain models, services, interfaces, Agent orchestration, API routes, and test code for the Phase 1 MVP.
 
@@ -25,9 +25,7 @@ The latest full test run passed **28 tests**, with one existing Starlette/AnyIO 
 
 See [project status](PROJECT_STATUS.md), [development log](DEVELOPMENT_LOG.md) and [API concurrency behavior](docs/API_CONCURRENCY.md). Architecture diagrams below describe the broader design: the current synchronous implementation handles each request's own gap directly; the queue is reserved for future background workers. Reports, approvals and audit records now share SQLite storage.
 
-The [token/cost research contract](docs/TOKEN_COST_RESEARCH.md) is documented on `dev`.
-Its implementation and 28-test evidence remain on `feature/token-cost-research` (`ca08851`) and
-have not been merged; the current `dev` runtime still has 25 tests and no `/api/research/*` routes.
+The [token/cost research contract](docs/TOKEN_COST_RESEARCH.md) and its implementation are now integrated on `dev`. The verified baseline is **28 passed, 1 warning**, including the `/api/research/*` measurement endpoints.
 
 Current status:
 
@@ -57,15 +55,18 @@ Real LLM integration         Pending
 PostgreSQL runtime adapter   Pending
 Docker sandbox               Pending
 Semantic retrieval           Pending
-Observability                Pending
+Routing/failure telemetry    Required Next
+Observability                Partial / Expanding
 Background workers           Pending
 Capability sharing           Future Reserved
 Marketplace                  Future Reserved
 ```
 
-The next research milestone is:
+The next engineering/research milestone is:
 
-> **Real-provider token/cost capture and controlled baseline comparison**
+> **Build the Routing / Failure Telemetry Evidence Foundation, then connect real-provider usage and controlled baselines.**
+
+This is now a current requirement because the long-term research direction includes hierarchical and adaptive Agent organization. The project must begin collecting structured success and failure evidence before those layers exist.
 
 The complete mock flow and standalone server path have passed. Phase 1 now also preserves the measurement data needed to compare capability creation against later reuse:
 
@@ -191,6 +192,41 @@ Activate
   ↓
 Reuse
 ```
+
+---
+
+## Current Telemetry Requirement
+
+The platform should start collecting routing and execution evidence **now**, even though recursive Manager / Sub-Agent organization is a later-stage feature.
+
+Minimum evidence path:
+
+~~~text
+Task / Trace
+→ Routing Decision
+→ Candidate Set
+→ Selected Agent / Capability / Skill / Tool
+→ Execution
+→ Failure / Retry / Fallback
+→ Final Outcome
+→ Token / Latency / Cost
+~~~
+
+The schema should support recursive decisions through fields such as parent decision, routing depth, node type, selected target, candidate count, normalized failure category, and recovery outcome.
+
+The purpose is to create a longitudinal dataset for future experiments comparing:
+
+~~~text
+Flat Routing
+→ Capability / Skill Routing
+→ Sub-Agent Routing
+→ Manager Hierarchy
+→ Adaptive Agent Organization
+~~~
+
+The project is **not** implementing autonomous organization restructuring at this stage. It is implementing the evidence foundation required to evaluate that direction later.
+
+See [DEV_PLAN.md](DEV_PLAN.md), [PROJECT_STATUS.md](PROJECT_STATUS.md), and [Future Productization Vision](docs/AGENT_PLATFORM_FUTURE_VISION.md).
 
 ---
 
@@ -1120,7 +1156,7 @@ The research goal is to determine whether this architecture can enable an Agent 
 
 The project is currently focused on one thing:
 
-> **Verify the standalone API and retain runtime evidence for the already-tested core loop.**
+> **Implement structured Routing / Failure Telemetry and begin accumulating longitudinal success/failure evidence while integrating real provider usage.**
 
 See [DEV_PLAN.md](DEV_PLAN.md) for the remaining Phase 1 work before real infrastructure integration.
 

@@ -119,3 +119,20 @@ Claude Code（Sonnet 5, `claude-sonnet-5`），使用者 talent4925@gmail.com �
 
 [PROJECT_STATUS.md](../PROJECT_STATUS.md)、[DEV_PLAN.md](../DEV_PLAN.md)、
 [DEVELOPMENT_LOG.md](../DEVELOPMENT_LOG.md)
+
+---
+
+## Telemetry Security Review Requirement
+
+Phase 1 新增 Execution Experience & Evolution Telemetry Foundation 後，後續安全稽核必須把 operational telemetry 視為正式資料資產與攻擊面。Telemetry 可能包含 task context、routing metadata、candidate identifiers、tool identifiers、exception payload、environment metadata 與 execution outcome。
+
+後續實作與稽核至少應檢查：
+
+- data minimization：只保存研究、診斷與治理真正需要的欄位；
+- secret / sensitive-data redaction：exception、tool output 與 task context 不得無限制原樣持久化；
+- access control：telemetry query / export 必須納入未來 authn / authz 與 tenant scope；
+- retention / deletion policy：raw operational history 與 curated experience 應有不同保存週期；
+- integrity / auditability：Evolution Signal 不應能由未受信任 execution 任意偽造；
+- lineage：由 raw telemetry 產生 Experience Record 或 organization-evolution proposal 時應保留來源證據鏈。
+
+這是新增的 **review target**，不是對 2026-09-22 歷史 audit finding 的改寫；待 Telemetry schema / API 實作後再進行正式 finding 評級。

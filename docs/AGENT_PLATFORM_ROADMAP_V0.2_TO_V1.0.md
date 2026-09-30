@@ -33,6 +33,8 @@ Capability Evolution
         ↓
 Control Plane
         ↓
+Agent Organization Layer
+        ↓
 Multi-Agent Runtime
         ↓
 External Platform Interfaces
@@ -53,7 +55,7 @@ Governed Agent Platform v1.0
 | **v0.4** | Governed Tool Runtime | Tool Gateway, Policy Engine, execution grants, approval, audit | v0.3 durable runtime | Prove that Agents can safely interact with external systems |
 | **v0.5** | Capability Evolution Engine | Capability registry, gap detection, generation, testing, versioning, reuse | v0.3 + v0.4 | Prove that reusable capability accumulation creates measurable value |
 | **v0.6** | Platform Control Plane | Task Router, Agent Registry, Model Router, Workflow Registry | v0.3–v0.5 | Prove that execution strategy can be selected dynamically |
-| **v0.7** | Multi-Agent Runtime | Parent/child tasks, dependency graph, coordination, shared state | v0.6 Control Plane | Prove that multi-Agent execution adds value for complex tasks |
+| **v0.7** | Agent Organization + Multi-Agent Runtime | Manager / Agent / Sub-Agent organization, bounded routing, parent/child tasks, coordination, shared state | v0.6 Control Plane | Validate hierarchical routing and multi-Agent execution |
 | **v0.8** | External Integration Platform | REST API, SDK, MCP, Webhook, Event Stream | v0.6–v0.7 | Prove that different external applications can reuse the same platform |
 | **v0.9** | Distributed Production Runtime | Worker pool, queue/event bus, distributed state, observability, cost controls | v0.8 stable interfaces | Prove stable operation under failures and concurrent workloads |
 | **v1.0** | Governed Agent Platform | Multi-application shared runtime, full governance, reliability, stable contracts | All previous stages | Prove that multiple real applications can depend on one common platform |
@@ -74,6 +76,8 @@ External Systems
 Access Layer
         ↓
 Control Plane
+        ↓
+Agent Organization Layer
         ↓
 Agent Runtime
         ↓
@@ -554,16 +558,20 @@ Dynamic routing must produce measurable value in at least one important dimensio
 
 ---
 
-## 8. v0.7 — Multi-Agent Runtime
+## 8. v0.7 — Agent Organization and Multi-Agent Runtime
 
 ### 8.1 Stage Objective
 
-Introduce multi-Agent execution only after the single-Agent runtime and Control Plane are stable.
+Introduce the Agent Organization Layer and multi-Agent execution only after the single-Agent runtime and Control Plane are stable. The Control Plane owns platform-level control and selects an organization entry point; recursive Manager / Agent / Sub-Agent routing belongs to the Agent Organization Layer.
 
 Multi-Agent architecture is treated as a **complexity multiplier**, not a default solution.
 
 ### 8.2 Core Capabilities
 
+- Agent Organization Graph metadata,
+- organization entry-point selection,
+- Manager / Agent / Sub-Agent responsibility boundaries,
+- bounded local routing,
 - parent/child tasks,
 - dependency graph,
 - shared state,

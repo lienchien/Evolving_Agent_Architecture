@@ -3,7 +3,7 @@
 **Language:** English | [繁體中文](README.zh-TW.md)
 
 ![Status](https://img.shields.io/badge/status-experimental-orange)
-![Phase](https://img.shields.io/badge/phase-1--verified-blue)
+![Phase](https://img.shields.io/badge/phase-1--in%20progress-blue)
 ![Validation](https://img.shields.io/badge/automated%20tests-28%20passed-green)
 
 > [!WARNING]
@@ -17,9 +17,9 @@ The long-term goal is to study whether Agent performance can scale through **cap
 
 ## Project Status
 
-> **Current Stage (2026-09-30): Phase 1 Verified; Telemetry Evidence Foundation Is the Next Required Build**
+> **Current Stage (2026-09-30): Phase 1 In Progress — Core Baseline Verified; Execution Experience & Evolution Telemetry Required**
 
-The repository currently contains the architecture skeleton, core domain models, services, interfaces, Agent orchestration, API routes, and test code for the Phase 1 MVP.
+The repository currently contains a verified Phase 1 Core Baseline: architecture skeleton, core domain models, services, interfaces, Agent orchestration, API routes, persistence, concurrency controls, and token/cost measurement. **Phase 1 is not yet complete** because Execution Experience & Evolution Telemetry is now a required Phase 1 capability.
 
 The latest full test run passed **28 tests**, with one existing Starlette/AnyIO deprecation warning. In addition to the verified HTTP and persistence flows, Phase 1 now records task-level cost observations and individual LLM interactions for the token-efficiency/cost-amortization research hypothesis. Missing provider token usage remains explicitly unavailable rather than estimated.
 
@@ -704,9 +704,9 @@ The automated suite covers the flow below. Repeat it against a standalone server
 
 # 12. Roadmap
 
-## Phase 1 — Core MVP Skeleton
+## Phase 1 — Core MVP + Execution Experience Foundation
 
-**Current stage**
+**Current stage — In Progress (Core Baseline Verified)**
 
 - architecture skeleton
 - Main Agent
@@ -720,14 +720,28 @@ The automated suite covers the flow below. Repeat it against a standalone server
 - API
 - tests written
 
-Still required:
+Core baseline already verified:
 
 - standalone Uvicorn / HTTP validation and retained runtime evidence
-- long-running load and crash-recovery validation
+- capability lifecycle / approval / reuse / persistence / concurrency
+- token / cost measurement foundation
+
+Still required before Phase 1 can be marked complete:
+
+- durable success / failure / retry / fallback execution observations
+- task / trace / routing correlation
+- candidate-set and selected-target persistence
+- normalized failure taxonomy plus raw exception metadata
+- retry / fallback linkage and recovery outcome
+- failure-rate denominator and repeated-exception aggregation
+- restart-persistent telemetry
+- automated telemetry tests and linkage to existing token/cost metrics
 
 ---
 
 ## Phase 1.5 — Real Infrastructure Integration
+
+**Starts only after the updated Phase 1 telemetry exit criteria are complete.**
 
 Planned:
 
@@ -1170,7 +1184,7 @@ The research goal is to determine whether this architecture can enable an Agent 
 
 The project is currently focused on one thing:
 
-> **Implement structured Routing / Failure Telemetry and begin accumulating longitudinal success/failure evidence while integrating real provider usage.**
+> **Complete Phase 1 by implementing Execution Experience & Evolution Telemetry and begin accumulating longitudinal operational history. Real-provider integration follows in Phase 1.5.**
 
 See [DEV_PLAN.md](DEV_PLAN.md) for the remaining Phase 1 work before real infrastructure integration.
 

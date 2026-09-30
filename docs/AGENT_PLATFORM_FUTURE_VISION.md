@@ -1,7 +1,7 @@
 # Agent Platform — Future Productization Vision
 
 > **Document Status:** Future Direction / Conceptual Target Architecture  
-> **Version:** v0.9  
+> **Version:** v1.0  
 > **Current Relationship to CEAA:** This document does **not** redefine the current CEAA research scope. It describes a possible platform architecture that may be developed **after** the current research validates the capability-evolution hypothesis.
 
 ---
@@ -4034,6 +4034,455 @@ It covers:
 Core long-term principle:
 
 > **Autonomous where possible, governed where necessary, auditable everywhere.**
+
+---
+
+## 14.1 Primary Long-Term Direction — Adaptive Agent Organization
+
+The recursive multi-Agent model should be treated as a **primary long-term development direction** of the platform after the core CEAA capability-evolution mechanism is validated.
+
+The central scaling problem is broader than tool calling. As the number of tools, skills, Agents, domains, users, and concurrent tasks grows, a fixed Agent architecture eventually exposes too large a decision space to individual reasoning nodes.
+
+The long-term objective is therefore to evolve from a capability-evolving Agent into a:
+
+> **Self-Organizing Agent System**
+
+The platform should be able to organize large numbers of capabilities and Agents into an adaptive organizational structure in which each node reasons over a bounded local capability space.
+
+Conceptually:
+
+~~~text
+Task
+ ↓
+Organization Root
+ ↓
+Manager / Domain Router
+ ↓
+Specialized Agent
+ ↓
+Sub-Agent
+ ↓
+Skill / Capability Family
+ ↓
+Tool / Enterprise System
+~~~
+
+This hierarchy is not intended to be a fixed number of layers. It should be **recursive and adaptive**.
+
+If a Manager becomes overloaded because its child count, routing entropy, workload, latency, context cost, or error rate grows too high, the system may introduce another abstraction layer:
+
+~~~text
+Before
+
+Root Manager
+ ├─ Agent 1
+ ├─ Agent 2
+ ├─ ...
+ └─ Agent 80
+
+After
+
+Root Manager
+ ├─ Finance Manager
+ │    └─ Finance Agents
+ ├─ Operations Manager
+ │    └─ Operations Agents
+ ├─ IT Manager
+ │    └─ IT Agents
+ └─ Knowledge Manager
+      └─ Knowledge Agents
+~~~
+
+The same principle applies recursively at any level.
+
+> **When a node's local decision space becomes too large, create or reorganize abstraction boundaries rather than exposing more capabilities to the same Agent.**
+
+This allows the architecture to scale both downward and upward:
+
+~~~text
+Tools
+ ↓
+Skills
+ ↓
+Sub-Agents
+ ↓
+Agents
+ ↓
+Managers
+ ↓
+Domain / Regional Managers
+ ↓
+Organization Root
+~~~
+
+Simple tasks should not be forced through every layer. Routing depth should remain adaptive to task complexity, risk, domain, capability-space size, and current system load.
+
+### Agent Organization Graph
+
+The long-term platform should represent this structure as an **Agent Organization Graph**, not merely as a UI hierarchy.
+
+A node may contain:
+
+~~~text
+AgentNode
+ ├─ identity / role
+ ├─ capability profile
+ ├─ children
+ ├─ routing policy
+ ├─ permission boundary
+ ├─ memory / experience scope
+ ├─ cost / latency profile
+ ├─ reliability evidence
+ └─ workload / health metrics
+~~~
+
+A node with children may behave as a Manager or Router. A leaf node may perform specialized execution. These roles should be architectural behaviors rather than permanently separate Agent classes.
+
+The organization graph should integrate:
+
+- Agents,
+- Sub-Agents,
+- Skill / Capability DAGs,
+- tools,
+- permissions,
+- policies,
+- memory,
+- routing evidence,
+- workload,
+- execution traces,
+- and experience.
+
+The platform's Evolution Engine may eventually operate on this graph as well as on individual capabilities.
+
+### Organizational Evolution
+
+Capability evolution answers:
+
+> What new capability does the system need?
+
+Organizational evolution adds a higher-level question:
+
+> How should the system organize its existing Agents and capabilities so that tasks can be routed and executed reliably at scale?
+
+Potential organization-level operations include:
+
+~~~text
+Split
+Merge
+Create
+Retire
+Re-route
+Re-parent
+Specialize
+Promote to Manager
+Collapse Layer
+Create Layer
+~~~
+
+Examples:
+
+~~~text
+High routing error + high child count
+→ Split Manager
+
+Repeated cooperation between Agents
+→ Propose specialized shared Agent
+
+Low utilization + high capability overlap
+→ Merge or retire Agents
+
+Growing domain-specific workload
+→ Create Domain Manager
+
+Manager routing overload
+→ Add higher-level Manager
+
+Unnecessary hierarchy depth
+→ Collapse layer
+~~~
+
+This produces three possible scales of evolution:
+
+~~~text
+Micro Evolution
+Tool / Skill / Capability Evolution
+
+Meso Evolution
+Sub-Agent / Agent Specialization
+
+Macro Evolution
+Manager / Organization Topology Evolution
+~~~
+
+The long-term progression is therefore:
+
+~~~text
+Experience
+ ↓
+Capability Evolution
+ ↓
+Agent Specialization
+ ↓
+Organizational Evolution
+ ↓
+Self-Organizing Agent System
+~~~
+
+### Why This May Reduce Tool-Selection Error
+
+A flat Agent may be forced to select directly from a large capability set:
+
+~~~text
+Task
+→ choose from 1,000+ tools
+~~~
+
+The organization model progressively reduces the local decision space:
+
+~~~text
+Task
+→ choose Domain
+→ choose Agent
+→ choose Sub-Agent
+→ choose Skill Family
+→ choose 3–10 candidate tools
+~~~
+
+The hypothesis is not that additional hierarchy is automatically better. Every routing layer can introduce its own error and latency.
+
+The research question is whether hierarchical decomposition can keep each local selection problem sufficiently small that total system reliability improves as the global capability space grows.
+
+A simplified formulation is:
+
+~~~text
+Global Capability Space ↑
+        ↓
+Flat Selection Complexity ↑
+        ↓
+Tool-Selection Error ↑
+
+versus
+
+Global Capability Space ↑
+        ↓
+Hierarchical Decomposition
+        ↓
+Bounded Local Decision Spaces
+        ↓
+More Stable Routing Accuracy
+~~~
+
+### Span of Control
+
+A key research variable is the **Span of Control** of each Agent node:
+
+~~~text
+SpanOfControl(A) = number of directly managed child nodes
+~~~
+
+The platform should investigate whether routing quality degrades after a node manages too many children.
+
+Potential signals include:
+
+- child count,
+- routing entropy,
+- routing confidence,
+- wrong-route rate,
+- task success rate,
+- retry rate,
+- context size,
+- token cost,
+- latency,
+- queue depth,
+- workload imbalance,
+- and human intervention rate.
+
+These signals may later become inputs to topology-evolution policies.
+
+### Required Telemetry
+
+The current platform should preserve enough telemetry to make future organizational experiments possible even before adaptive organization is implemented.
+
+A task trace should ideally preserve:
+
+~~~text
+Task
+ ↓
+Agent / Manager Routing Decisions
+ ↓
+Candidate Agents
+ ↓
+Selected Agent / Sub-Agent
+ ↓
+Candidate Skills
+ ↓
+Selected Skill
+ ↓
+Candidate Tools
+ ↓
+Selected Tool
+ ↓
+Execution Outcome
+~~~
+
+Recommended fields include:
+
+- task and trace identifiers,
+- routing path,
+- candidate-set size at every level,
+- selected node / skill / tool,
+- routing confidence,
+- routing entropy where available,
+- retries and fallback paths,
+- token usage,
+- latency,
+- cost,
+- permission / policy decisions,
+- human intervention,
+- final task success,
+- failure location,
+- and post-execution evaluation.
+
+This telemetry is strategically important because future topology optimization requires evidence about **where routing failed**, not merely whether the final task failed.
+
+### Experimental Roadmap
+
+The organizational direction should be developed experimentally rather than assumed to be superior.
+
+#### Experiment A — Capability Scaling
+
+Compare:
+
+~~~text
+Flat Tool Calling
+vs
+Semantic Tool Retrieval
+vs
+Hierarchical Skill Routing
+vs
+Sub-Agent + Skill Routing
+~~~
+
+Increase capability-space size progressively, for example:
+
+~~~text
+50 → 100 → 500 → 1,000 → 3,000+
+~~~
+
+Measure:
+
+- tool-selection accuracy,
+- task success,
+- wrong-tool rate,
+- token usage,
+- latency,
+- cost,
+- and recovery rate.
+
+#### Experiment B — Hierarchical Agent Routing
+
+Introduce:
+
+~~~text
+Task
+→ Manager
+→ Agent
+→ Sub-Agent
+→ Skill
+→ Tool
+~~~
+
+Vary Span of Control and hierarchy depth to identify where routing quality begins to degrade.
+
+#### Experiment C — Fixed vs Adaptive Hierarchy
+
+Compare a manually designed fixed organization against an organization that can react to workload and routing evidence.
+
+Evaluate whether topology adaptation improves:
+
+- routing accuracy,
+- task success,
+- latency,
+- cost,
+- load distribution,
+- and failure isolation.
+
+#### Experiment D — Experience-Guided Organization
+
+Use historical traces to learn which Agents and capabilities frequently cooperate, which routing paths succeed, and which nodes become bottlenecks.
+
+Test whether experience can support safe proposals for:
+
+~~~text
+Split / Merge / Create / Retire / Re-route
+~~~
+
+#### Experiment E — Organizational Evolution
+
+Long-term research question:
+
+> **Can an Agent system learn how to organize itself as its capability space, workload, and task diversity grow?**
+
+The target comparison becomes:
+
+~~~text
+Flat Architecture
+vs
+Fixed Hierarchy
+vs
+Adaptive Hierarchy
+vs
+Experience-Guided Self-Organizing Hierarchy
+~~~
+
+### Development Position
+
+This direction should be treated as a **future primary development line**, but it must not destabilize the current CEAA research scope.
+
+Recommended sequence:
+
+~~~text
+Validate Capability Evolution
+        ↓
+Build Reliable Capability / Skill Routing
+        ↓
+Validate Sub-Agent Decomposition
+        ↓
+Introduce Manager-Agent Hierarchy
+        ↓
+Measure Span-of-Control and Routing Limits
+        ↓
+Build Agent Organization Graph
+        ↓
+Add Adaptive Topology Operations
+        ↓
+Experience-Guided Organizational Evolution
+        ↓
+Self-Organizing Agent System
+~~~
+
+The immediate implementation priority remains reliable capability evolution, governance, routing telemetry, and reproducible evaluation.
+
+However, architecture decisions made today should avoid preventing this future recursive organizational model.
+
+### Long-Term Research Thesis
+
+The long-term thesis can be summarized as:
+
+> **As AI systems accumulate more tools, skills, Agents, and responsibilities, the central scaling problem shifts from building a stronger individual Agent to organizing many bounded Agents and capabilities effectively.**
+
+The platform therefore evolves from:
+
+~~~text
+Agent Architecture
+→ Capability Architecture
+→ Multi-Agent Architecture
+→ Agent Organization
+→ Adaptive Agent Organization
+→ Self-Organizing Agent System
+~~~
+
+This is intended to become one of the platform's primary future research and product-development directions.
 
 ---
 

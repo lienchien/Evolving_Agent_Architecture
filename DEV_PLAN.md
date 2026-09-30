@@ -4,7 +4,7 @@
 
 ## 目前基準
 
-**Phase 1 — 核心驗證完成；現階段新增必要基礎：Routing / Failure Telemetry Evidence Foundation。**
+**Phase 1 — 核心驗證完成；現階段新增必要基礎：Execution Experience & Evolution Telemetry Foundation。**
 
 目前分支為 `dev`；Token／費用研究功能已完整納入，包含 task／LLM interaction
 成本觀測、SQLite 持久化與研究 API。最近完整測試為 **28 passed, 1 warning in 7.12s**。
@@ -60,12 +60,16 @@
 隔離 SQLite 保存 1 Capability、1 TestReport、1 ApprovalRecord、2 AuditEntry。
 完整執行紀錄見 [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md)。
 
-## 現階段必要功能：Routing / Failure Telemetry Evidence Foundation
+## 現階段必要功能：Execution Experience & Evolution Telemetry Foundation
 
 這不是未來才做的 Adaptive Agent Organization 功能，而是**現在就必須建立的研究資料基礎**。
 
-目的不是讓系統立即自動 Split / Merge Agent，而是從目前的單一／早期 routing 流程開始，持續保存未來能回答以下問題的真實資料：
+目的不是讓系統立即自動 Split / Merge Agent，而是從目前的單一／早期 routing 流程開始，持續保存**完整 operational history**。Raw exception、成功 execution、retry、fallback、routing decision 都是未來可分析的資料，不要求先完成 root-cause diagnosis 才保存。
 
+除了回答單一 task 為什麼失敗，也必須能回答 population-level 問題：
+
+- 某個 exception 為什麼持續大量重複？是否集中在特定 Agent / Skill / Tool / environment？
+- failure count 的 denominator 是多少，實際 failure rate 是否惡化？
 - 哪一層做錯決策？
 - 正確候選是否曾經出現在 candidate set？
 - 錯誤是 routing、skill selection、tool execution、policy、provider 還是 runtime failure？
@@ -107,6 +111,7 @@ Research Metrics
 建議新增的持久化概念：
 
 - `routing_decisions`
+- append-only / durable execution observations（成功與失敗都保留）
 - `execution_failures` 或等價的 normalized failure observation
 - task / trace correlation ID
 - parent decision / routing depth
@@ -128,25 +133,37 @@ Root
 → Tool
 ~~~
 
-也就是現在蒐集的是 **future organization experiments 的 longitudinal baseline**。
+也就是現在蒐集的不只是 **future organization experiments 的 longitudinal baseline**，也是未來 Experience Memory、system diagnosis 與 Evolution Signal 的原始歷史資料層。
+
+資料概念：
+
+~~~text
+Raw Operational History
+   ├─→ Episode Resolution → Curated Experience Memory
+   └─→ Population Mining → Systemic Pattern → Evolution Signal
+~~~
+
+Raw data 不因為重複而失去價值；大量重複本身可能正是需要檢查或演化的訊號。
 
 ### 實作原則
 
 1. **先觀測，不自動重組。** 現階段不實作自動 Split / Merge / Create / Retire。
 2. **錯誤資料不可只存在 log。** 需要結構化、可查詢、可與 task / interaction 關聯。
-3. **保留失敗與成功樣本。** 只蒐集 failure 無法計算 error rate 或比較 routing quality。
+3. **保留完整成功與失敗母體。** 10 萬筆 exception 本身可能是重要訊號，但仍需成功 execution 作 denominator，才能區分高頻低比例與真正高 failure rate。
+4. **Raw failure 不需先被解決才有價值。** 未分類／未解決 exception 仍應保留，後續可用 clustering、frequency、trend、correlation 回推 systemic problem。
 4. **未知值不可猜測。** 沒有 confidence、token 或 cost 時保存 unavailable / null。
-5. **failure taxonomy 要穩定。** 原始 exception 可保留，但研究分析應使用 normalized category。
-6. **避免保存敏感 payload。** 優先保存 identifier、metadata、hash / summary 與分類結果。
-7. **Telemetry failure 不應改變主要 task outcome。** 但應有可觀測的 instrumentation failure 記錄。
-8. **Schema 從單層開始但支援遞迴。** 透過 parent decision / depth / node type 避免未來重做資料模型。
+6. **failure taxonomy 要穩定。** 原始 exception 可保留，但研究分析應使用 normalized category。
+7. **避免保存敏感 payload。** 優先保存 identifier、metadata、hash / summary 與分類結果。
+8. **Telemetry failure 不應改變主要 task outcome。** 但應有可觀測的 instrumentation failure 記錄。
+9. **Schema 從單層開始但支援遞迴。** 透過 parent decision / depth / node type 避免未來重做資料模型。
 
 ### 第一階段驗收
 
 - 成功 task 可查到完整 task → routing → execution → outcome 關聯。
 - routing / capability miss / tool failure / provider failure 至少可區分。
 - retry / fallback 可追蹤到原始失敗。
-- 可統計 success count、failure count、wrong-selection proxy、retry recovery rate。
+- 可統計 success count、failure count、failure rate、exception recurrence、wrong-selection proxy、retry recovery rate。
+- 可對大量 raw exceptions 依 type / path / environment / time window 做聚合，找出 repeated/systemic failure clusters。
 - 可依 task family / capability / selected target / failure category 查詢。
 - 與既有 `llm_interactions`、`task_cost_metrics` 共用 task / trace correlation。
 - 測試覆蓋成功、失敗、retry、缺失 metrics、持久化與重啟讀回。
@@ -158,7 +175,7 @@ Root
 
 ## 下一個里程碑：Telemetry、真實 Usage 與 Production Hardening
 
-1. 建立 Routing / Failure Telemetry Evidence Foundation，開始累積成功與錯誤 routing / execution 資料。
+1. 建立 Execution Experience & Evolution Telemetry Foundation，開始累積成功與錯誤 routing / execution 資料。
 2. 讓 LiteLLM／NVIDIA NIM／OpenRouter adapter 回傳 provider 原生 token usage 與可靠費用.
 3. 建立 static-agent baseline runner 與 Exact／Near-Similar／Generalized 任務資料集。
 4. 為生成名額加入 lease／逾時復原，驗證程序強制終止後能安全重試。

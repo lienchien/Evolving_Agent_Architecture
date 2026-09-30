@@ -6,10 +6,11 @@
 
 ## Current Stage
 
-**Phase 1 — Complete / Verified Core plus Token/Cost Research Instrumentation**
+**Phase 1 — In Progress / Core Baseline Verified; Execution Experience & Evolution Telemetry Required**
 
-Phase 1 的核心開發與驗證退出條件已完成。目前專案已從「骨架建立」進入
-「已驗證研究原型」階段，下一個主要工程階段為 **Phase 1.5 — Telemetry Evidence Foundation + Real Infrastructure & Hardening**。
+Phase 1 原有的 Core Baseline 開發與驗證條件已完成，但在確認 Execution Experience & Evolution Telemetry 是未來 Experience Memory、system diagnosis、Capability / Agent / Organization Evolution 的必要歷史資料層後，**Phase 1 退出條件已重新開啟並擴充**。
+
+目前狀態應解讀為：**Core Baseline Verified，但 Phase 1 尚未 Complete**。下一個工作不是 Phase 1.5，而是先完成 Phase 1 的 Execution Experience & Evolution Telemetry Foundation；完成後才進入 **Phase 1.5 — Real Infrastructure & Hardening**。
 
 核心 mock 流程、FastAPI TestClient 整合、併發一致性與跨程序持久化已取得執行證據。
 獨立 Uvicorn 已完成 loopback HTTP 全流程與停止／重啟持久化驗證；新增 Token／費用
@@ -157,24 +158,40 @@ Queue 保留擴充介面，Phase 1 不透過它執行背景任務。
 `reviewer` 仍是呼叫端提供的值；subprocess 不具安全隔離，LLM 仍為固定模板。
 所有 worker 必須同時升級並使用相同 SQLite 路徑；跨主機部署未納入本次驗證。
 
-## Phase 1 退出條件
+## Phase 1 更新後退出條件
 
-- [x] pytest 實際執行並通過。
-- [x] mock 核心循環、功能失敗與修訂路徑通過。
-- [x] HTTP 整合的核准、啟用、重用與報告查詢通過。
-- [x] 併發去重、決策交易、跨實例持久化通過。
-- [x] 獨立伺服器啟動、外部 HTTP 操作、報告／log 核對及重啟持久化通過。
-- [x] Token／費用研究的 task／interaction 持久化、API、unavailable 規則與衍生計算基礎通過。
+既有完成項目：
 
-Phase 1 的驗證退出條件已完成。後續不再以新增 Phase 1 核心功能為主，而是進入
-**Phase 1.5 — Real Infrastructure & Hardening**，包括真實 LLM provider、PostgreSQL、
-Docker sandbox、認證／授權、租約復原與負載／故障測試。詳見 [DEV_PLAN.md](DEV_PLAN.md)。
+- [x] pytest 實際執行並通過既有 Core Baseline。
+- [x] mock 核心循環、功能失敗與修訂路徑。
+- [x] HTTP 整合的核准、啟用、重用與報告查詢。
+- [x] 併發去重、決策交易、跨實例持久化。
+- [x] 獨立伺服器與重啟持久化。
+- [x] Token／費用 task／interaction measurement foundation。
+
+新增 Phase 1 必做項目：
+
+- [ ] Durable raw execution observations：success / failure / retry / fallback。
+- [ ] Task / trace / routing correlation。
+- [ ] Candidate set / selected target / routing decision persistence。
+- [ ] Failure stage / normalized category / raw exception metadata。
+- [ ] Retry / fallback linkage and recovery outcome。
+- [ ] Success denominator、failure rate、exception recurrence aggregation。
+- [ ] Operational-history query / summary capability。
+- [ ] Restart-persistent telemetry evidence。
+- [ ] Telemetry 與 token / cost metrics 的一致 identity linkage。
+- [ ] 對 success、failure、retry、missing metrics、persistence 的自動測試。
+
+因此 **Phase 1 = In Progress**。既有 28-test 結果代表 Core Baseline Verified，不再代表整個 Phase 1 Complete。
+
+---
 
 ## 後續階段
 
 | 階段 | 規劃與狀態 |
 |---|---|
-| Phase 1.5 | 下一步：Execution Experience & Evolution Telemetry Evidence Foundation；之後整合 LiteLLM、NVIDIA NIM/OpenRouter、PostgreSQL adapter/migration、Docker sandbox、更多邊界與安全測試 |
+| Phase 1 | 進行中：Core Baseline 已驗證；目前必做 Execution Experience & Evolution Telemetry Foundation，完成後才正式退出 Phase 1 |
+| Phase 1.5 | 尚未開始：Phase 1 telemetry 完成後，整合 LiteLLM、NVIDIA NIM/OpenRouter、PostgreSQL adapter/migration、Docker sandbox、更多邊界與安全測試 |
 | Phase 2 | 規劃：pgvector、embedding、語意檢索、相容性篩選與排序；目前僅完成 task_family 精確去重 |
 | Phase 3 | 規劃：在 Phase 1 量測基礎上，以 tracing、Phoenix/DeepEval/MLflow 執行跨模型 baseline、token amortization、相似度、重用與回歸實驗 |
 | Phase 4 | 規劃：Redis/RQ、Evolution/Testing/Notification workers |

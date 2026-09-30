@@ -2197,11 +2197,23 @@ where each completed task contributes evidence that can improve future routing, 
 
 ---
 
-### 11.2 Experience as a First-Class Platform Asset
+### 11.2 Operational History and Experience as First-Class Platform Assets
 
 The platform should record more than the final answer or output.
 
-A completed execution may produce an Experience Record containing:
+**Raw operational history is itself a first-class asset, even before an individual failure has been diagnosed, corrected, or converted into a curated Experience Record.** Large volumes of repeated exceptions, retries, routing decisions, latency spikes, denials, and successful executions can reveal systemic patterns that are not visible from isolated episodes.
+
+The platform should therefore preserve two complementary forms of evidence:
+
+~~~text
+Raw Operational History
+→ complete execution observations for population-level analysis
+
+Curated Experience Memory
+→ interpreted / resolved episodes suitable for direct retrieval and reuse
+~~~
+
+A task execution observation may contain:
 
 ~~~text
 Problem / Task
@@ -2241,7 +2253,32 @@ Experience Record
 Experience Memory
 ~~~
 
-Experience records should remain inspectable, versioned, and governed rather than being compressed only into model weights.
+Raw observations and curated Experience Records should remain inspectable, versioned, and governed rather than being compressed only into model weights.
+
+Raw evidence should not require prior resolution to be retained. For example, 100,000 occurrences of the same exception may itself be a high-value signal: frequency, recurrence, affected routing paths, time windows, environments, retry outcomes, and correlated latency/cost can indicate a systemic defect even before root cause is known.
+
+Conceptually:
+
+~~~text
+Execution
+   ↓
+Raw Telemetry / Operational History
+   ├─→ Episode Correlation
+   │      ↓
+   │   Root Cause / Correction / Validation
+   │      ↓
+   │   Curated Experience Memory
+   │
+   └─→ Population Analysis
+          ↓
+       Frequency / Clustering / Trend / Correlation
+          ↓
+       Systemic Pattern
+          ↓
+       Evolution Signal
+~~~
+
+Both paths may later inform Capability, Routing, Agent, or Organization evolution.
 
 ---
 
@@ -2482,11 +2519,11 @@ The strongest effect is expected in bounded enterprise environments where task p
 
 ---
 
-### 11.9 Experience Quality and Negative Experience
+### 11.9 Failure Data, Negative Experience, and Population Signals
 
 Organizational learning should not record only successful executions.
 
-Failures may be equally valuable.
+Failures may be equally valuable, and repeated raw failures may become more informative as their population grows. A failure does not need to be individually resolved before it has analytical value.
 
 The Experience Memory should capture:
 
@@ -2509,6 +2546,27 @@ but also:
 > What should not be repeated?
 
 Negative experience can therefore reduce repeated failure and unnecessary exploration.
+
+At population scale, the platform should also analyze:
+
+- exception frequency and recurrence,
+- failure-rate denominator rather than raw count alone,
+- temporal and workload concentration,
+- affected Agent / Skill / Tool paths,
+- environment and dependency correlation,
+- retry / fallback success,
+- latency and cost amplification,
+- blast radius / severity,
+- and whether a previously rare failure is becoming systemic.
+
+A useful conceptual priority signal is:
+
+~~~text
+Evolution Priority
+≈ Frequency × Severity × Recurrence × Impact × Evidence Confidence
+~~~
+
+This is a prioritization concept rather than a fixed production formula. The important principle is that repeated exceptions should be treated as evidence about the system, not discarded as redundant logs.
 
 ---
 
@@ -4450,7 +4508,9 @@ These signals may later become inputs to topology-evolution policies.
 
 ### Required Telemetry
 
-The current platform should preserve enough telemetry to make future organizational experiments possible even before adaptive organization is implemented.
+The current platform should preserve enough **Execution Experience & Evolution Telemetry** to make future capability, routing, and organizational experiments possible even before adaptive organization is implemented.
+
+Telemetry is not only an observability mechanism. It is the historical evidence layer from which the platform may later derive both reusable Experience Records and population-level Evolution Signals. Raw exceptions remain valuable even when root cause is not yet known.
 
 A task trace should ideally preserve:
 
@@ -4492,7 +4552,26 @@ Recommended fields include:
 - failure location,
 - and post-execution evaluation.
 
-This telemetry is strategically important because future topology optimization requires evidence about **where routing failed**, not merely whether the final task failed.
+This telemetry is strategically important because future evolution requires evidence about **what repeatedly happens across the system**, as well as where an individual routing decision failed. The platform should preserve both numerator and denominator data: failures without successful executions cannot establish failure rate, and success-only data cannot expose the failure surface.
+
+The intended evidence pipeline is:
+
+~~~text
+Execution Experience & Evolution Telemetry
+        ↓
+Historical Operational Dataset
+        ├─→ Episode Analysis → Curated Experience Memory
+        └─→ Population Analysis → Evolution Signals
+                                  ↓
+                 Capability / Routing / Agent /
+                    Organization Investigation
+                                  ↓
+                           Validated Change
+                                  ↓
+                              New Evidence
+~~~
+
+The current implementation only needs to establish the evidence foundation; automated diagnosis or self-modification remains future work.
 
 ### Experimental Roadmap
 

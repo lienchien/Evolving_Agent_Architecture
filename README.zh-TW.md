@@ -3,7 +3,7 @@
 **語言：** [English](README.md) | 繁體中文
 
 ![Status](https://img.shields.io/badge/status-experimental-orange)
-![Phase](https://img.shields.io/badge/phase-1--verified-blue)
+![Phase](https://img.shields.io/badge/phase-1--in%20progress-blue)
 ![Validation](https://img.shields.io/badge/automated%20tests-28%20passed-green)
 
 > [!WARNING]
@@ -17,9 +17,9 @@
 
 ## 專案狀態
 
-> **目前階段（2026-09-20）：Phase 1 已驗證，並加入 Token／費用研究量測基礎**
+> **目前階段（2026-09-30）：Phase 1 進行中 — Core Baseline 已驗證；Execution Experience & Evolution Telemetry 為退出 Phase 1 前必做項目**
 
-目前 repository 已包含 Phase 1 MVP 所需的架構骨架、核心 domain model、service、interface、Agent orchestration、API route 與測試程式。
+目前 repository 已完成並驗證 Phase 1 Core Baseline，包括架構骨架、核心 domain model、service、interface、Agent orchestration、API route、持久化、併發控制與 Token／費用量測基礎。**Phase 1 尚未 Complete**；目前必須補齊 Execution Experience & Evolution Telemetry Foundation，完成後才進入 Phase 1.5。
 
 最近完整測試為 **28 passed**，另有一項既有 Starlette/AnyIO 棄用警告。除已驗證的 HTTP 與持久化流程外，Phase 1 現在會為 token efficiency／cost amortization 研究記錄 task 層級成本觀測與每次 LLM interaction；provider 未回報的 token 明確維持 unavailable，不以字數或其他方式估算。
 
@@ -455,7 +455,7 @@ Capability Registry
 Evolving_Agent_Architecture/
 ├── README.md
 ├── README.zh-TW.md
-├── Capability-Evolving Agent Architecture — System Design v1.6.md
+├── Capability-Evolving Agent Architecture — System Design v1.7.md
 ├── Capability_Evolving_Agent_Tech_Stack_v1.md
 ├── DEV_PLAN.md
 ├── PROJECT_STATUS.md
@@ -652,7 +652,7 @@ http://localhost:8000/docs
 
 # 12. Roadmap
 
-## Phase 1 — Core MVP Skeleton
+## Phase 1 — Core MVP + Execution Experience Foundation
 
 **目前階段**
 
@@ -1013,7 +1013,7 @@ Repository 以不同文件負責不同的專案管理用途。
 |---|---|
 | `README.md` | 英文專案入口與總覽 |
 | `README.zh-TW.md` | 繁體中文專案入口與總覽 |
-| `Capability-Evolving Agent Architecture — System Design v1.6.md` | 長期系統架構與設計原則 |
+| `Capability-Evolving Agent Architecture — System Design v1.7.md` | 長期系統架構與設計原則 |
 | `Capability_Evolving_Agent_Tech_Stack_v1.md` | 技術棧與分階段導入規劃 |
 | `DEV_PLAN.md` | 目前 implementation plan 與替換路徑 |
 | `PROJECT_STATUS.md` | 目前開發階段、完成狀態與里程碑 |
@@ -1122,7 +1122,7 @@ Share
 
 目前專案只應優先處理一件事：
 
-> **驗證獨立 API，為已通過自動化測試的核心流程補齊 runtime 證據。**
+> **完成 Phase 1 的 Execution Experience & Evolution Telemetry Foundation，開始累積未來 Experience Memory 與 Capability / Agent / Organization Evolution 所需的 operational history。**
 
 實際 infrastructure 整合前的 Phase 1 收尾工作見 [DEV_PLAN.md](DEV_PLAN.md)。
 

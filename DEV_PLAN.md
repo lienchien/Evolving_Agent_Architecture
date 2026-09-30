@@ -1,10 +1,10 @@
 # Capability-Evolving Agent — Phase 1 Development Plan
 
-更新日期：2026-09-21
+更新日期：2026-09-30
 
 ## 目前基準
 
-**Phase 1 — 核心驗證完成，Token／費用研究量測基礎已納入。**
+**Phase 1 — 核心驗證完成；現階段新增必要基礎：Routing / Failure Telemetry Evidence Foundation。**
 
 目前分支為 `dev`；Token／費用研究功能已完整納入，包含 task／LLM interaction
 成本觀測、SQLite 持久化與研究 API。最近完整測試為 **28 passed, 1 warning in 7.12s**。
@@ -60,15 +60,112 @@
 隔離 SQLite 保存 1 Capability、1 TestReport、1 ApprovalRecord、2 AuditEntry。
 完整執行紀錄見 [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md)。
 
-## 下一個里程碑：真實 Usage 與 Production Hardening
+## 現階段必要功能：Routing / Failure Telemetry Evidence Foundation
 
-1. 讓 LiteLLM／NVIDIA NIM／OpenRouter adapter 回傳 provider 原生 token usage 與可靠費用。
-2. 建立 static-agent baseline runner 與 Exact／Near-Similar／Generalized 任務資料集。
-3. 為生成名額加入 lease／逾時復原，驗證程序強制終止後能安全重試。
-4. 加入認證、管理員授權、可信 reviewer 及 tenant/owner/scope 資料控制。
-5. 將 restrictions 接到實際執行政策，加入請求大小、資源與執行配額。
-6. 執行長時間負載、延遲、SQLite lock timeout 與故障復原量測。
-7. 評估 PostgreSQL 與 Docker sandbox adapter；保留 Mock/SQLite 測試基線。
+這不是未來才做的 Adaptive Agent Organization 功能，而是**現在就必須建立的研究資料基礎**。
+
+目的不是讓系統立即自動 Split / Merge Agent，而是從目前的單一／早期 routing 流程開始，持續保存未來能回答以下問題的真實資料：
+
+- 哪一層做錯決策？
+- 正確候選是否曾經出現在 candidate set？
+- 錯誤是 routing、skill selection、tool execution、policy、provider 還是 runtime failure？
+- retry / fallback 是否成功修復？
+- capability 數量增加後，selection error 是否上升？
+- token、latency、cost 與錯誤率之間的關係為何？
+
+最低資料契約應保留：
+
+~~~text
+Task / Trace
+ ↓
+Routing Decision
+ ├─ layer / node
+ ├─ candidate set
+ ├─ selected candidate
+ ├─ confidence / score (if available)
+ └─ decision latency
+ ↓
+Execution
+ ├─ Agent / Skill / Tool
+ ├─ retry / fallback
+ └─ policy decision
+ ↓
+Outcome
+ ├─ success / failure
+ ├─ failure stage
+ ├─ failure category
+ ├─ error code / normalized reason
+ └─ human correction / final resolution
+ ↓
+Research Metrics
+ ├─ token usage
+ ├─ latency
+ ├─ cost
+ └─ capability reuse / generation
+~~~
+
+建議新增的持久化概念：
+
+- `routing_decisions`
+- `execution_failures` 或等價的 normalized failure observation
+- task / trace correlation ID
+- parent decision / routing depth
+- candidate count 與 candidate identifiers
+- selected target
+- routing confidence / score（若 router 可提供）
+- failure stage / category / recoverable
+- retry count / fallback target
+- final outcome
+
+資料模型必須允許目前只有一層 routing，也能在未來自然擴充成：
+
+~~~text
+Root
+→ Manager
+→ Agent
+→ Sub-Agent
+→ Skill
+→ Tool
+~~~
+
+也就是現在蒐集的是 **future organization experiments 的 longitudinal baseline**。
+
+### 實作原則
+
+1. **先觀測，不自動重組。** 現階段不實作自動 Split / Merge / Create / Retire。
+2. **錯誤資料不可只存在 log。** 需要結構化、可查詢、可與 task / interaction 關聯。
+3. **保留失敗與成功樣本。** 只蒐集 failure 無法計算 error rate 或比較 routing quality。
+4. **未知值不可猜測。** 沒有 confidence、token 或 cost 時保存 unavailable / null。
+5. **failure taxonomy 要穩定。** 原始 exception 可保留，但研究分析應使用 normalized category。
+6. **避免保存敏感 payload。** 優先保存 identifier、metadata、hash / summary 與分類結果。
+7. **Telemetry failure 不應改變主要 task outcome。** 但應有可觀測的 instrumentation failure 記錄。
+8. **Schema 從單層開始但支援遞迴。** 透過 parent decision / depth / node type 避免未來重做資料模型。
+
+### 第一階段驗收
+
+- 成功 task 可查到完整 task → routing → execution → outcome 關聯。
+- routing / capability miss / tool failure / provider failure 至少可區分。
+- retry / fallback 可追蹤到原始失敗。
+- 可統計 success count、failure count、wrong-selection proxy、retry recovery rate。
+- 可依 task family / capability / selected target / failure category 查詢。
+- 與既有 `llm_interactions`、`task_cost_metrics` 共用 task / trace correlation。
+- 測試覆蓋成功、失敗、retry、缺失 metrics、持久化與重啟讀回。
+- 後續可直接加入 Manager / Sub-Agent routing decision，而不需破壞 schema。
+
+這項工作應與真實 provider usage / baseline runner 並列為下一個工程里程碑，而不是延後到未來的 Observability Phase。
+
+---
+
+## 下一個里程碑：Telemetry、真實 Usage 與 Production Hardening
+
+1. 建立 Routing / Failure Telemetry Evidence Foundation，開始累積成功與錯誤 routing / execution 資料。
+2. 讓 LiteLLM／NVIDIA NIM／OpenRouter adapter 回傳 provider 原生 token usage 與可靠費用.
+3. 建立 static-agent baseline runner 與 Exact／Near-Similar／Generalized 任務資料集。
+4. 為生成名額加入 lease／逾時復原，驗證程序強制終止後能安全重試。
+5. 加入認證、管理員授權、可信 reviewer 及 tenant/owner/scope 資料控制。
+6. 將 restrictions 接到實際執行政策，加入請求大小、資源與執行配額。
+7. 執行長時間負載、延遲、SQLite lock timeout 與故障復原量測。
+8. 評估 PostgreSQL 與 Docker sandbox adapter；保留 Mock/SQLite 測試基線。
 
 ## 測試與執行
 

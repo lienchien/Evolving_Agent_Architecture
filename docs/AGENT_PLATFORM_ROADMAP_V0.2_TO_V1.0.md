@@ -450,10 +450,7 @@ Measure:
 - regression rate,
 - review burden.
 
-Phase 1 的量測契約與 feature 候選實作見
-[`TOKEN_COST_RESEARCH.md`](TOKEN_COST_RESEARCH.md)。該文件已同步到 `dev`，但研究 API
-與 SQLite metrics schema 仍留在 `feature/token-cost-research`，不得視為 v0.5 runtime
-已完成。正式 Gate B 實驗仍需真實 provider usage、static baseline 與相似度任務序列。
+Phase 1 的量測契約與目前實作見 [`TOKEN_COST_RESEARCH.md`](TOKEN_COST_RESEARCH.md)。研究 API 與 SQLite metrics schema 已整合至 `dev`，目前 Core Baseline 為 **28 passed, 1 warning**。這仍不代表 Gate B 已完成：正式實驗仍需真實 provider usage、static baseline 與相似度任務序列。Phase 1 目前另需完成 Execution Experience & Evolution Telemetry Foundation，為後續 routing 與 Agent organization experiments 保存完整 evidence。
 
 ### 6.7 Exit Criterion
 

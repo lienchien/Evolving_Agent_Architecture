@@ -1,6 +1,6 @@
 # Capability-Evolving Agent — Project Status
 
-更新日期：2026-09-21
+更新日期：2026-09-30
 
 開發分支：`dev`（Token／費用研究功能已合併）
 
@@ -9,7 +9,7 @@
 **Phase 1 — Complete / Verified Core plus Token/Cost Research Instrumentation**
 
 Phase 1 的核心開發與驗證退出條件已完成。目前專案已從「骨架建立」進入
-「已驗證研究原型」階段，下一個主要工程階段為 **Phase 1.5 — Real Infrastructure & Hardening**。
+「已驗證研究原型」階段，下一個主要工程階段為 **Phase 1.5 — Telemetry Evidence Foundation + Real Infrastructure & Hardening**。
 
 核心 mock 流程、FastAPI TestClient 整合、併發一致性與跨程序持久化已取得執行證據。
 獨立 Uvicorn 已完成 loopback HTTP 全流程與停止／重啟持久化驗證；新增 Token／費用
@@ -38,6 +38,46 @@ Token efficiency／cost amortization 的研究契約與實作已合併至 `dev`�
 目前完整 runtime 基準為 **28 passed, 1 warning**。真實 provider usage、static baseline runner、
 Exact／Near-Similar／Generalized 長序列實驗仍屬下一階段研究工作，不能以目前 mock 測試結果
 宣稱 CEAA 已證明節省 Token。
+
+## 新增必要基礎：Routing / Failure Telemetry
+
+Adaptive Agent Organization 已被列為長期主力研究方向，但**自動組織演化本身尚未進入目前實作範圍**。
+
+現階段新增的必要工作是先建立可持續累積的錯誤與 routing evidence。原因是未來要比較 Flat Routing、Skill Routing、Sub-Agent、Manager Hierarchy 與 Adaptive Organization，必須有長期且結構化的 baseline，而不能只依賴 application log 或最終 task success。
+
+目前狀態：
+
+- [x] task-level token / cost / latency measurement foundation
+- [ ] routing decision persistence
+- [ ] candidate-set / selected-target persistence
+- [ ] normalized failure taxonomy
+- [ ] retry / fallback linkage
+- [ ] task / trace / routing correlation
+- [ ] routing success / failure summary API
+- [ ] restart-persistent routing / failure evidence
+- [ ] longitudinal dataset for future organization experiments
+
+預定資料鏈：
+
+~~~text
+Task
+→ Routing Decision(s)
+→ Agent / Capability / Skill / Tool Selection
+→ Execution
+→ Failure / Retry / Fallback
+→ Outcome
+→ Token / Latency / Cost
+~~~
+
+未來 Manager / Sub-Agent 層加入後，沿用同一 decision model：
+
+~~~text
+Root → Manager → Agent → Sub-Agent → Skill → Tool
+~~~
+
+因此這項工作不是提前實作未來 hierarchy，而是建立**現在開始就不能缺少的 longitudinal telemetry**。
+
+---
 
 ## 已實作與驗證
 
@@ -90,6 +130,7 @@ Queue 保留擴充介面，Phase 1 不透過它執行背景任務。
 
 ## 尚未完成與已接受限制
 
+- [ ] Routing / Failure Telemetry：routing decision、candidate set、selected target、failure taxonomy、retry/fallback 與 outcome correlation。
 - [ ] 長時間負載、吞吐量、延遲、鎖定逾時及故障復原驗證。
 - [ ] 程序強制終止後的生成名額自動復原／租約。
 - [ ] 認證、管理員角色與 tenant/owner/scope 資料控制。
@@ -119,7 +160,7 @@ Docker sandbox、認證／授權、租約復原與負載／故障測試。詳見
 
 | 階段 | 規劃與狀態 |
 |---|---|
-| Phase 1.5 | 尚未開始：LiteLLM、NVIDIA NIM/OpenRouter、PostgreSQL adapter/migration、Docker sandbox、更多邊界與安全測試 |
+| Phase 1.5 | 下一步：Routing / Failure Telemetry Evidence Foundation；之後整合 LiteLLM、NVIDIA NIM/OpenRouter、PostgreSQL adapter/migration、Docker sandbox、更多邊界與安全測試 |
 | Phase 2 | 規劃：pgvector、embedding、語意檢索、相容性篩選與排序；目前僅完成 task_family 精確去重 |
 | Phase 3 | 規劃：在 Phase 1 量測基礎上，以 tracing、Phoenix/DeepEval/MLflow 執行跨模型 baseline、token amortization、相似度、重用與回歸實驗 |
 | Phase 4 | 規劃：Redis/RQ、Evolution/Testing/Notification workers |

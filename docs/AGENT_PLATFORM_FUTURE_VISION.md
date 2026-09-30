@@ -92,83 +92,116 @@ CEAA may later become the platform's **Capability Evolution Engine**.
 
 ## 3. High-Level Architecture
 
-```text
-┌──────────────────────────────────────────────┐
-│              External Systems               │
-│                                              │
-│  Horizon   News Map   Security Agent   SaaS  │
-│  Internal Apps   Enterprise Systems   Apps   │
-└──────────────────────┬───────────────────────┘
-                       │
-                 API / SDK / MCP
-                       │
-┌──────────────────────▼───────────────────────┐
-│              Agent Platform                 │
-│                                              │
-│  ┌────────────────────────────────────────┐  │
-│  │        Integration / Access Layer      │  │
-│  │ REST API / SDK / MCP / Webhook / Event│  │
-│  └───────────────────┬────────────────────┘  │
-│                      │                       │
-│  ┌───────────────────▼────────────────────┐  │
-│  │          Agent Control Plane           │  │
-│  │                                        │  │
-│  │ Task Router                            │  │
-│  │ Agent Registry                         │  │
-│  │ Workflow / Multi-Agent Orchestration   │  │
-│  │ Model Router                           │  │
-│  │ State / Session Management             │  │
-│  └───────────────────┬────────────────────┘  │
-│                      │                       │
-│  ┌───────────────────▼────────────────────┐  │
-│  │          Agent Runtime Layer           │  │
-│  │                                        │  │
-│  │ Agent Execution                        │  │
-│  │ Tool Calling                           │  │
-│  │ Memory                                 │  │
-│  │ Planning / Reasoning                   │  │
-│  │ Retry / Recovery                       │  │
-│  └───────────────────┬────────────────────┘  │
-│                      │                       │
-│  ┌───────────────────▼────────────────────┐  │
-│  │     Capability Evolution Engine        │  │
-│  │                                        │  │
-│  │ Capability Search                      │  │
-│  │ Gap Detection                          │  │
-│  │ Capability Generation                  │  │
-│  │ Validation / Testing                   │  │
-│  │ Registry / Versioning                  │  │
-│  │ Reuse / Deprecation / Revocation       │  │
-│  └───────────────────┬────────────────────┘  │
-│                      │                       │
-│  ┌───────────────────▼────────────────────┐  │
-│  │          Security & Governance         │  │
-│  │                                        │  │
-│  │ Policy Engine                          │  │
-│  │ Permission Control                     │  │
-│  │ Credential Vault                       │  │
-│  │ Human Approval                         │  │
-│  │ Sandbox                                │  │
-│  │ Audit / Rollback                       │  │
-│  └───────────────────┬────────────────────┘  │
-│                      │                       │
-│  ┌───────────────────▼────────────────────┐  │
-│  │          Tool / Data Gateway           │  │
-│  │                                        │  │
-│  │ API / DB / Files / Browser / MCP       │  │
-│  │ Cloud Services / Internal Systems      │  │
-│  └───────────────────┬────────────────────┘  │
-│                                              │
-│  Cross-cutting: Observability / Cost / Trace │
-└──────────────────────┼───────────────────────┘
-                       │
-┌──────────────────────▼───────────────────────┐
-│        Models / Tools / Data Sources         │
-│                                              │
-│ OpenAI / Gemini / Claude / Local Models      │
-│ DB / API / Cloud / Browser / Enterprise Data│
-└──────────────────────────────────────────────┘
-```
+The long-term platform architecture separates global control, recursive Agent organization, task execution, capability evolution, governance, and external-system access.
+
+~~~text
+┌────────────────────────────────────────────────────────────┐
+│                 External Systems / Users                   │
+│ Horizon / News Map / Security / SaaS / Enterprise Apps   │
+└──────────────────────────┬─────────────────────────────────┘
+                           │
+                    API / SDK / MCP / Event
+                           │
+┌──────────────────────────▼─────────────────────────────────┐
+│               Integration / Access Layer                  │
+│ Auth / Request Normalization / Tenant / Rate Limit        │
+└──────────────────────────┬─────────────────────────────────┘
+                           │
+┌──────────────────────────▼─────────────────────────────────┐
+│                    Agent Control Plane                     │
+│ Global Task Classification / Policy / Model Routing       │
+│ Workflow / State Ownership / Resource Allocation          │
+└──────────────────────────┬─────────────────────────────────┘
+                           │
+┌──────────────────────────▼─────────────────────────────────┐
+│                 Agent Organization Layer                  │
+│                                                            │
+│                    Organization Root                       │
+│                           │                                │
+│              ┌────────────┼────────────┐                   │
+│              ▼            ▼            ▼                   │
+│           Manager      Manager      Manager                │
+│              │            │            │                   │
+│            Agents       Agents       Agents                │
+│              │                                             │
+│          Sub-Agents                                         │
+│              │                                             │
+│       Skill / Capability DAG                               │
+│                                                            │
+│ Hierarchical Routing / Adaptive Depth / Local Scope        │
+│ Split / Merge / Create / Retire / Re-route / Re-parent    │
+└──────────────────────────┬─────────────────────────────────┘
+                           │
+┌──────────────────────────▼─────────────────────────────────┐
+│                    Agent Runtime Layer                     │
+│ Execution / Planning / Memory / State / Tool Calling      │
+│ Retry / Recovery / Checkpoint / Multi-Step Execution      │
+└─────────────────────┬──────────────────┬───────────────────┘
+                      │                  │
+          ┌───────────▼──────────┐  ┌────▼──────────────────┐
+          │ Capability Evolution │  │ Experience / Evidence │
+          │ Engine               │  │ Routing / Outcome     │
+          │ Search / Gap / Build │  │ Trace / Evaluation    │
+          │ Validate / Version   │  │ Reuse / Failure Data  │
+          └───────────┬──────────┘  └────┬──────────────────┘
+                      │                  │
+                      └────────┬─────────┘
+                               ▼
+                    Evolution Feedback
+             Capability / Agent / Organization
+                               │
+                               └───────────────┐
+                                               │
+                     feedback to Organization ─┘
+
+┌────────────────────────────────────────────────────────────┐
+│                Security & Governance Plane                 │
+│ Policy / Permission / Credential / Approval / Audit       │
+│ Sandbox / Execution Grant / Rollback                      │
+└──────────────────────────┬─────────────────────────────────┘
+                           │
+┌──────────────────────────▼─────────────────────────────────┐
+│                    Tool / Data Gateway                     │
+│ API / DB / Files / Browser / MCP / Cloud / Legacy        │
+└──────────────────────────┬─────────────────────────────────┘
+                           │
+┌──────────────────────────▼─────────────────────────────────┐
+│              Models / Tools / Data / Systems              │
+│ LLMs / ERP / MES / CRM / Internal APIs / Robots / Edge   │
+└────────────────────────────────────────────────────────────┘
+
+Cross-cutting across all layers:
+Observability / Cost / Trace / Security / Evaluation
+~~~
+
+The architecture contains two related evolution loops:
+
+~~~text
+Experience
+   ↓
+Capability Evolution
+   ↓
+Skill / Capability Improvement
+
+Experience
+   ↓
+Routing Evidence
+   ↓
+Agent Specialization
+   ↓
+Organization Evolution
+   ↓
+Updated Agent Organization Graph
+~~~
+
+The **Agent Organization Layer** is intentionally separated from both the Control Plane and Runtime.
+
+- The **Control Plane** owns global execution policy, task admission/classification, model policy, workflow/state ownership, and resource decisions.
+- The **Agent Organization Layer** owns recursive responsibility decomposition and hierarchical routing across Managers, Agents, Sub-Agents, and capability branches.
+- The **Runtime** executes the selected work under the scope produced by the upper layers.
+- The **Evolution mechanisms** use execution evidence to improve capabilities and, in later stages, propose changes to the Agent organization itself.
+
+This separation allows the platform to scale without requiring one Agent or one global router to understand every available tool and capability.
 
 ---
 
@@ -411,42 +444,122 @@ Responsibilities:
 
 Purpose:
 
-> Decide how an incoming task should be executed.
+> Provide global task control and execution policy without requiring the Control Plane itself to reason over every low-level Agent, skill, or tool.
 
 Potential responsibilities:
 
-- Task Router
-- Agent Registry
-- Data Sensitivity Classifier
-- Hierarchical Capability Router / Skill Tree Gate
-- Model Router
-- Execution Placement / Model Policy Resolver
-- Workflow Registry
-- Multi-Agent Orchestration
-- Session / State ownership
-- Capability requirements
-- Policy assignment
-- resource allocation
+- task admission and normalization,
+- top-level task / domain classification,
+- Agent Organization entry-point selection,
+- Agent Registry and organization metadata ownership,
+- Data Sensitivity Classification,
+- Model Router,
+- Execution Placement / Model Policy Resolver,
+- Workflow Registry,
+- session / state ownership,
+- policy assignment,
+- resource allocation,
+- global scheduling,
+- lifecycle control,
+- and cross-organization orchestration when required.
 
-Conceptual flow:
+The Control Plane should **not** become a single flat router for every capability in the platform.
 
-```text
+Preferred conceptual flow:
+
+~~~text
 Incoming Task
     ↓
-Task Classification
+Global Classification / Policy
     ↓
-Choose Agent
+Select Organization Entry Point
     ↓
-Choose Workflow
+Agent Organization Layer
     ↓
-Choose Model
+Recursive Manager / Agent / Sub-Agent Routing
     ↓
-Assign Capabilities / Tools
+Capability / Skill Candidate Scope
     ↓
-Apply Policy
-    ↓
-Dispatch Runtime
-```
+Runtime Dispatch
+~~~
+
+This creates a clean responsibility boundary:
+
+~~~text
+Control Plane
+= global control, policy, placement, lifecycle
+
+Agent Organization Layer
+= recursive responsibility and capability routing
+
+Runtime
+= execution
+~~~
+
+As the platform grows, the organization layer may dynamically introduce additional Manager levels without requiring the external interface or global Control Plane to expose the entire internal hierarchy.
+
+---
+
+### 5.2.1 Agent Organization Layer
+
+Purpose:
+
+> Organize Agents and capabilities into bounded local decision spaces that can recursively scale as workload and capability diversity increase.
+
+Potential responsibilities:
+
+- Organization Root,
+- Manager / Agent / Sub-Agent hierarchy,
+- hierarchical Agent routing,
+- Skill / Capability DAG ownership,
+- local capability scope,
+- adaptive routing depth,
+- Span-of-Control measurement,
+- routing confidence / entropy tracking,
+- branch-local memory and experience scope,
+- organization topology metadata,
+- specialization boundaries,
+- and future topology-evolution proposals.
+
+Conceptually:
+
+~~~text
+Organization Entry Point
+        ↓
+Manager
+        ↓
+Specialized Agent
+        ↓
+Sub-Agent
+        ↓
+Skill / Capability Branch
+        ↓
+Small Candidate Tool Set
+~~~
+
+The hierarchy is recursive rather than fixed. Any node may become a routing/management node when it owns children, while leaf nodes may remain specialized execution nodes.
+
+The long-term organization model should support growth in both directions:
+
+~~~text
+Tools
+ ↓
+Skills
+ ↓
+Sub-Agents
+ ↓
+Agents
+ ↓
+Managers
+ ↓
+Higher-Level Managers
+ ↓
+Organization Root
+~~~
+
+When a node becomes overloaded, the preferred response is not necessarily to expose more context or use a larger model. The platform may instead restructure the local organization so that each routing decision remains bounded.
+
+The detailed long-term evolution model is defined in Section 14 and Section 14.1.
 
 ---
 

@@ -371,11 +371,14 @@ Data Store
 
 The Data Gateway can enforce branch ownership, read/write distinction, temporary grants, classification, tenant isolation, audit logging, rate limits, data-loss prevention, and revocation.
 
-Together with Tool Gateway and Agent Control Plane, the future platform may have three major governed boundaries:
+Together with Tool Gateway, Agent Control Plane, and the Agent Organization Layer, the future platform separates platform-level control from recursive responsibility routing and resource access:
 
 ```text
 Agent Control Plane
-→ Agent creation / delegation
+→ platform-level policy / placement / lifecycle
+
+Agent Organization Layer
+→ recursive Manager / Agent / Sub-Agent responsibility routing
 
 Tool Gateway
 → External tools / APIs
@@ -570,6 +573,34 @@ A useful long-term product principle is:
 > **Autonomous where possible, governed where necessary, auditable everywhere.**
 
 The enterprise value proposition is not merely that the platform can create more Agents. It is that the platform can create, validate, delegate, observe, improve, and retire Agents while preserving permission boundaries, data ownership, auditability, and human control.
+
+---
+
+## 15.1 Execution Experience as Organization Evidence
+
+Adaptive organization requires evidence collected before topology changes are automated. The current platform should therefore preserve complete execution history rather than only curated failures.
+
+```text
+Task / Trace
+→ Organization Entry Point
+→ Manager / Agent / Sub-Agent Routing
+→ Candidate Set
+→ Selected Target
+→ Skill / Capability / Tool
+→ Execution Outcome
+→ Retry / Fallback / Recovery
+→ Cost / Latency / Token Evidence
+```
+
+This evidence has two distinct future uses:
+
+```text
+Operational History
+├─→ Episode Resolution → Experience Memory
+└─→ Population Analysis → Organization Evolution Signal
+```
+
+The organization layer should eventually evaluate routing accuracy, candidate-set size, routing confidence, workload imbalance, repeated failure patterns, latency, cost, recovery rate, and Span of Control. These signals may support proposals to split, merge, specialize, re-parent, create, retire, or collapse organizational nodes. Structural changes remain governed and auditable rather than being applied solely because an LLM proposes them.
 
 ---
 

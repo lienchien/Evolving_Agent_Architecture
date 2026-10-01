@@ -865,3 +865,44 @@ Gap
 ### Status
 
 本次只更新 Phase 1.5 計畫與文件，仍為 **Planned / Not Implemented**；未新增 runtime code 或測試證據。
+
+---
+
+## 2026-10-01 — Phase 1.5 formal experimental validation added
+
+### Decision
+
+Phase 1.5 不再只要求完成 real infrastructure 與 Code Evolution feature implementation；正式加入實驗設計，用來驗證 CEAA 是否真的能自主生成 Skill / controlled Sub-Agent，以及 Main/Audit cross-validation 是否帶來可量測的驗證價值。
+
+### Experiment groups
+
+- Skill Auto-Generation：Simple / Medium / Complex。
+- Sub-Agent Auto-Generation：AgentArtifact、Skill composition、permission/data/tool binding。
+- Reviewer Ablation：Builder self-review、Main-only、Audit-only、Main+Audit。
+- Known-Defect Security Benchmark。
+- Model Configuration Comparison：same-model、frontier same-family、cross-model / cross-provider。
+- Human Escalation Effectiveness。
+
+### Metrics
+
+- generation success
+- task / test success
+- functional/security detection recall
+- false positive / false negative
+- reviewer agreement / disagreement
+- escalation / false escalation
+- token / cost / latency
+- revision count
+- human intervention / review burden
+
+### Integrity requirements
+
+- known defect ground truth 在 review 前固定。
+- Main/Audit first-pass context 隔離。
+- ERROR / UNKNOWN / timeout 不得視為 PASS。
+- provider missing usage 不估算。
+- 保存 model/provider/policy/artifact/trace/review/human-decision lineage。
+
+### Status
+
+本次仍是 **planned experimental scope**，尚未實作 benchmark dataset、experiment runner 或取得任何實驗結果。

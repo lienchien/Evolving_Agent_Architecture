@@ -248,12 +248,31 @@ AgentArtifact Construction Foundation
 
 ---
 
+## Phase 1.5 Experimental Validation Scope
+
+Phase 1.5 已正式加入研究實驗，不只驗證 infrastructure 與 feature completion。
+
+預計實驗分為：
+
+1. **Skill Auto-Generation**：Simple / Medium / Complex 任務，量測 generation success、test pass、iteration、token/cost、latency、human intervention。
+2. **Sub-Agent Auto-Generation**：量測 AgentArtifact 完整性、Skill composition、permission/data/tool binding、controlled task success 與 hierarchy invariant。
+3. **Reviewer Ablation**：Builder self-review、Main only、Audit only、Main+Audit cross-validation。
+4. **Known-Defect Security Benchmark**：功能錯誤、過度權限、secret exposure、unsafe process/network、data exfiltration、dependency risk、prompt/tool injection、cross-branch access、privilege escalation、recursive delegation bypass。
+5. **Model Configuration Comparison**：同模型 reviewer、frontier same-family reviewer、cross-model / cross-provider reviewer。
+6. **Human Escalation Evaluation**：escalation rate、false escalation、human burden、resolution outcome。
+
+核心研究指標包括 detection rate、functional/security recall、false-positive rate、false-negative rate、reviewer agreement、human escalation rate、token/cost、latency。
+
+目前狀態仍為 **Planned / Not Implemented / Not Evaluated**。
+
+---
+
 ## 後續階段
 
 | 階段 | 規劃與狀態 |
 |---|---|
 | Phase 1 | 進行中：Core Baseline 已驗證；目前必做 Execution Experience & Evolution Telemetry Foundation，完成後才正式退出 Phase 1 |
-| Phase 1.5 | 尚未開始：Real Infrastructure + Controlled Code Evolution。完成 LiteLLM/NIM/OpenRouter、PostgreSQL、Docker sandbox、auth/policy/recovery，並實作 Skill-oriented CodeBuilderRuntime、Main/Audit Secure Evolution Gate、frontier-model semantic review、Validation Incident、mandatory Human Escalation；Sub-Agent 僅建立 AgentArtifact / validation foundation，不包含完整 recursive organization runtime |
+| Phase 1.5 | 尚未開始：Real Infrastructure + Controlled Code Evolution + Experimental Validation。除 LiteLLM/NIM/OpenRouter、PostgreSQL、Docker、auth/policy/recovery 外，實作 Skill/Sub-Agent autonomous construction、Main/Audit Secure Evolution Gate、frontier semantic review、Validation Incident、mandatory Human Escalation，並執行 reviewer ablation、known-defect security benchmark、model configuration 與 escalation-burden 實驗；不包含完整 recursive organization runtime |
 | Phase 2 | 規劃：pgvector、embedding、語意檢索、相容性篩選與排序；目前僅完成 task_family 精確去重 |
 | Phase 3 | 規劃：在 Phase 1 量測基礎上，以 tracing、Phoenix/DeepEval/MLflow 執行跨模型 baseline、token amortization、相似度、重用與回歸實驗 |
 | Phase 4 | 規劃：Redis/RQ、Evolution/Testing/Notification workers |

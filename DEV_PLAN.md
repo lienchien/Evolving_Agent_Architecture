@@ -404,6 +404,171 @@ G_child ⊆ G_parent ⊆ G_root
 
 Phase 1.5 的 Sub-Agent 目標是證明「可生成、可驗證、可治理的 AgentArtifact」，不是完成整個 recursive organization orchestration。
 
+### Phase 1.5-I — Autonomous Evolution & Cross-Validation Experiments
+
+Phase 1.5 的驗證不只確認功能可執行，也要形成正式研究實驗，量化 Skill / Sub-Agent 自動生成能力與 Main/Audit cross-validation 的有效性。
+
+#### Experiment Group A — Skill Auto-Generation
+
+建立分級任務集，至少包含：
+
+- Simple：單一函式 / isolated transformation。
+- Medium：需要整合既有 CEAA interface / service。
+- Complex：multi-file modification、dependency、integration tests。
+
+每個案例從 Capability Gap 開始，不預先提供完成程式，觀察 Builder 是否能自主完成：
+
+~~~text
+Gap
+→ Build Specification
+→ Inspect Repository
+→ Write Code
+→ Write Tests
+→ Execute
+→ Debug / Revise
+→ Candidate Skill
+~~~
+
+量測：
+
+- generation success rate
+- import / compilation success rate
+- acceptance-test pass rate
+- iterations to success
+- revision count
+- build latency
+- input / output / total tokens
+- provider cost
+- human intervention rate
+- unauthorized-action attempt count
+
+#### Experiment Group B — Sub-Agent Auto-Generation
+
+建立需要角色分工的受控任務，驗證 Main Agent 能否自主產生 AgentBuildSpecification，優先組合既有 Skills，並產生可執行 AgentArtifact。
+
+量測：
+
+- AgentArtifact generation success rate
+- manifest completeness
+- capability composition correctness
+- tool / data / permission binding correctness
+- controlled task success rate
+- hierarchy-invariant pass rate
+- unnecessary permission request rate
+- generation / revision token cost
+- latency
+- human intervention rate
+
+至少驗證：
+
+~~~text
+P_child ⊆ P_parent ⊆ P_root
+G_child ⊆ G_parent ⊆ G_root
+~~~
+
+Phase 1.5 不要求完整 recursive organization benchmark，但必須證明至少一個受控 Sub-Agent 能由系統自動建立、驗證並執行。
+
+#### Experiment Group C — Reviewer Ablation
+
+比較四種驗證配置：
+
+~~~text
+A. Builder self-review only
+B. Main Agent review only
+C. Audit Agent review only
+D. Main + Audit independent cross-validation
+~~~
+
+建立含已知 defect / vulnerability 的 Candidate Artifact benchmark，例如：
+
+- functional bug
+- boundary-condition bug
+- excessive permission
+- secret exposure
+- unsafe subprocess / shell execution
+- unexpected network access
+- data exfiltration path
+- dependency / supply-chain risk
+- prompt / tool injection path
+- cross-branch data access
+- privilege escalation
+- recursive delegation bypass
+
+核心量測：
+
+- overall detection rate
+- functional finding recall
+- security finding recall
+- false-negative rate
+- false-positive rate
+- reviewer agreement / disagreement rate
+- human escalation rate
+- false escalation rate
+- review token cost
+- review latency
+
+目標不是預設雙 reviewer 一定較好，而是實證 Main + Audit cross-validation 是否能在可接受成本下，降低單一 reviewer 的 blind spots。
+
+#### Experiment Group D — Model Configuration Comparison
+
+比較 reviewer 模型配置，至少保留下列研究條件：
+
+~~~text
+Config 1:
+Builder = Model A
+Main = Model A
+Audit = Model A
+
+Config 2:
+Builder = coding / medium model
+Main = frontier model A
+Audit = frontier model A
+
+Config 3:
+Builder = coding / medium model
+Main = frontier model A
+Audit = frontier model B
+~~~
+
+研究問題：
+
+> 不同角色與不同 model family / provider 是否能降低 correlated blind spots，並提升功能與安全問題 detection？
+
+量測 detection、false positive / negative、cost、latency 與 escalation burden。
+
+#### Experiment Group E — Human Escalation Effectiveness
+
+因 Secure Evolution Gate 採 fail-closed，Human Escalation 本身也必須量測，避免 Audit 過度敏感造成不可接受的人工作業量。
+
+量測：
+
+- escalation rate
+- true-positive escalation rate
+- false escalation rate
+- human review burden
+- revision-after-escalation rate
+- quarantine / reject / false-positive decision distribution
+- time to resolution
+
+研究目標：
+
+~~~text
+High-risk issue detection ↑
+while
+Unnecessary human escalation ↓
+~~~
+
+#### Experimental Integrity
+
+- 每個 Candidate 的已知 defect ground truth 必須在 reviewer 執行前固定。
+- Main 與 Audit first-pass review 必須相互隔離。
+- reviewer 無法完成時記錄 ERROR / UNKNOWN / timeout，不得當作 PASS。
+- provider 未回報 token / cost 欄位時保存 unavailable，不估算。
+- 所有 experiment 必須保存 model / provider / prompt-policy version、artifact version、trace_id、review evidence 與 human decision。
+- Builder、Main、Audit 的模型配置必須可重現。
+
+---
+
 ### Phase 1.5 Exit Direction
 
 Phase 1.5 至少應能證明：
@@ -417,12 +582,28 @@ Real Sandbox
 +
 Controlled Code Builder
 +
+Skill Auto-Generation
++
+Controlled Sub-Agent Auto-Generation
++
 Main/Audit Secure Evolution Gate
 +
 Mandatory Human Escalation
++
+Measured Cross-Validation Effectiveness
 ~~~
 
-可以共同運作，並讓一個新 Skill 從 Gap 走到 Candidate、Security Review、Human Review / Approval 與 Registry，而沒有繞過治理邊界。
+可以共同運作，並讓新 Skill 與至少一個受控 Sub-Agent 從 Gap 走到 Candidate、Security Review、Human Review / Approval 與 Registry / Controlled Execution，而沒有繞過治理邊界。
+
+Phase 1.5 Exit Evidence 應至少包含：
+
+- Skill generation benchmark results。
+- Sub-Agent generation benchmark results。
+- reviewer ablation（self / Main / Audit / Main+Audit）。
+- known-defect security benchmark。
+- model-configuration comparison。
+- detection / FP / FN / agreement / escalation / cost / latency metrics。
+- 至少一個 Human Escalation incident 的完整可追溯 evidence chain。
 
 Phase 2 再加入 embedding/pgvector、語意檢索、相容性與排序；之後評估 tracing、實驗追蹤、Redis/RQ 背景 worker、更強隔離、管理介面及企業場景。
 完整 Recursive Multi-Agent Organization、Sharing／Import／Export／Marketplace 仍屬後續階段。

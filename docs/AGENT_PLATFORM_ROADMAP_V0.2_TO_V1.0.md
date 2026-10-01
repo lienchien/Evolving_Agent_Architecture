@@ -373,13 +373,19 @@ Capability Missing / Insufficient
  ↓
 Gap Detection
  ↓
-Generate Candidate
+Evolution Planner / Build Specification
  ↓
-Sandbox Test
+Code Evolution Runtime / Ephemeral Builder
  ↓
-Validation
+Candidate Artifact
  ↓
-Approval
+Main Review + Audit Review
+ ↓
+Secure Evolution Gate
+ ↓
+Sandbox / Deterministic / Adversarial Tests
+ ↓
+Human Approval
  ↓
 Registry
  ↓
@@ -405,6 +411,38 @@ created_at
 deprecated_at
 ```
 
+### 6.3.1 Construction and Verification Requirements
+
+v0.5 must define a real construction path rather than treating `Generate Candidate` as one opaque model response.
+
+Required platform contracts:
+
+- `BuildSpecification`;
+- replaceable `CodeBuilderRuntime` / Builder adapter;
+- isolated Git/workspace and sandbox boundaries;
+- versioned `BuildResult` / Candidate Artifact;
+- independent Main Agent review;
+- independent Audit Agent security review;
+- deterministic + semantic security evidence;
+- adversarial test generation for risky artifacts;
+- Validation Incident records;
+- mandatory Human Administrator escalation when either reviewer is not PASS.
+
+Strong semantic verification may use frontier models. The construction model and verification model do not need to be identical; model/provider diversity is preferred for high-risk reviews.
+
+Fail-closed invariant:
+
+```text
+Main PASS + Audit PASS
+→ may continue
+
+Anything else
+→ block + notify Human Administrator
+```
+
+A revision must rerun the complete Secure Evolution Gate.
+
+---
 ### 6.4 Dependencies
 
 - v0.3 reliable execution
@@ -566,6 +604,22 @@ Introduce the Agent Organization Layer and multi-Agent execution only after the 
 
 Multi-Agent architecture is treated as a **complexity multiplier**, not a default solution.
 
+### 8.1.1 Sub-Agent Construction Requirement
+
+When v0.7 introduces dynamic Sub-Agent creation, it should reuse the v0.5 Code Evolution Runtime and Secure Evolution Gate rather than invent a second generation pipeline.
+
+A generated Agent should be a versioned `AgentArtifact` containing its manifest, role, capability/tool bindings, model and memory policy, data scope, permission scope, delegation policy, child-creation policy, resource budget, tests, and lifecycle policy.
+
+Sub-Agent validation must additionally prove the hierarchy invariants:
+
+```text
+P_child ⊆ P_parent ⊆ P_root
+G_child ⊆ G_parent ⊆ G_root
+```
+
+Any Main/Audit disagreement or failure requires Human Administrator review before the Agent can proceed.
+
+---
 ### 8.2 Core Capabilities
 
 - Agent Organization Graph metadata,

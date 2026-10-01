@@ -6,7 +6,8 @@
 
 與其他文件的角色區分：
 
-- `Capability-Evolving Agent Architecture — System Design v1.6.md`：長期系統架構與設計原則
+- `Capability-Evolving Agent Architecture — System Design v1.8.md`：目前長期系統架構與設計原則
+- `Capability-Evolving Agent Architecture — System Design v1.6/v1.7.md`：歷史架構快照
 - `Capability_Evolving_Agent_Tech_Stack_v1.md`：技術棧與分階段導入規劃
 - `DEV_PLAN.md`：目前開發方案與下一步
 - `PROJECT_STATUS.md`：目前所處階段與完成度
@@ -777,3 +778,46 @@ Future Vision、平台 roadmap、README、PROJECT_STATUS、DEV_PLAN 與 API conc
 衝突解決保留遠端新增的 event-driven／long-running vision 與 roadmap，並將所有狀態文件
 更新為功能已納入 `dev`。合併後完整測試為 **28 passed, 1 warning in 7.12s**；既有限制仍包括
 真實 provider usage、認證／tenant scope、static baseline runner 與正式 Phase 3 實驗。
+
+---
+
+## 2026-10-01 — System Design v1.8：Code Evolution Runtime 與 Secure Evolution Gate
+
+### 背景
+
+既有 CEAA 已定義 Capability Gap → Generate → Validate → Test → Approval，但 `Generate` 階段仍偏抽象，缺少「Main Agent 已確認需要新 Skill / Sub-Agent 後，實際如何讀 repository、寫程式、執行測試與產出 Candidate」的 execution architecture。
+
+同時新增安全治理要求：任何新生成 Skill / Workflow / future Sub-Agent 不能只依賴 Builder 自測，必須由 Main Agent 與 Audit Agent 獨立交叉驗證。
+
+### 設計決策
+
+- 新增 System Design v1.8，保留 v1.7 不覆寫。
+- 定義 Evolution Planner → Build Specification → Code Evolution Runtime → Ephemeral Builder → Candidate Artifact。
+- Builder Runtime 採 interface / adapter 概念，可接 Pi-like、Codex-like 或其他 coding-agent runtime，不綁單一框架。
+- Builder 僅在 isolated Git/worktree + sandbox workspace 內操作，不得直接 activate 或取得 production credentials。
+- Main Agent Reviewer 檢查功能、需求、架構與 permission necessity。
+- Audit Agent Reviewer 從 adversarial/security 角度檢查 privilege escalation、data/secret leakage、tool/process/network、dependency、cross-branch 與 recursive delegation risk。
+- 高風險 semantic review 可路由到 strong frontier model；deterministic security controls 不可被 LLM 取代。
+- Audit Agent 可生成 adversarial security tests。
+- Secure Evolution Gate 採 fail-closed：只有 Main=PASS 且 Audit=PASS 才可自動繼續。
+- 任一 FAIL / ERROR / UNKNOWN / timeout / disagreement 都建立 Validation Incident 並通知 Human Administrator。
+- Human 可 Reject / Request Revision / Quarantine / 記錄 False Positive，但不提供 unrestricted Force Activate；任何修訂後必須完整重驗。
+- future Sub-Agent generation 共用相同 construction pipeline，並額外驗證 permission/governance monotonicity。
+
+### 同步文件
+
+- `Capability-Evolving Agent Architecture — System Design v1.8.md`
+- `docs/AGENT_PLATFORM_FUTURE_VISION.md`
+- `docs/AGENT_PLATFORM_ROADMAP_V0.2_TO_V1.0.md`
+- `docs/MULTI_AGENT_ORGANIZATION_DESIGN.md`
+- `docs/SECURITY_AUDIT_LOG.md`
+- `DEV_PLAN.md`
+- `PROJECT_STATUS.md`
+- `README.md`
+- `README.zh-TW.md`
+
+### Validation / Implementation Status
+
+本次為 **architecture/documentation update only**。未新增 `src/` implementation，也未執行新的 runtime test，因此不得宣稱 CodeBuilderRuntime、SecureEvolutionGate、dual frontier-model validation、Validation Incident 或 dynamic Sub-Agent generation 已實作或驗證。
+
+現有 Core Baseline 測試證據仍維持先前紀錄；Phase 1 Execution Experience & Evolution Telemetry Foundation 的實作狀態不因本次文件升級而改變。

@@ -676,20 +676,31 @@ http://localhost:8000/docs
 
 ---
 
-## Phase 1.5 — Real Infrastructure Integration
+## Phase 1.5 — Real Infrastructure + Controlled Code Evolution
 
 規劃：
 
-- LiteLLM adapter
-- NVIDIA NIM
-- OpenRouter
-- PostgreSQL repository
-- Docker sandbox
-- 更完整的 autonomous tests
+- runtime configuration / environment profile
+- LiteLLM adapter、NVIDIA NIM、OpenRouter、provider fallback / health check
+- PostgreSQL repository / migration
+- Docker sandbox、filesystem / network / resource isolation
+- Skill-oriented CodeBuilderRuntime 與 ephemeral Builder Agent
+- isolated Git / worktree candidate workspace
+- versioned BuildSpecification / BuildResult / Candidate Artifact
+- Main Agent independent functional / architecture review
+- Audit Agent independent adversarial security review
+- 高風險 review 的 frontier-model semantic verification
+- deterministic security evidence 與 adversarial test generation
+- fail-closed Secure Evolution Gate
+- Validation Incident 與 mandatory Human Administrator escalation
+- authentication / authorization / policy / quota / lease / crash recovery
+- Skill pipeline 穩定後建立 AgentArtifact / Sub-Agent construction foundation
 
 目標：
 
-> 在不修改核心 Agent logic 的情況下，把 mock infrastructure 替換成真實 infrastructure。
+> 把 CEAA 從已驗證的 mock prototype，提升成能在真實 infrastructure 上安全完成「新 Skill 寫程式 → 獨立交叉驗證 → 異常人工升級 → 治理／Registry」的研究平台。
+
+完整 Recursive Multi-Agent Organization 仍維持後續階段。
 
 ---
 

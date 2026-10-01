@@ -224,12 +224,36 @@ Queue 保留擴充介面，Phase 1 不透過它執行背景任務。
 
 ---
 
+## Phase 1.5 Planned Scope Clarification
+
+System Design v1.8 定義的 Code Evolution Runtime 與 Secure Evolution Gate 已正式納入 **Phase 1.5 預計開發項目**。
+
+Phase 1.5 的 construction scope 採漸進策略：
+
+~~~text
+First:
+Skill / Capability Builder MVP
+        ↓
+Main + Audit Secure Evolution Gate
+        ↓
+Mandatory Human Escalation / Approval
+
+Then:
+AgentArtifact Construction Foundation
+~~~
+
+完整 recursive child-Agent organization / multi-Agent orchestration 仍維持後續階段，避免 Phase 1.5 同時引入過多 coordination complexity。
+
+目前狀態仍為 **Planned / Not Implemented**。
+
+---
+
 ## 後續階段
 
 | 階段 | 規劃與狀態 |
 |---|---|
 | Phase 1 | 進行中：Core Baseline 已驗證；目前必做 Execution Experience & Evolution Telemetry Foundation，完成後才正式退出 Phase 1 |
-| Phase 1.5 | 尚未開始：Phase 1 telemetry 完成後，整合 LiteLLM、NVIDIA NIM/OpenRouter、PostgreSQL adapter/migration、Docker sandbox、auth/policy、更多邊界與安全測試；同時建立 v1.8 Code Evolution / Secure Evolution Gate 所需 infrastructure prerequisites |
+| Phase 1.5 | 尚未開始：Real Infrastructure + Controlled Code Evolution。完成 LiteLLM/NIM/OpenRouter、PostgreSQL、Docker sandbox、auth/policy/recovery，並實作 Skill-oriented CodeBuilderRuntime、Main/Audit Secure Evolution Gate、frontier-model semantic review、Validation Incident、mandatory Human Escalation；Sub-Agent 僅建立 AgentArtifact / validation foundation，不包含完整 recursive organization runtime |
 | Phase 2 | 規劃：pgvector、embedding、語意檢索、相容性篩選與排序；目前僅完成 task_family 精確去重 |
 | Phase 3 | 規劃：在 Phase 1 量測基礎上，以 tracing、Phoenix/DeepEval/MLflow 執行跨模型 baseline、token amortization、相似度、重用與回歸實驗 |
 | Phase 4 | 規劃：Redis/RQ、Evolution/Testing/Notification workers |

@@ -136,3 +136,30 @@ Phase 1 新增 Execution Experience & Evolution Telemetry Foundation 後，後�
 - lineage：由 raw telemetry 產生 Experience Record 或 organization-evolution proposal 時應保留來源證據鏈。
 
 這是新增的 **review target**，不是對 2026-09-22 歷史 audit finding 的改寫；待 Telemetry schema / API 實作後再進行正式 finding 評級。
+
+---
+
+## Secure Evolution Gate Review Requirement
+
+System Design v1.8 introduces a future **Code Evolution Runtime + Secure Evolution Gate** for generated Skills, Workflows, and Sub-Agents. This section records a security review requirement, not a claim that the mechanism is already implemented or audited.
+
+Future security audits must verify that:
+
+- Builder Agents operate only in isolated candidate workspaces and cannot directly activate artifacts;
+- generated artifacts remain untrusted after generation and Builder self-tests;
+- Main Agent and Audit Agent perform independent first-pass reviews;
+- Main review covers intent, architecture, integration, scope, and unnecessary permissions;
+- Audit review covers privilege escalation, secret exposure, cross-branch data access, unsafe tool/process/network use, exfiltration, supply-chain risk, and recursive delegation bypass;
+- deterministic security evidence is combined with semantic/frontier-model review rather than replaced by it;
+- Audit Agent can produce adversarial security tests for execution in the sandbox;
+- only `Main=PASS AND Audit=PASS` may continue automatically;
+- any FAIL, ERROR, UNKNOWN, timeout, or disagreement blocks progression and creates a Validation Incident;
+- the Notification Service reliably alerts a Human Administrator for such incidents;
+- there is no unrestricted Force Activate path around the gate;
+- human false-positive decisions are justified and audited, then followed by full revalidation;
+- every revision creates a new version and reruns the complete gate;
+- Sub-Agent validation enforces `P_child ⊆ P_parent ⊆ P_root` and `G_child ⊆ G_parent ⊆ G_root`.
+
+High-risk semantic review may be routed to strong frontier models. Where feasible, Main and Audit reviews should use model/provider diversity or, at minimum, isolated inference contexts and distinct roles to reduce correlated blind spots.
+
+This becomes a mandatory review target once Code Evolution Runtime / dynamic Sub-Agent construction enters implementation.

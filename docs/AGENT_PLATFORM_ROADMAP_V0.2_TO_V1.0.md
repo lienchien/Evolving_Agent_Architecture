@@ -494,6 +494,38 @@ Measure:
 
 Phase 1 的量測契約與目前實作見 [`TOKEN_COST_RESEARCH.md`](TOKEN_COST_RESEARCH.md)。研究 API 與 SQLite metrics schema 已整合至 `dev`，目前 Core Baseline 為 **28 passed, 1 warning**。這仍不代表 Gate B 已完成：正式實驗仍需真實 provider usage、static baseline 與相似度任務序列。Phase 1 目前另需完成 Execution Experience & Evolution Telemetry Foundation，為後續 routing 與 Agent organization experiments 保存完整 evidence。
 
+### 6.6.1 Phase 1.5 Experimental Validation
+
+Before treating the Capability Evolution Engine as validated, Phase 1.5 should run controlled experiments on both autonomous construction and secure verification.
+
+Required experiment groups:
+
+1. Skill auto-generation across simple, medium, and complex repository-modification tasks.
+2. Controlled Sub-Agent construction and AgentArtifact validation.
+3. Reviewer ablation: Builder self-review, Main-only, Audit-only, and independent Main+Audit cross-validation.
+4. Known-defect / known-vulnerability artifact benchmark.
+5. Reviewer model configuration comparison, including same-model and cross-model / cross-provider setups.
+6. Human Escalation effectiveness and review-burden analysis.
+
+Core metrics:
+
+- generation success rate;
+- test / controlled-task success;
+- functional and security finding recall;
+- overall detection rate;
+- false-positive and false-negative rates;
+- reviewer agreement / disagreement;
+- escalation and false-escalation rates;
+- token / monetary cost;
+- latency;
+- revision and human-intervention counts.
+
+The experiment must not assume that dual review is superior. It should test whether independent Main/Audit review measurably reduces blind spots at an acceptable operational cost.
+
+At least one end-to-end incident path should preserve evidence from generated artifact through reviewer disagreement/failure, Human Administrator escalation, decision, revision, and full revalidation.
+
+---
+
 ### 6.7 Exit Criterion
 
 > **The capability library improves future execution rather than merely accumulating artifacts and technical debt.**

@@ -363,6 +363,74 @@ Destroy Container
 
 ---
 
+# 4A. Code Evolution Runtime 與 Secure Verification（System Design v1.8）
+
+此區為**未來實作技術方向**，目前尚未實作。
+
+## 4A.1 Code Builder Runtime
+
+建議保留統一 interface：
+
+```text
+CodeBuilderRuntime
+├─ Pi-like coding-agent adapter
+├─ Codex-like coding-agent adapter
+├─ other coding-agent adapter
+└─ future local builder adapter
+```
+
+Builder 不綁單一 framework，並只允許在 isolated Git/worktree + sandbox workspace 中操作 candidate。
+
+可搭配：
+
+- Git worktree / temporary branch
+- Docker sandbox
+- controlled filesystem mount
+- CPU / memory / runtime quotas
+- explicit network policy
+- token / cost / iteration budget
+
+## 4A.2 Secure Evolution Gate
+
+安全驗證採兩層 evidence：
+
+```text
+Deterministic Security
++
+Semantic / Frontier-Model Review
+```
+
+Deterministic 工具候選：
+
+- pytest / integration / regression tests
+- Ruff / type checker
+- SAST scanner
+- dependency vulnerability scanner
+- secret scanner
+- sandbox execution
+- filesystem / network observation
+
+Semantic review：
+
+- Main Agent Reviewer：功能、架構、整合、最小權限
+- Audit Agent Reviewer：privilege escalation、data/secret exposure、tool/process/network misuse、cross-branch access、dependency/supply-chain、recursive delegation bypass
+
+高風險 review 可路由到 strong frontier models；若可行，Main 與 Audit 使用不同 model/provider family。即使使用同一模型，也應採獨立 inference context 與不同 system role。
+
+Fail-closed requirement：
+
+```text
+Main PASS + Audit PASS
+→ continue
+
+Anything else
+→ block + Validation Incident + Human Administrator notification
+```
+
+不得以 LLM review 取代 deterministic security controls。
+
+---
+
 # 5. Observability 與 Experiment Tracking
 
 ## 5.1 Agent Observability
@@ -809,3 +877,7 @@ Reuse
 目前最重要的研究問題不是工具是否足夠，而是：
 
 > **Agent 是否真的可以自行發現能力缺口、建立新的 Capability、驗證並保存，並在後續任務中重複使用。**
+
+在此研究核心成立後，System Design v1.8 再進一步驗證：
+
+> **已確認需要演化後，系統能否透過受隔離的 Builder Runtime 真正產生程式 Artifact，並經 Main/Audit 雙重驗證與強制 Human Escalation 安全地進入後續治理流程。**

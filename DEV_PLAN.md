@@ -260,18 +260,171 @@ Phase 1.5 應先完成這套機制的必要基礎：real provider abstraction、
 
 ---
 
-## Phase 1.5 與後續
+## Phase 1.5 — Real Infrastructure + Controlled Code Evolution
 
-在上述 Phase 1 Telemetry 退出條件完成後，再依序評估：
+在上述 Phase 1 Telemetry 退出條件完成後，Phase 1.5 不只替換 mock infrastructure，也開始實作 System Design v1.8 定義的第一條受控 Code Evolution 路徑。
 
-1. LiteLLM adapter、NVIDIA NIM/OpenRouter、provider fallback/health check；保留 Mock 測試。
-2. PostgreSQL repository、migration 與 runtime configuration。
-3. Docker sandbox、資源限制、檔案隔離、network policy 與 cleanup。
-4. 更多 boundary/failure/regression/generalization/safety 測試及 performance metrics。
-5. 將真實 provider usage 寫入 Phase 1 已建立的研究資料模型，禁止估算缺失 token。
+### Phase 1.5-A — Runtime Configuration
 
-Phase 2 再加入 embedding/pgvector、語意檢索、相容性與排序；之後評估 tracing、
-實驗追蹤、Redis/RQ 背景 worker、更強隔離、管理介面及企業場景。
-Sharing／Import／Export／Marketplace 仍是 Future Reserved。
+- 統一 runtime configuration / environment profile。
+- env.example 補齊 provider、model、database、sandbox、timeout、retry、budget 與 feature flag。
+- dev / test / production-like configuration 分離。
+- secret 不進 repository；由 runtime injection / secret provider 提供。
+
+### Phase 1.5-B — Real LLM Provider
+
+- LiteLLM adapter。
+- NVIDIA NIM / OpenRouter。
+- provider fallback / health check。
+- provider-native token usage / cost / latency。
+- 保留 MockLLMProvider 作 deterministic test baseline。
+- 為未來 Builder、Main Reviewer、Audit Reviewer 預留獨立 model routing policy。
+
+### Phase 1.5-C — PostgreSQL Repository
+
+- PostgreSQL repository adapter。
+- schema migration / transaction / concurrency validation。
+- Registry filtering / pagination 下推 SQL。
+- Validation Incident、Builder provenance、review evidence 等 v1.8 future records 預留 persistence contract。
+- 保留 SQLite 作 local / unit-test baseline。
+
+### Phase 1.5-D — Docker Sandbox
+
+- SubprocessSandbox → DockerSandbox。
+- CPU / memory / runtime limits。
+- filesystem isolation。
+- explicit network policy。
+- controlled mounts。
+- process cleanup / timeout / failure recovery。
+- 為 Builder Agent 建立 disposable candidate workspace。
+
+### Phase 1.5-E — Code Evolution Runtime / Skill Builder MVP
+
+Phase 1.5 正式加入 v1.8 的程式生成 execution layer。
+
+第一個實作目標先限定為 **Skill / Capability generation**：
+
+~~~text
+Capability Gap Confirmed
+        ↓
+Build Specification
+        ↓
+CodeBuilderRuntime
+        ↓
+Ephemeral Builder Agent
+        ↓
+Isolated Git / Workspace
+        ↓
+Inspect → Plan → Code → Test → Debug → Revise
+        ↓
+Candidate Capability Artifact
+~~~
+
+必要工作：
+
+- BuildSpecification domain contract。
+- CodeBuilderRuntime interface。
+- 至少一個 real coding-agent adapter；可評估 Pi-like / Codex-like runtime，但 CEAA core 不綁單一實作。
+- temporary branch / worktree / candidate workspace。
+- Builder iteration / time / token / cost / test-run budget。
+- Builder 不可直接寫 production branch、activate registry 或取得 raw production credential。
+- BuildResult / Candidate Artifact 包含 code diff、tests、dependency change、build log、known limitations、model/provider provenance。
+- 至少完成一個小型 Skill 的 end-to-end「讀 repo → 寫 code → 寫 tests → run → revise → candidate」驗證。
+
+### Phase 1.5-F — Secure Evolution Gate
+
+新生成 Skill 不得因 Builder 自測成功而取得信任。
+
+實作：
+
+- Main Agent independent functional / architecture review。
+- Audit Agent independent adversarial security review。
+- first-pass review context isolation。
+- strong frontier-model routing for high-risk semantic review。
+- deterministic security evidence：regression / integration tests、static analysis、dependency scan、secret scan、sandbox execution、filesystem / network observation。
+- Audit Agent adversarial test generation。
+- CrossValidationResult。
+- ValidationIncident。
+- Notification Service 的 HumanReviewRequired / SecurityFinding / CrossValidationDisagreement。
+- full revalidation after every revision。
+
+強制 invariant：
+
+~~~text
+AUTO_CONTINUE
+iff
+Main Review = PASS
+AND
+Audit Review = PASS
+~~~
+
+以下任何情況都必須 Block 並通知 Human Administrator：
+
+- Main FAIL
+- Audit FAIL
+- ERROR
+- UNKNOWN
+- timeout
+- disagreement
+
+Phase 1.5 不提供 unrestricted Force Activate。
+
+### Phase 1.5-G — Auth / Policy / Recovery / Hardening
+
+- authentication。
+- administrator role / trusted reviewer。
+- tenant / owner / scope access control。
+- restrictions 接到真正 runtime policy。
+- request / resource / execution quota。
+- generation reservation lease / TTL / crash recovery。
+- retry / backoff 上限。
+- provider / database / sandbox failure recovery。
+- long-running load / latency / lock / fault validation。
+- real provider usage 寫入研究資料模型；缺失 token 一律保持 unavailable。
+
+### Phase 1.5-H — Sub-Agent Construction Foundation
+
+在 Skill Builder + Secure Evolution Gate 穩定後，Phase 1.5 可開始建立未來 Sub-Agent generation 的共同底座，但**不在本階段實作完整 Recursive Multi-Agent Organization runtime**。
+
+預計：
+
+- AgentBuildSpecification。
+- AgentArtifact / Agent Manifest contract。
+- capability / tool / model / memory / permission / data / delegation binding。
+- 先以 existing validated Skills composition 為主。
+- 若 Agent 建立過程發現缺少 Skill，回到 Skill Generation pipeline。
+- Main/Audit 雙重 cross-validation。
+- frontier-model semantic security review。
+- hierarchy invariant checks：
+
+~~~text
+P_child ⊆ P_parent ⊆ P_root
+G_child ⊆ G_parent ⊆ G_root
+~~~
+
+Phase 1.5 的 Sub-Agent 目標是證明「可生成、可驗證、可治理的 AgentArtifact」，不是完成整個 recursive organization orchestration。
+
+### Phase 1.5 Exit Direction
+
+Phase 1.5 至少應能證明：
+
+~~~text
+Real Provider
++
+Real Database
++
+Real Sandbox
++
+Controlled Code Builder
++
+Main/Audit Secure Evolution Gate
++
+Mandatory Human Escalation
+~~~
+
+可以共同運作，並讓一個新 Skill 從 Gap 走到 Candidate、Security Review、Human Review / Approval 與 Registry，而沒有繞過治理邊界。
+
+Phase 2 再加入 embedding/pgvector、語意檢索、相容性與排序；之後評估 tracing、實驗追蹤、Redis/RQ 背景 worker、更強隔離、管理介面及企業場景。
+完整 Recursive Multi-Agent Organization、Sharing／Import／Export／Marketplace 仍屬後續階段。
 
 核心依賴方向維持 **Agent → Service → Interface → Infrastructure Adapter**。

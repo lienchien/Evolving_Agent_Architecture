@@ -614,13 +614,19 @@ Capability Missing / Insufficient
       ↓
 Gap Detection
       ↓
-Generate Candidate
+Evolution Planning / Build Specification
       ↓
-Validate
+Code Evolution Runtime
       ↓
-Autonomous Test
+Ephemeral Builder Agent
       ↓
-Test Report
+Candidate Artifact
+      ↓
+Main Agent Review  +  Audit Agent Review
+      ↓
+Secure Evolution Gate
+      ↓
+Independent Runtime / Security Testing
       ↓
 Policy / Human Approval
       ↓
@@ -647,6 +653,56 @@ The platform should only adopt this subsystem after the current CEAA research pr
 
 ---
 
+### 5.4.1 Code Evolution Runtime and Secure Evolution Gate
+
+The Capability Evolution Engine should not implement software generation as an opaque LLM call.
+
+Once a Capability Gap or future Agent Gap is confirmed, the platform should create a structured Build Specification and delegate construction to a replaceable **Code Evolution Runtime**. A temporary Builder Agent may inspect an isolated repository snapshot, write code and tests, run them, revise the candidate, and return a versioned artifact with provenance.
+
+```text
+Gap Confirmed
+   ↓
+Build Specification
+   ↓
+Code Evolution Runtime
+   ↓
+Ephemeral Builder
+   ↓
+Candidate Artifact
+```
+
+The Builder is a construction worker, not a trust authority. It must not activate its own output, modify production branches, or grant itself permissions.
+
+Every generated Capability, Workflow, or future Sub-Agent must then pass a **Secure Evolution Gate** composed of:
+
+- independent Main Agent functional / architecture review;
+- independent Audit Agent security / permission review;
+- deterministic tests and security checks;
+- adversarial tests where appropriate;
+- sandboxed runtime evidence;
+- policy and human governance.
+
+Main and Audit reviews should be independent on first pass. Semantic review may be routed to strong frontier models, preferably with model/provider diversity for higher-risk artifacts, while deterministic controls remain mandatory.
+
+Fail-closed rule:
+
+```text
+AUTO_CONTINUE
+iff
+Main Review = PASS
+AND
+Audit Review = PASS
+```
+
+Any FAIL, ERROR, UNKNOWN, timeout, or disagreement must block automatic progression, create a Validation Incident, and notify a Human Administrator.
+
+> **A functional PASS can never override a security FAIL.**
+
+Human review may reject, request revision, quarantine, or mark a finding as a documented false positive. A false-positive decision still requires full revalidation; it does not directly force activation.
+
+All revisions create a new artifact version and rerun the complete gate.
+
+---
 ### 5.5 Security & Governance Plane
 
 Purpose:
@@ -711,6 +767,8 @@ The current CEAA implementation can later map into platform components without r
 |---|---|
 | MainAgent | Runtime / early Control Plane boundary; possible future leaf/specialized Agent |
 | EvolutionAgent | Capability Evolution Engine; future source of organization-evolution proposals |
+| Future CodeBuilderRuntime | Replaceable coding-agent execution layer for isolated artifact construction |
+| Future SecureEvolutionGate | Main/Audit cross-validation, deterministic evidence, incident escalation |
 | CapabilityService | Capability Registry |
 | TestingService | Capability Validation / Testing |
 | ApprovalService | Governance Plane |

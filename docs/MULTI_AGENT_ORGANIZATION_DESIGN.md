@@ -141,6 +141,87 @@ The Main Agent must not directly create an unrestricted child Agent and immediat
 
 ---
 
+## 3.1 Sub-Agent Construction Runtime
+
+Once a governing Main Agent has confirmed that a persistent or temporary Sub-Agent is required, the Agent should not be created as an unrestricted prompt-only object.
+
+The proposed construction path is:
+
+```text
+Agent Gap Confirmed
+        ↓
+Agent Build Specification
+        ↓
+Code Evolution Runtime
+        ↓
+Ephemeral Agent Builder
+        ↓
+AgentArtifact Candidate
+        ↓
+Main Agent Independent Review
+        +
+Audit Agent Independent Review
+        ↓
+Secure Evolution Gate
+        ↓
+Simulation / Runtime / Security Tests
+        ↓
+Governance / Human Approval
+        ↓
+Agent Registry
+```
+
+The Agent Builder should first compose existing validated Capabilities. Missing capabilities may recursively invoke the Skill Generation pipeline, but each newly generated Skill must independently pass its own Secure Evolution Gate before the Agent can depend on it.
+
+An `AgentArtifact` should include at least:
+
+- Agent Manifest and version;
+- role, goal, and responsibilities;
+- capability and tool bindings;
+- model and memory policy;
+- data and permission scope;
+- delegation and child-creation policy;
+- resource budget;
+- test/evaluation specification;
+- lifecycle policy;
+- builder/model provenance.
+
+### 3.2 Dual-Agent Security Cross-Validation
+
+The governing Main Agent and Audit Agent provide different evidence:
+
+```text
+Main Agent
+→ Does this Agent do the intended job correctly and fit the organization?
+
+Audit Agent
+→ Can this Agent do something it must not be able to do?
+```
+
+The first review pass must be independent.
+
+Main/Audit validation may route difficult semantic analysis to strong frontier models, while deterministic policy checks, sandbox evidence, and hierarchy assertions remain mandatory.
+
+### 3.3 Mandatory Human Escalation
+
+Dynamic Agent creation is fail-closed.
+
+```text
+Main PASS + Audit PASS
+→ continue
+
+Main FAIL / Audit FAIL / disagreement / error / unknown / timeout
+→ block
+→ create Validation Incident
+→ notify Human Administrator
+```
+
+A Human Administrator may reject, request revision, quarantine, or document a false positive. A false-positive decision does not directly activate the Agent; the revised/accepted artifact must rerun full validation.
+
+There is no unrestricted `Force Activate` path in the early architecture.
+
+---
+
 ## 4. Permission Monotonicity — Root Security Invariant
 
 The highest-level security invariant is:

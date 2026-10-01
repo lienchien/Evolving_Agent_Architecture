@@ -695,10 +695,17 @@ http://localhost:8000/docs
 - Validation Incident 與 mandatory Human Administrator escalation
 - authentication / authorization / policy / quota / lease / crash recovery
 - Skill pipeline 穩定後建立 AgentArtifact / Sub-Agent construction foundation
+- Skill 自動生成正式實驗：Simple / Medium / Complex 任務
+- 受控 Sub-Agent 自動生成實驗
+- reviewer ablation：Builder self-review / Main only / Audit only / Main+Audit
+- known-defect security benchmark 與 adversarial validation
+- reviewer 模型配置比較，包含 cross-model / cross-provider
+- Human Escalation effectiveness / 人工審查負擔量測
+- detection / FP / FN / agreement / escalation / cost / latency 指標
 
 目標：
 
-> 把 CEAA 從已驗證的 mock prototype，提升成能在真實 infrastructure 上安全完成「新 Skill 寫程式 → 獨立交叉驗證 → 異常人工升級 → 治理／Registry」的研究平台。
+> 把 CEAA 從已驗證的 mock prototype，提升成能在真實 infrastructure 上自主建立 Skill 與受控 Sub-Agent，透過 Main/Audit 獨立交叉驗證與 Human Escalation 安全治理，並以正式實驗量化驗證效果的研究平台。
 
 完整 Recursive Multi-Agent Organization 仍維持後續階段。
 

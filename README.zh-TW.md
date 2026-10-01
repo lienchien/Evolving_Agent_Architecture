@@ -1011,7 +1011,8 @@ Repository 以不同文件負責不同的專案管理用途。
 |---|---|
 | `README.md` | 英文專案入口與總覽 |
 | `README.zh-TW.md` | 繁體中文專案入口與總覽 |
-| `Capability-Evolving Agent Architecture — System Design v1.7.md` | 長期系統架構與設計原則 |
+| `Capability-Evolving Agent Architecture — System Design v1.8.md` | 目前長期系統架構；新增 Code Evolution Runtime 與 Secure Evolution Gate |
+| `Capability-Evolving Agent Architecture — System Design v1.7.md` | 歷史設計快照，保留架構演進可追溯性 |
 | `Capability_Evolving_Agent_Tech_Stack_v1.md` | 技術棧與分階段導入規劃 |
 | `DEV_PLAN.md` | 目前 implementation plan 與替換路徑 |
 | `PROJECT_STATUS.md` | 目前開發階段、完成狀態與里程碑 |
@@ -1101,6 +1102,14 @@ Share
 ### Evolution Engine
 
 辨識 Agent 還不會的事情，並嘗試建立新的 Capability。
+
+### Code Evolution Runtime（System Design v1.8，尚未實作）
+
+當 Main Agent 已確認 Capability Gap 或未來 Agent Gap 後，規劃透過可替換 Builder Runtime，在隔離 workspace 中實際讀取 repository、寫程式、建立測試、執行除錯並輸出版本化 Candidate Artifact。成功生成本身不代表可信。
+
+所有新 Skill / Workflow / 未來 Sub-Agent 都規劃由 Main Agent 與 Audit Agent進行獨立 first-pass 交叉驗證，再結合 deterministic runtime / security evidence。只有 `Main=PASS AND Audit=PASS` 才可自動繼續；任一 failure、error、unknown、timeout 或 disagreement 都必須中止流程並通知人類管理員。
+
+---
 
 ### Testing Layer
 

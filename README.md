@@ -761,10 +761,17 @@ Planned:
 - Validation Incident and mandatory Human Administrator escalation
 - authentication, authorization, policy enforcement, quotas, lease / crash recovery
 - AgentArtifact / Sub-Agent construction foundation after the Skill pipeline is stable
+- formal Skill auto-generation experiments across simple / medium / complex tasks
+- controlled Sub-Agent auto-generation experiments
+- reviewer ablation: Builder self-review vs Main-only vs Audit-only vs Main+Audit
+- known-defect security benchmark and adversarial validation
+- reviewer model-configuration comparison, including cross-model / cross-provider review
+- Human Escalation effectiveness and review-burden measurement
+- detection / false-positive / false-negative / agreement / escalation / cost / latency metrics
 
 Goal:
 
-> Move from a verified mock prototype to a real-infrastructure research platform that can safely construct, independently verify, escalate, and govern at least one newly generated Skill end to end.
+> Move from a verified mock prototype to a real-infrastructure research platform that can autonomously construct Skills and controlled Sub-Agents, independently verify them, escalate uncertain or failed reviews to humans, and quantitatively evaluate whether the Main/Audit cross-validation architecture improves safety and correctness.
 
 Full recursive multi-Agent organization remains a later stage.
 

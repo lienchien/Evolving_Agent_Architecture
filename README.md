@@ -740,22 +740,33 @@ Still required before Phase 1 can be marked complete:
 
 ---
 
-## Phase 1.5 — Real Infrastructure Integration
+## Phase 1.5 — Real Infrastructure + Controlled Code Evolution
 
 **Starts only after the updated Phase 1 telemetry exit criteria are complete.**
 
 Planned:
 
-- LiteLLM adapter
-- NVIDIA NIM
-- OpenRouter
-- PostgreSQL repository
-- Docker sandbox
-- improved autonomous tests
+- runtime configuration and environment profiles
+- LiteLLM adapter, NVIDIA NIM, OpenRouter, provider fallback / health checks
+- PostgreSQL repository and migrations
+- Docker sandbox with filesystem / network / resource controls
+- Skill-oriented CodeBuilderRuntime and ephemeral Builder Agent
+- isolated candidate Git/worktree execution
+- versioned BuildSpecification / BuildResult / Candidate Artifact
+- independent Main-Agent functional / architecture review
+- independent Audit-Agent adversarial security review
+- frontier-model semantic verification for higher-risk reviews
+- deterministic security evidence and adversarial test generation
+- fail-closed Secure Evolution Gate
+- Validation Incident and mandatory Human Administrator escalation
+- authentication, authorization, policy enforcement, quotas, lease / crash recovery
+- AgentArtifact / Sub-Agent construction foundation after the Skill pipeline is stable
 
 Goal:
 
-> Replace mock infrastructure without changing core Agent logic.
+> Move from a verified mock prototype to a real-infrastructure research platform that can safely construct, independently verify, escalate, and govern at least one newly generated Skill end to end.
+
+Full recursive multi-Agent organization remains a later stage.
 
 ---
 

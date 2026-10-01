@@ -1,6 +1,6 @@
 # Capability-Evolving Agent — Phase 1 Development Plan
 
-更新日期：2026-09-30
+更新日期：2026-10-01
 
 ## 目前基準
 
@@ -233,6 +233,32 @@ API、併發與成本研究測試分別位於 `tests/test_api.py`、`tests/test_
 
 新版本遇到同 family 多個 open 能力的舊資料庫會拒絕啟動；需先備份並明確處理
 重複資料。此安全檢查不可用自動刪除歷史紀錄的方式繞過。
+
+## Architecture Baseline v1.8 — Code Evolution & Secure Evolution Gate
+
+2026-10-01 已完成設計層補強，新增 `Capability-Evolving Agent Architecture — System Design v1.8.md`。此版本定義未來 Main Agent 已確認 Capability Gap / Agent Gap 後，如何真正執行程式生成與安全驗證。
+
+此項目前為 **Design Defined / Not Implemented**，不得與目前 Phase 1 runtime 能力混淆。
+
+核心設計要求：
+
+1. `EvolutionPlanner` 先產生結構化 `BuildSpecification`，而不是直接要求 LLM 自由生成。
+2. 以可替換 `CodeBuilderRuntime` 執行 coding loop；可接 Pi-like、Codex-like 或其他 coding-agent runtime，但核心不綁單一 provider/framework。
+3. Builder 預設為 ephemeral，只能在 isolated Git/worktree + sandbox candidate workspace 內寫入。
+4. Builder 輸出為版本化 Candidate Artifact / BuildResult，而不是文字式「完成」。
+5. Main Agent 與 Audit Agent 對 Candidate 進行獨立 first-pass cross-validation。
+6. Main Agent 檢查功能、需求、架構、整合與最小權限；Audit Agent檢查 privilege escalation、資料外洩、secret、tool/process/network、dependency、cross-branch 與 recursive delegation 風險。
+7. 高風險 semantic review 可呼叫 strong frontier model；但必須與 deterministic test / SAST / dependency scan / secret scan / sandbox evidence 並行，不能由 LLM 取代。
+8. Audit Agent 可產生 adversarial security tests，交給 sandbox / Testing runtime 執行。
+9. Secure Evolution Gate 採 fail-closed：只有 `Main=PASS AND Audit=PASS` 才能自動繼續。
+10. 任一 FAIL、ERROR、UNKNOWN、timeout 或 disagreement 必須 Block、建立 Validation Incident、通知 Human Administrator。
+11. Human 可 Reject / Request Revision / Quarantine / 記錄 False Positive；不提供 unrestricted Force Activate。
+12. 任何 revision 都建立新 artifact version 並重新跑完整 gate。
+13. 未來 Sub-Agent construction 共用同一 pipeline，並額外驗證 `P_child ⊆ P_parent ⊆ P_root` 與 `G_child ⊆ G_parent ⊆ G_root`。
+
+Phase 1.5 應先完成這套機制的必要基礎：real provider abstraction、runtime configuration、Docker sandbox、authn/authz、policy enforcement、trace / audit identity。完整 autonomous Code Builder 與 dynamic Sub-Agent generation 在上述基礎穩定後再進入實作。
+
+---
 
 ## Phase 1.5 與後續
 

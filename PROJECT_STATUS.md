@@ -1,6 +1,6 @@
 # Capability-Evolving Agent — Project Status
 
-更新日期：2026-09-30
+更新日期：2026-10-01
 
 開發分支：`dev`（Token／費用研究功能已合併）
 
@@ -24,7 +24,7 @@ Token／費用欄位與研究限制見 [TOKEN_COST_RESEARCH.md](docs/TOKEN_COST_
 ## Token／費用研究整合狀態
 
 Token efficiency／cost amortization 的研究契約與實作已合併至 `dev`，並與
-[TOKEN_COST_RESEARCH.md](docs/TOKEN_COST_RESEARCH.md)、System Design v1.7、Future Vision
+[TOKEN_COST_RESEARCH.md](docs/TOKEN_COST_RESEARCH.md)、System Design v1.8、Future Vision
 及平台 roadmap 對齊。
 
 目前 `dev` 已包含：
@@ -91,6 +91,44 @@ Raw History
 ~~~
 
 也就是失敗資料不需要先被整理成「好經驗」才值得保存。
+
+---
+
+## Design Baseline Update — System Design v1.8
+
+2026-10-01 已新增 `Capability-Evolving Agent Architecture — System Design v1.8.md`，補齊 CEAA 先前較抽象的 `Generate Candidate` 階段。
+
+新增設計包含：
+
+- Evolution Planner / Build Specification；
+- replaceable Code Evolution Runtime；
+- ephemeral Builder Agent + isolated workspace；
+- Candidate Artifact / BuildResult contract；
+- Main Agent functional / architecture review；
+- Audit Agent adversarial security review；
+- strong frontier-model semantic verification；
+- deterministic + semantic security evidence；
+- adversarial security test generation；
+- Secure Evolution Gate；
+- mandatory Human Administrator escalation；
+- Validation Incident / quarantine / full revalidation；
+- future AgentArtifact / Sub-Agent construction path。
+
+**狀態：Design Defined / Not Implemented.**
+
+目前 `src/` 尚未提供 CodeBuilderRuntime、Builder Agent、SecureEvolutionGate、ValidationIncidentService 或 dynamic Sub-Agent generation。因此既有 28-test Core Baseline 不可被解讀為已驗證上述新機制。
+
+此設計的安全 invariant 為：
+
+```text
+AUTO_CONTINUE
+iff
+Main Review = PASS
+AND
+Audit Review = PASS
+```
+
+任一 FAIL / ERROR / UNKNOWN / timeout / disagreement 均要求停止自動流程並通知 Human Administrator。
 
 ---
 
@@ -191,7 +229,7 @@ Queue 保留擴充介面，Phase 1 不透過它執行背景任務。
 | 階段 | 規劃與狀態 |
 |---|---|
 | Phase 1 | 進行中：Core Baseline 已驗證；目前必做 Execution Experience & Evolution Telemetry Foundation，完成後才正式退出 Phase 1 |
-| Phase 1.5 | 尚未開始：Phase 1 telemetry 完成後，整合 LiteLLM、NVIDIA NIM/OpenRouter、PostgreSQL adapter/migration、Docker sandbox、更多邊界與安全測試 |
+| Phase 1.5 | 尚未開始：Phase 1 telemetry 完成後，整合 LiteLLM、NVIDIA NIM/OpenRouter、PostgreSQL adapter/migration、Docker sandbox、auth/policy、更多邊界與安全測試；同時建立 v1.8 Code Evolution / Secure Evolution Gate 所需 infrastructure prerequisites |
 | Phase 2 | 規劃：pgvector、embedding、語意檢索、相容性篩選與排序；目前僅完成 task_family 精確去重 |
 | Phase 3 | 規劃：在 Phase 1 量測基礎上，以 tracing、Phoenix/DeepEval/MLflow 執行跨模型 baseline、token amortization、相似度、重用與回歸實驗 |
 | Phase 4 | 規劃：Redis/RQ、Evolution/Testing/Notification workers |

@@ -453,6 +453,7 @@ Capability Registry
 Evolving_Agent_Architecture/
 ├── README.md
 ├── README.zh-TW.md
+├── Capability-Evolving Agent Architecture — System Design v1.8.md
 ├── Capability-Evolving Agent Architecture — System Design v1.7.md
 ├── Capability_Evolving_Agent_Tech_Stack_v1.md
 ├── DEV_PLAN.md

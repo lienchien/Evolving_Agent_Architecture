@@ -821,3 +821,47 @@ Future Vision、平台 roadmap、README、PROJECT_STATUS、DEV_PLAN 與 API conc
 本次為 **architecture/documentation update only**。未新增 `src/` implementation，也未執行新的 runtime test，因此不得宣稱 CodeBuilderRuntime、SecureEvolutionGate、dual frontier-model validation、Validation Incident 或 dynamic Sub-Agent generation 已實作或驗證。
 
 現有 Core Baseline 測試證據仍維持先前紀錄；Phase 1 Execution Experience & Evolution Telemetry Foundation 的實作狀態不因本次文件升級而改變。
+
+---
+
+## 2026-10-01 — Phase 1.5 scope expanded to Controlled Code Evolution
+
+### Decision
+
+System Design v1.8 的 Code Evolution Runtime 與 Secure Evolution Gate 不再只視為較後期 future implementation，而正式納入 Phase 1.5 planned development scope。
+
+Phase 1.5 重新定義為：
+
+> **Real Infrastructure + Controlled Code Evolution**
+
+### Planned implementation sequence
+
+1. Runtime Configuration
+2. Real LLM Provider
+3. PostgreSQL
+4. Docker Sandbox
+5. Skill-oriented CodeBuilderRuntime / Ephemeral Builder MVP
+6. Main/Audit Secure Evolution Gate + frontier semantic review + deterministic security evidence
+7. Validation Incident + mandatory Human Administrator escalation
+8. Auth / Policy / Recovery / Load Hardening
+9. AgentArtifact / Sub-Agent construction foundation
+
+Phase 1.5 第一個 construction exit target 是讓至少一個新 Skill 完成：
+
+~~~text
+Gap
+→ Build Specification
+→ Builder writes code/tests
+→ Candidate Artifact
+→ Main Review
+→ Audit Review
+→ Secure Evolution Gate
+→ Human Escalation if needed
+→ Approval / Registry
+~~~
+
+完整 recursive Agent organization / multi-Agent orchestration 不納入 Phase 1.5，避免同時引入 organization coordination complexity。
+
+### Status
+
+本次只更新 Phase 1.5 計畫與文件，仍為 **Planned / Not Implemented**；未新增 runtime code 或測試證據。

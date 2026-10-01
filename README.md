@@ -1077,7 +1077,8 @@ The repository uses separate documents for different project-management purposes
 |---|---|
 | `README.md` | English project overview and entry point |
 | `README.zh-TW.md` | Traditional Chinese project overview and entry point |
-| `Capability-Evolving Agent Architecture — System Design v1.7.md` | Current long-term system architecture and design principles |
+| `Capability-Evolving Agent Architecture — System Design v1.8.md` | Current long-term system architecture; Code Evolution Runtime and Secure Evolution Gate |
+| `Capability-Evolving Agent Architecture — System Design v1.7.md` | Historical design snapshot retained for architecture evolution traceability |
 | `Capability-Evolving Agent Architecture — System Design v1.6.md` | Historical design snapshot retained for architecture evolution traceability |
 | `Capability_Evolving_Agent_Tech_Stack_v1.md` | Technology stack and phased adoption plan |
 | `DEV_PLAN.md` | Current implementation plan and replacement paths |
@@ -1168,6 +1169,14 @@ Stores what the Agent has already learned how to do.
 ### Evolution Engine
 
 Identifies what the Agent cannot yet do and attempts to create new capabilities.
+
+### Code Evolution Runtime (Design v1.8, not yet implemented)
+
+Once a capability or future Agent gap is confirmed, a replaceable Builder Runtime is intended to construct a versioned candidate inside an isolated workspace. Generation itself does not establish trust.
+
+Every generated Skill / Workflow / future Sub-Agent is intended to pass independent Main-Agent and Audit-Agent review plus deterministic runtime/security evidence. Only `Main=PASS AND Audit=PASS` may continue automatically; any failure, error, unknown result, timeout, or disagreement must block the pipeline and notify a human administrator.
+
+---
 
 ### Testing Layer
 

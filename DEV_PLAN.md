@@ -192,6 +192,40 @@ Phase 1 不再以既有 28-test Core Baseline 作為完整退出點。既有結�
 
 ---
 
+## Manager Agent Decision Layer — Planned
+
+Manager / hierarchical routing 的後續實作正式加入 Decision Model abstraction，但不改變目前 Phase 1 / Phase 1.5 核心退出條件。
+
+設計原則：
+
+~~~text
+Manager State
+→ bounded candidate set
+→ DecisionModelInterface
+→ choice / score / confidence
+→ high confidence + low risk: direct dispatch
+→ low confidence / conflict / novelty / high risk: reasoning LLM / stronger model
+~~~
+
+第一個 open/self-host reference adapter 規劃使用 **Laya**，以 CPU self-host 為初始 deployment baseline。Laya 只是一個 adapter，不可成為 Manager domain logic 的硬相依。
+
+預計介面：
+
+~~~text
+DecisionModelInterface
+├─ LayaAdapter
+├─ LLMDecisionAdapter
+└─ FutureDecisionModelAdapter
+~~~
+
+後續 Manager development 必須保存 decision telemetry：candidate set、selected target、confidence/score、decision model/version、latency、fallback/override reason 與 final outcome，直接沿用目前 Phase 1 正在建立的 `routing_decisions` / trace correlation schema。
+
+未來正式啟用前需比較 LLM-only、decision-model-only、decision→LLM fallback 與 decision→strong-model fallback，量測 routing accuracy、bad-routing rate、task success、calibration、latency、token/cost 與 fallback/escalation rate。
+
+Decision Model 不得繞過 Policy Engine、permission/data governance、Secure Evolution Gate 或 mandatory Human escalation。
+
+---
+
 ## 下一個里程碑：完成 Phase 1 Telemetry，再進入真實 Usage 與 Production Hardening
 
 1. 建立 Execution Experience & Evolution Telemetry Foundation，開始累積成功與錯誤 routing / execution 資料。

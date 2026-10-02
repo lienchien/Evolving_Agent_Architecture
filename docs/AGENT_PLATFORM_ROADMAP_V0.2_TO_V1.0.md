@@ -553,6 +553,9 @@ to:
 - Model Router
 - Workflow Registry
 - Capability Resolver
+- DecisionModelInterface for bounded routing / gating decisions
+- Laya self-host adapter as the first open reference implementation
+- confidence-based fallback to reasoning LLM / stronger model
 - policy assignment
 - resource scheduling
 - execution-strategy selection
@@ -595,6 +598,38 @@ High-volume Task
 → Lower-cost Model
 ```
 
+### 7.4.1 Decision Model Routing
+
+The Control Plane / Manager path should support **Decision-first, Reasoning-on-demand**.
+
+~~~text
+Task / State
+   ↓
+Bounded Candidate Set
+   ↓
+Decision Model
+   ↓
+confidence sufficient?
+   ├─ yes → route / select
+   └─ no  → reasoning LLM / stronger model / governed escalation
+~~~
+
+The first open reference implementation is planned as a self-hosted **Laya** adapter, initially CPU-first for reproducibility and low deployment complexity. The platform must keep a provider-neutral `DecisionModelInterface`; Laya is not a hard dependency.
+
+Validation should compare at least:
+
+~~~text
+A. LLM-only routing
+B. Decision-model-only routing
+C. Decision model → low confidence → LLM
+D. Decision model → low confidence / high risk → stronger model
+~~~
+
+Measure routing accuracy, task success, bad-routing rate, calibration, fallback/escalation rate, latency, token usage, and cost.
+
+The decision model never overrides Policy Engine, permission ceilings, data-governance boundaries, Secure Evolution Gate, or mandatory Human escalation.
+
+---
 ### 7.5 Dependencies
 
 - v0.3 runtime abstraction
@@ -658,6 +693,8 @@ Any Main/Audit disagreement or failure requires Human Administrator review befor
 - organization entry-point selection,
 - Manager / Agent / Sub-Agent responsibility boundaries,
 - bounded local routing,
+- Manager DecisionModelInterface integration,
+- confidence-based reasoning fallback,
 - parent/child tasks,
 - dependency graph,
 - shared state,

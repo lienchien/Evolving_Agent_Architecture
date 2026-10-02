@@ -94,6 +94,25 @@ Raw History
 
 ---
 
+## Manager Decision Layer — Future Design Update
+
+Manager / hierarchical routing 的 future design 已加入 **Decision-first, Reasoning-on-demand**：高頻、有限候選的 routing / gating / scoring 優先交給 `DecisionModelInterface`，只有低 confidence、衝突、新穎或高風險情境才升級到 reasoning LLM / stronger model。
+
+第一個 reference adapter 規劃為 **self-hosted Laya**，初始 deployment baseline 採 CPU-first；但 Laya 不屬於 platform hard dependency。
+
+目前狀態：
+
+- [ ] DecisionModelInterface
+- [ ] LayaAdapter
+- [ ] Manager bounded-candidate routing
+- [ ] confidence-based LLM fallback
+- [ ] routing calibration / accuracy benchmark
+- [ ] decision-model telemetry integration
+
+因此此功能目前是 **Design Planned / Not Implemented / Not Evaluated**，不能解讀為現有 Manager Agent 已使用 Laya。
+
+---
+
 ## Design Baseline Update — System Design v1.8
 
 2026-10-01 已新增 `Capability-Evolving Agent Architecture — System Design v1.8.md`，補齊 CEAA 先前較抽象的 `Generate Candidate` 階段。

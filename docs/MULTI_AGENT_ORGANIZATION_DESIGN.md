@@ -405,6 +405,66 @@ A Branch Main Agent cannot grant permissions, access, or governance authority ou
 
 ---
 
+## 8.1 Manager Decision Model
+
+A Branch Main Agent / Manager should support a dedicated decision layer for frequent bounded choices instead of invoking an LLM for every local routing decision.
+
+~~~text
+Manager State
+   ↓
+Local Candidate Set
+   ↓
+DecisionModelInterface
+   ↓
+Choice / Score / Confidence
+   ↓
+High confidence + low risk
+   → Dispatch
+
+Low confidence / disagreement / novelty / high risk
+   → Reasoning LLM / higher Manager / governed escalation
+~~~
+
+Initial reference adapter:
+
+~~~text
+DecisionModelInterface
+        ↓
+LayaAdapter
+        ↓
+Self-hosted Laya service
+~~~
+
+Laya is a reference implementation only. Manager logic must not depend on Laya-specific request or response structures.
+
+A Manager may use the decision layer for:
+
+- child-Agent selection,
+- Skill / Capability selection,
+- delegation-vs-local-execution choice,
+- fallback choice,
+- escalation decision,
+- model-tier selection,
+- workload placement,
+- confidence estimation.
+
+The decision layer is subordinate to governance. It cannot expand delegated authority, create permissions, override branch data boundaries, bypass Secure Evolution Gate, or suppress required Human Administrator review.
+
+For every decision, persist enough evidence to reconstruct:
+
+~~~text
+Manager
+→ candidate set
+→ decision model + version
+→ selected candidate
+→ confidence / score
+→ fallback / override
+→ final outcome
+~~~
+
+This is required for later experiments on routing quality, calibration, cost, latency, and organization evolution.
+
+---
 ## 9. Data Classification
 
 The future platform may support organization-style data classifications:

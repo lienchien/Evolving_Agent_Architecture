@@ -571,6 +571,77 @@ When a node becomes overloaded, the preferred response is not necessarily to exp
 
 The detailed long-term evolution model is defined in Section 14 and Section 14.1.
 
+### 5.2.2 Manager Decision Layer — Decision-First, Reasoning-on-Demand
+
+Manager nodes should not require a generative LLM for every routing, gating, or scoring decision. The preferred long-term design separates **fast bounded decision making** from **open-ended reasoning**.
+
+~~~text
+Incoming Task / Local State
+        ↓
+Candidate Set
+        ↓
+DecisionModelInterface
+        ↓
+Decision + Confidence / Score
+        │
+        ├─ high confidence + low risk
+        │      → dispatch / select / gate
+        │
+        └─ low confidence / conflict / novelty / high risk
+               ↓
+        Reasoning LLM
+               ↓
+        Frontier / Human escalation when required
+~~~
+
+This pattern is summarized as:
+
+> **Decision-first, Reasoning-on-demand.**
+
+The initial open/self-host reference implementation may use **Laya** through a replaceable adapter. Laya is not a platform dependency; the architecture must remain compatible with other decision models and LLM-based decision backends.
+
+~~~text
+DecisionModelInterface
+├─ LayaAdapter
+├─ LLMDecisionAdapter
+├─ FutureDecisionModelAdapter
+└─ optional external hosted decision-model adapter
+~~~
+
+Potential Manager uses include:
+
+- choosing among bounded child Agents,
+- local task routing,
+- Skill / Capability selection after candidate retrieval,
+- confidence scoring,
+- escalation / fallback gating,
+- selecting model tier,
+- selecting review depth,
+- workload placement,
+- and low-cost policy-support signals.
+
+A decision model must **not** bypass Policy Engine, Main/Audit validation, permission invariants, or Human Administrator escalation. It proposes or scores an operational choice inside an already authorized decision space.
+
+Recommended telemetry for every decision-model call:
+
+- task / trace ID,
+- Manager / node ID,
+- candidate set,
+- selected target,
+- score / confidence,
+- decision-model identifier and version,
+- adapter/backend,
+- latency,
+- fallback reason,
+- final execution outcome,
+- whether a reasoning model overrode the decision.
+
+The platform should compare decision-model routing with LLM-only routing before enabling it as the default. Relevant measurements include routing accuracy, task success, bad-routing rate, fallback/escalation rate, latency, token usage, cost, and calibration.
+
+The first deployment target may be CPU self-hosting for reproducibility and low infrastructure complexity; hardware acceleration should be treated as an optimization rather than a prerequisite.
+
+---
+
 ---
 
 ### 5.3 Agent Runtime

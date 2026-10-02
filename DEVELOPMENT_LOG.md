@@ -906,3 +906,46 @@ Phase 1.5 不再只要求完成 real infrastructure 與 Code Evolution feature i
 ### Status
 
 本次仍是 **planned experimental scope**，尚未實作 benchmark dataset、experiment runner 或取得任何實驗結果。
+
+---
+
+## 2026-10-02 — Manager Agent 加入 Decision Model 設計
+
+### Decision
+
+未來 Manager / hierarchical routing 不再預設每個 bounded decision 都呼叫 generative LLM。新增 provider-neutral `DecisionModelInterface`，採 **Decision-first, Reasoning-on-demand**。
+
+~~~text
+Manager State
+→ Candidate Set
+→ DecisionModelInterface
+→ Choice / Score / Confidence
+→ High confidence + Low risk: dispatch
+→ Low confidence / Conflict / Novelty / High risk: reasoning LLM / stronger model
+~~~
+
+### Reference implementation
+
+- 第一個 open/self-host reference adapter 規劃使用 Laya。
+- 初始 deployment baseline 採 CPU self-host，降低開發環境複雜度並提高實驗可重現性。
+- Laya 不是 CEAA core dependency；Manager domain logic 不得依賴 Laya-specific schema。
+
+### Governance boundary
+
+Decision Model 只能在已授權的 bounded candidate space 中提供選擇或分數，不得：
+
+- 擴張 parent/root 授權；
+- 繞過 Policy Engine；
+- 繞過 data-governance boundary；
+- 取代 Main/Audit Secure Evolution Gate；
+- 壓掉 mandatory Human Administrator escalation。
+
+### Telemetry / experiments
+
+每個 decision 應保存 candidate set、selected target、confidence/score、model/version、latency、fallback/override reason 與 final outcome。
+
+後續比較：LLM-only、decision-model-only、decision→LLM fallback、decision→strong-model fallback；量測 routing accuracy、bad-routing rate、task success、calibration、latency、token/cost 與 escalation/fallback rate。
+
+### Status
+
+目前為 **Design Planned / Not Implemented / Not Evaluated**。現有 Phase 1 runtime 尚未加入 Manager Agent 或 Laya。

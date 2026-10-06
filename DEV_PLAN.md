@@ -358,10 +358,16 @@ Candidate Capability Artifact
 
 - BuildSpecification domain contract。
 - CodeBuilderRuntime interface。
-- 至少一個 real coding-agent adapter；可評估 Pi-like / Codex-like runtime，但 CEAA core 不綁單一實作。
+- 至少一個 real coding-agent adapter；**Pi 1.x 優先作為第一候選 reference implementation**，Codex-like / Native Builder 等保留為替代 adapter；CEAA core 不綁單一 runtime。
+- 透過 `AgentRuntimeInterface` / `CodeBuilderRuntime` 封裝 Pi，不讓 BuildSpecification、Evolution Planner 或 governance logic 依賴 Pi-specific session / provider schema。
+- Pi 1.x 的 multi-provider / model switching 能力可用於 Builder 內部的角色化模型組合，例如 Planner、Coder、Debugger / Repair 使用不同 model/provider；模型選擇由 CEAA `ModelPolicy` 控制，而不是由 Pi 自行決定治理策略。
+- Builder runtime 必須回傳 model/provider usage、model switch、latency、cost、tool execution 與 session provenance，供研究與稽核使用。
+- Pi 版本需固定並建立 adapter compatibility test；升級 Pi 前先驗證 model switching、tool calling、session state、usage/cost 與 workspace 行為，避免 runtime package 變動破壞 evolution pipeline。
 - temporary branch / worktree / candidate workspace。
 - Builder iteration / time / token / cost / test-run budget。
 - Builder 不可直接寫 production branch、activate registry 或取得 raw production credential。
+- Builder 的 multi-model session 可以共享 construction context，但 **Main Reviewer 與 Audit Reviewer 必須使用獨立 session / context**，不得直接沿用 Builder conversation；兩者 first-pass 也彼此隔離。
+- Main / Audit 可以使用 Pi runtime 作為模型執行層，但必須建立獨立 runtime session，並由 CEAA 決定 reviewer model/provider policy。
 - BuildResult / Candidate Artifact 包含 code diff、tests、dependency change、build log、known limitations、model/provider provenance。
 - 至少完成一個小型 Skill 的 end-to-end「讀 repo → 寫 code → 寫 tests → run → revise → candidate」驗證。
 
@@ -542,6 +548,33 @@ D. Main + Audit independent cross-validation
 - review latency
 
 目標不是預設雙 reviewer 一定較好，而是實證 Main + Audit cross-validation 是否能在可接受成本下，降低單一 reviewer 的 blind spots。
+
+#### Experiment Group C.1 — Builder Multi-Model Runtime
+
+若 Pi 1.x adapter 通過基本 compatibility validation，追加 Builder runtime ablation，用來確認 multi-model composition 是否真的比 single-model Builder 有價值：
+
+~~~text
+A. Single model: Plan + Code + Debug
+B. Planner Model A → Coder Model B
+C. Planner Model A → Coder Model B → Debugger Model C
+D. Dynamic fallback / model switch under budget
+~~~
+
+量測：
+
+- build success rate
+- first-pass test pass rate
+- iterations / repair loops
+- model switches
+- total tokens / monetary cost
+- build latency
+- failure recovery rate
+- unnecessary model-switch rate
+- artifact defect rate entering Secure Evolution Gate
+
+此實驗的目標不是預設模型越多越好，而是判斷角色化 multi-model Builder 是否在可接受成本下提高 construction reliability。
+
+---
 
 #### Experiment Group D — Model Configuration Comparison
 

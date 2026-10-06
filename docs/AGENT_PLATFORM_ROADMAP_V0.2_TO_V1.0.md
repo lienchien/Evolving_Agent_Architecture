@@ -418,7 +418,10 @@ v0.5 must define a real construction path rather than treating `Generate Candida
 Required platform contracts:
 
 - `BuildSpecification`;
-- replaceable `CodeBuilderRuntime` / Builder adapter;
+- replaceable `CodeBuilderRuntime` / `AgentRuntimeInterface`;
+- Pi 1.x as the first preferred reference Builder adapter, while preserving Codex-like / native alternatives;
+- CEAA-controlled `ModelPolicy` for multi-model Planner / Coder / Debugger composition and fallback;
+- runtime provenance for provider/model selection, switching, token/cost, latency, tools, and session identity;
 - isolated Git/workspace and sandbox boundaries;
 - versioned `BuildResult` / Candidate Artifact;
 - independent Main Agent review;
@@ -429,6 +432,8 @@ Required platform contracts:
 - mandatory Human Administrator escalation when either reviewer is not PASS.
 
 Strong semantic verification may use frontier models. The construction model and verification model do not need to be identical; model/provider diversity is preferred for high-risk reviews.
+
+Builder multi-model execution may share construction context inside one Pi Builder session, but Main Reviewer and Audit Reviewer must remain independent from the Builder and from each other on first pass. If Pi is reused as their execution runtime, each reviewer receives a separate session/context controlled by CEAA.
 
 Fail-closed invariant:
 

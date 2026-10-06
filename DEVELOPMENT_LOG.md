@@ -949,3 +949,43 @@ Decision Model 只能在已授權的 bounded candidate space 中提供選擇或�
 ### Status
 
 目前為 **Design Planned / Not Implemented / Not Evaluated**。現有 Phase 1 runtime 尚未加入 Manager Agent 或 Laya。
+
+---
+
+## 2026-10-06 — Pi 1.x promoted to preferred Phase 1.5 Builder Runtime candidate
+
+### Decision
+
+Pi 1.x 正式列為 Phase 1.5 `CodeBuilderRuntime` / `AgentRuntimeInterface` 的第一候選 reference implementation，但 CEAA core 仍維持 runtime/provider independent。
+
+### Planned architecture
+
+~~~text
+Evolution Planner
+→ BuildSpecification
+→ CEAA ModelPolicy
+→ PiBuilderAdapter
+   ├─ Planner Model
+   ├─ Coder Model
+   └─ Debugger / Repair Model
+→ Candidate Artifact
+~~~
+
+Pi 負責 session、tool loop、multi-provider/model execution 與受 CEAA policy 約束的 model switching；CEAA 負責 why/what-to-build、permission、budget、governance、validation、approval 與 audit。
+
+### Secure validation boundary
+
+Pi 的 multi-model construction context 僅限 Builder 內部。Main Reviewer 與 Audit Reviewer 必須建立獨立 session/context，兩者 first-pass 也相互隔離，避免 Builder reasoning/context 影響獨立驗證。
+
+### Compatibility / research requirements
+
+- pin concrete Pi 1.x version；
+- adapter compatibility tests before upgrades；
+- verify model switching / tool calling / session state / usage-cost / workspace behavior；
+- record provider/model/switch/session provenance；
+- compare single-model Builder vs Planner/Coder/Debugger multi-model composition；
+- measure build success、first-pass test pass、repair loops、cost、latency、switch count、artifact defect rate。
+
+### Status
+
+**Architecture / development-plan update only.** 尚未加入 Pi runtime、adapter、dependency 或任何新 runtime test；不得宣稱 multi-model Builder 已實作。

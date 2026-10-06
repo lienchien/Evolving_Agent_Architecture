@@ -372,12 +372,33 @@ Destroy Container
 建議保留統一 interface：
 
 ```text
-CodeBuilderRuntime
-├─ Pi-like coding-agent adapter
-├─ Codex-like coding-agent adapter
-├─ other coding-agent adapter
+CodeBuilderRuntime / AgentRuntimeInterface
+├─ Pi 1.x adapter              ← first reference candidate
+├─ Codex-like adapter
+├─ Native Builder adapter
 └─ future local builder adapter
 ```
+
+Pi 1.x 的定位是 **execution/runtime primitive**，不是 CEAA governance layer。CEAA 負責 BuildSpecification、ModelPolicy、resource budget、permission、validation、approval 與 audit；Pi 負責 session、tool loop、provider/model execution 與可控的 model switching。
+
+Builder 內部可採角色化 multi-model execution：
+
+```text
+BuildSpecification
+      ↓
+PiBuilderAdapter
+      ├─ Planner Model
+      ├─ Coder Model
+      └─ Debugger / Repair Model
+      ↓
+Candidate Artifact
+```
+
+Model selection / fallback 必須由 CEAA policy 指定或允許，不可因 runtime 支援多模型就讓 Builder 無限制切換。所有 model/provider、switch、usage、latency、cost 與 session provenance 應進入 trace / research metrics。
+
+Main Reviewer 與 Audit Reviewer 若也透過 Pi 執行，必須分別使用**獨立 session / first-pass context**，且不得沿用 Builder conversation。這是 Secure Evolution Gate 的驗證獨立性要求。
+
+Pi dependency 應固定 1.x 具體版本並建立 compatibility suite；版本更新前測試 model switching、tool calling、session state、usage/cost 與 isolated workspace 行為。
 
 Builder 不綁單一 framework，並只允許在 isolated Git/worktree + sandbox workspace 中操作 candidate。
 

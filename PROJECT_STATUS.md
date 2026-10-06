@@ -267,6 +267,36 @@ AgentArtifact Construction Foundation
 
 ---
 
+## Phase 1.5 Builder Runtime Direction — Pi 1.x
+
+Phase 1.5 的 Code Evolution Runtime 已將 **Pi 1.x** 提升為第一候選 reference implementation，用於 `CodeBuilderRuntime` / `AgentRuntimeInterface`，主要原因是其 multi-provider / model switching / coding-agent runtime 能力可減少自建 Builder loop 與 provider orchestration 的工作量。
+
+規劃中的責任分工：
+
+~~~text
+CEAA
+= BuildSpecification / ModelPolicy / Budget / Permission / Governance / Validation
+
+Pi 1.x
+= Builder Session / Tool Loop / Provider-Model Execution / Model Switching
+~~~
+
+Builder 內部可規劃 Planner / Coder / Debugger 使用不同模型，但模型選擇、fallback 與成本上限仍由 CEAA policy 控制。
+
+Secure Evolution Gate 邊界不變：
+
+- Builder session 可在 construction steps 之間共享 context。
+- Main Reviewer 使用獨立 session / context。
+- Audit Reviewer 使用另一個獨立 session / context。
+- Main/Audit first-pass 不讀取彼此 reviewer context。
+- Reviewer 不直接沿用 Builder conversation。
+
+另新增 Pi adapter compatibility requirement：固定具體 1.x 版本，升級前測試 model switching、tool calling、session state、usage/cost 與 isolated workspace 行為。
+
+目前狀態：**Planned / Not Implemented / Not Evaluated**。現有 `src/` 尚未包含 Pi adapter 或 multi-model Builder runtime。
+
+---
+
 ## Phase 1.5 Experimental Validation Scope
 
 Phase 1.5 已正式加入研究實驗，不只驗證 infrastructure 與 feature completion。

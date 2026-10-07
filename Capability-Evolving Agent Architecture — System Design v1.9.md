@@ -227,6 +227,160 @@ Average Cost per Task
 
 這個假說屬於目前 CEAA 研究範圍，而不是未來 Agent Platform 才驗證的項目。
 
+## 2.3 Reasoning Cost Amortization
+
+CEAA 將 Token Efficiency 的底層問題定義為：**降低重複任務反覆支付的推理成本，而不只是縮短 Prompt。**
+
+一般 Agent 即使曾完成相似任務，仍可能重新讀取 Context、搜尋 Capability、選擇 Tool、試錯與 Retry。這形成 Repeated Reasoning Tax。
+
+```text
+Expensive Reasoning
+→ Execution Experience
+→ Validated Capability / Skill
+→ Reusable Execution Path
+→ Learned Decision
+→ Less Repeated Reasoning
+```
+
+對重複任務：
+
+```text
+C_avg(N)
+= (C_exploration + Σ C_reuse(i) + C_maintenance) / N
+```
+
+若 `C_reuse << C_exploration`，則 Experience 與 Reuse 增加時，平均推理成本應下降。
+
+研究核心問題：
+
+> **Can repeated LLM reasoning be progressively amortized into reusable execution knowledge, capabilities, skills, and learned decisions while maintaining or improving task success?**
+
+主要效率目標不只看 Token per Request，而是：
+
+```text
+Cost per Successful Task
+= (LLM Token Cost + Tool Cost + Compute Cost + Retry Cost)
+  / Successful Tasks
+```
+
+並同步量測 Reasoning Calls、LLM Call Count、Retry Rate、Latency 與 Success Rate。
+
+## 2.4 Experience as Training Data
+
+Execution Experience 除了用於 Retrieval / Memory，也可作為未來 Decision Model 的訓練資料。
+
+```text
+State
+├─ Task / Context
+├─ Candidate Set
+└─ Available Capabilities
+
+Action
+├─ Route
+├─ Agent / Sub-Agent
+├─ Capability / Skill / Tool
+└─ Model Selection
+
+Outcome
+├─ Success / Failure
+├─ Retry / Fallback
+├─ Human Correction
+└─ Token / Cost / Latency
+```
+
+每次執行可近似為 `(state, action, reward, next state)`。Reward 可同時反映成功、Token、Latency、Retry 與 Failure。
+
+因此 Decision Model 的目標不是只模仿過去選了哪個 Tool，而是學習：
+
+> **在目前狀態下，哪個 routing / capability / skill / model decision 能以較低成本可靠完成任務。**
+
+研究演進可採：
+
+```text
+Telemetry
+→ Dataset
+→ Supervised Router
+→ Cost-Aware Ranking
+→ Contextual Bandit
+→ Offline Reinforcement Learning
+→ Controlled Deployment
+```
+
+Phase 1 的責任仍是建立高品質 Execution Experience dataset；Decision Model 訓練屬後續研究。
+
+## 2.5 Reasoning Compilation Loop
+
+CEAA 長期可將 Capability Evolution 理解為 **Reasoning Compilation**：
+
+> 使用昂貴 LLM reasoning 探索未知問題，再把反覆出現且已驗證的解題經驗逐步編譯成較便宜的 Experience、Capability、Skill 或 Decision Model。
+
+```text
+Explore → Execute → Observe → Validate
+                     ↓
+                 Experience
+                     ↓
+              Extract / Learn
+                     ↓
+       Capability / Skill / Decision
+                     ↓
+                   Reuse
+                     ↓
+            Measure Cost / Success
+                     ↓
+          Novelty / Failure → Explore
+```
+
+Operational History 因此同時具有：
+
+```text
+Observability Evidence
+Experience Memory
+Training Dataset
+Evolution Evidence
+```
+
+成功資料描述可重用路徑；失敗、Retry、Fallback 與人工修正則提供 decision boundary 與系統演化證據。
+
+## 2.6 Agent Organization as Reasoning-Space Reduction
+
+當 Capability、Skill、Tool 與 Agent 數量增加，把全域候選集合交給單一 LLM 會增加 Context 與選擇複雜度。
+
+```text
+Global Capability Space
+→ Manager
+→ Agent
+→ Sub-Agent
+→ Local Skill Set
+→ Tool
+```
+
+目標是讓：
+
+```text
+|C_effective(task)| << |C_global|
+```
+
+透過 progressive disclosure、experience retrieval、small decision models 與必要時的大模型 escalation，每一層只處理必要候選。
+
+因此 Agent Organization 不只是 scalability architecture，也是一種 **Reasoning-Space Reduction Architecture**。但 hierarchy 本身也有 overhead，必須用 end-to-end Success、Token、Latency 與 Cost 實證比較。
+
+## 2.7 Long-Term Decision Evolution
+
+長期演化可分為：
+
+```text
+Stage A: LLM Exploration
+Stage B: Experience-Assisted Decision
+Stage C: Small Learned Decision Model
+Stage D: Mature Reusable / Deterministic Path
+```
+
+成熟路徑逐漸減少大型 LLM 的重複參與；大型 LLM 則更集中於新問題、低信心情境、例外處理與驗證。
+
+因此 CEAA 的長期目標是：
+
+> **讓 Agent 隨使用經驗增加，逐步減少不必要的重複推理，在維持既有驗證與治理邊界的前提下變得更便宜、更快、更可靠。**
+
 ---
 
 # 3. 核心設計原則

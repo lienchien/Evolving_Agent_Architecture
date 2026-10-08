@@ -316,6 +316,17 @@ Phase 1.5 已正式加入研究實驗，不只驗證 infrastructure 與 feature 
 
 ---
 
+## Optional Future Technology Candidates
+
+| Candidate | Intended role | Timing / dependency | Status |
+|---|---|---|---|
+| **Strix** | Optional agentic/dynamic security testing adapter for Secure Evolution Gate, under Audit review | Evaluate after Docker sandbox, deterministic checks, evidence schema and reviewer independence are working; authorized disposable targets only | Candidate / Not Integrated / Not Evaluated |
+| **Render** | Optional static hosting for independently maintained React/Vite CEAA Console / public demo | Plan only after stable versioned API, auth, approval/incident/audit contracts; outside Phase 1.5 | Candidate / Not Selected / Not Deployed |
+
+Neither changes mandatory Phase 1.5 exit criteria. Strix does not replace Main/Audit, and Render does not host the core autonomous Builder/Sandbox by default.
+
+---
+
 ## 後續階段
 
 | 階段 | 規劃與狀態 |

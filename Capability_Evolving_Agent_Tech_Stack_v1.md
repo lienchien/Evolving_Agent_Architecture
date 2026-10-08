@@ -452,6 +452,36 @@ Anything else
 
 ---
 
+## 4A.3 Future Candidate — Strix Agentic Security Testing
+
+**Status: Candidate / Not Installed / Not Integrated / Not Evaluated.**
+
+Strix (open-source self-host CLI or managed service) is a potential dynamic/adversarial security-testing backend for the existing Secure Evolution Gate; it is **not** a replacement for Audit Agent, static analysis, deterministic tests, or Policy Engine.
+
+Planned integration boundary:
+
+```text
+Candidate Artifact
+→ Disposable, Authorized Test Target
+→ SecurityTestingInterface
+→ StrixAdapter (optional)
+→ Reproduction / Finding / Evidence
+→ Audit Review + CrossValidationResult
+→ Human Escalation when required
+```
+
+Selection criteria and constraints:
+
+- Prefer isolated self-host CLI for reproducible authorized white-box/API testing; verify licensing, maintenance status, Python/Docker/provider requirements and scan cost before adoption.
+- Define explicit target allowlist, sandbox-only network access, CPU/memory/time/token budgets, audit trace and clean-up; never point autonomous pentesting at production or third-party targets without authorization.
+- Normalize findings, evidence and scan status into CEAA contracts rather than trusting Strix-specific pass/fail as a governance decision.
+- A scan with no findings does **not** prove the artifact safe; a failed/timeout/inconclusive scan must be surfaced rather than silently treated as PASS.
+- If selected, compare known-defect detection, false positives, reproduction rate, scan cost and latency against the existing security baseline.
+
+Reference: https://github.com/usestrix/strix
+
+---
+
 # 5. Observability 與 Experiment Tracking
 
 ## 5.1 Agent Observability
@@ -581,8 +611,17 @@ Evolution Worker
 - Logs
 - PostgreSQL
 
-## 後期
-- Streamlit
+## 後期：獨立的 CEAA Console
+
+- Web/Admin Console 以 React + Vite 為候選，**獨立於 CEAA Core 維護**。
+- 只透過版本化 REST API / SSE / WebSocket 與 Platform 溝通；不直接讀取內部 DB、secrets 或 runtime。
+- **Render Static Site 為前端部署候選**，可綁定獨立 Git repo / branch 與自動部署；不是現階段必要技術。
+- 需等 platform API、approval / incident / audit / metrics contract 穩定後，才正式規劃 Console 功能與 hosting。
+- Render Free Web Service / Postgres 可供原型評估，但受 spin-down、ephemeral filesystem、資料庫效期等限制，不預設承載長時間 CEAA Builder / Sandbox / Workers。
+
+## 後期：研究 / 實驗 Dashboard
+
+- Streamlit（候選；與正式 Console 分離）
 
 可顯示：
 - Capability Library Size
@@ -592,6 +631,8 @@ Evolution Worker
 - Validation Pass Rate
 - Model Cost
 - Generalization Rate
+
+Render documentation: https://render.com/docs/static-sites
 
 ---
 

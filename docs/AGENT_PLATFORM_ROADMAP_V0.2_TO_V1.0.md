@@ -448,6 +448,20 @@ Anything else
 A revision must rerun the complete Secure Evolution Gate.
 
 ---
+### 6.3.2 Optional Security Testing Candidate — Strix
+
+Strix is a future **candidate**, not an obligatory component of the v0.5 / Phase 1.5 Secure Evolution Gate.
+
+- Potential adapter: `SecurityTestingInterface → StrixAdapter` for authorized dynamic and agentic penetration testing on disposable test targets.
+- Run under explicit target allowlist, network isolation, quotas, bounded model spend, traceable execution and cleanup.
+- Normalize findings and reproducible evidence into Audit Agent / Validation Incident records.
+- Strix must not replace deterministic checks, independent Main/Audit first-pass review, Policy Engine, or Human escalation.
+- Benchmark detection / reproduction quality, false positives, resource cost and latency before making an adoption decision.
+
+Reference: https://github.com/usestrix/strix
+
+---
+
 ### 6.4 Dependencies
 
 - v0.3 reliable execution
@@ -789,6 +803,29 @@ without knowing:
 - model provider,
 - persistence schema,
 - workflow internals.
+
+### 9.2.1 Future CEAA Console Deployment Candidate — Render
+
+Once the platform's API, authentication, lifecycle and governance contracts have stabilized, a separately maintained React/Vite Console may consume those public API contracts as one of several platform clients.
+
+**Render Static Site** is a candidate for hosting that UI, documentation or a public demonstration; it is not selected as required infrastructure and does not belong to Phase 1.5.
+
+~~~text
+CEAA Console (independent repository)
+  ↓ Render Static Site (optional)
+  ↓ HTTPS / REST / SSE
+Versioned CEAA Platform API
+  ↓
+CEAA Core / Governance / Agent Runtime
+~~~
+
+The Console must never directly depend on internal database schema, model credentials or container runtime. Compare vendor limits, deployment automation, custom domain / TLS, preview workflow, security/auth/CORS, API access and recurring cost when planning the actual UI.
+
+Render Free Web Service / Postgres tiers are not assumed suitable for persistent background evolution workers or production data.
+
+Reference: https://render.com/docs/static-sites
+
+---
 
 ### 9.3 Example Client Model
 

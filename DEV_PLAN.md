@@ -388,6 +388,15 @@ Candidate Capability Artifact
 - Notification Service 的 HumanReviewRequired / SecurityFinding / CrossValidationDisagreement。
 - full revalidation after every revision。
 
+**Future optional tooling — Strix (not a Phase 1.5 prerequisite):**
+
+- Add `SecurityTestingInterface` / `StrixAdapter` as an optional authorized dynamic / agentic pentest backend when baseline deterministic checks and independent reviews are stable.
+- For evaluation, provision a disposable Docker target, explicit target allowlist, restrictive outbound network policy, time/resource/LLM-spend budget, evidence collection and cleanup.
+- Ingest reproducible findings / PoC evidence into Audit review, Validation Incident and trace; a clean scan never automatically grants PASS, and scanner failures cannot be converted to PASS.
+- Compare true/false findings, known-defect detection, reproduction quality, duration, cost and operational overhead before adoption.
+- Do not give Strix uncontrolled access to production, external assets or unapproved targets. Do not make Strix mandatory for every Skill.
+
+
 強制 invariant：
 
 ~~~text
@@ -633,6 +642,18 @@ Unnecessary human escalation ↓
 - provider 未回報 token / cost 欄位時保存 unavailable，不估算。
 - 所有 experiment 必須保存 model / provider / prompt-policy version、artifact version、trace_id、review evidence 與 human decision。
 - Builder、Main、Audit 的模型配置必須可重現。
+
+---
+
+## Future Console Deployment Candidate — Render
+
+**Reserved for later platformization; not part of Phase 1.5 scope or exit criteria.**
+
+- `CEAA Console` planned as independently maintained React/Vite front end consuming versioned CEAA REST / SSE interfaces.
+- Render Static Site is a **candidate deployment provider** for Console, docs or demonstration landing pages; alternatives remain viable.
+- Consider only after authentication / CORS / API versioning / approval / incident / audit / metrics contracts stabilize.
+- A hosted static UI cannot replace the CEAA agent runtime, Pi Builder, Docker sandbox, Strix security environment, PostgreSQL or background workers.
+- Before deployment evaluate bandwidth/build limits, API reachability, session/authentication model, preview branch strategy and vendor cost.
 
 ---
 

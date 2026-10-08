@@ -989,3 +989,24 @@ Pi 的 multi-model construction context 僅限 Builder 內部。Main Reviewer �
 ### Status
 
 **Architecture / development-plan update only.** 尚未加入 Pi runtime、adapter、dependency 或任何新 runtime test；不得宣稱 multi-model Builder 已實作。
+
+---
+
+## 2026-10-08 — Strix / Render added as optional future technology candidates
+
+### Decision
+
+將 Strix 與 Render 記錄為未來候選技術，而非立即採用的核心依賴。
+
+- **Strix:** 可選擇的 `SecurityTestingInterface` / `StrixAdapter`，於已授權的隔離測試環境中執行 agentic / dynamic security testing；其 finding 作為 Audit review 的證據，而非取代 Main/Audit、deterministic controls、Human escalation。
+- **Render:** 未來獨立 CEAA Console / docs / demo 的 Static Site 部署候選；等 CEAA API、授權、Incident/Approval/Audit contract 穩定後再評估，UI 不屬於目前 Phase 1.5 scope。
+
+### Guardrails / Selection Criteria
+
+- Strix：target allowlist、isolated disposable sandbox、network/credential policy、LLM cost/time quotas、findings provenance、safe cleanup、known-defect benchmark；不得掃描未授權目標。
+- Render：React/Vite static deployment、獨立 repo / CI、API versioning、HTTPS、authentication/CORS、免費方案限制、成本；不預設承載 Core Runtime / Docker Sandbox / Builder / long-running workers。
+- 保留 provider/tool independence；允許未來選其他 security scanner 或 hosting provider。
+
+### Status
+
+**Documentation / planning update only**：未新增 Strix / Render dependency、部署、Adapter 或安全測試結果；不變更 Phase 1.5 mandatory exit criteria。

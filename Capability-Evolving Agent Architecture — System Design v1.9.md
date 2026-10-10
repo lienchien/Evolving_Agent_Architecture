@@ -821,13 +821,20 @@ Code Evolution Runtime 是可替換的 software-engineering execution layer。
 
 ```text
 CodeBuilderRuntime
-├─ Pi-like Builder Adapter
+├─ Pi 1.x Builder Adapter           (preferred evaluation candidate)
+├─ OpenCode Builder Adapter         (alternative candidate)
 ├─ Codex-like Builder Adapter
-├─ Other Coding Agent Adapter
+├─ Native / Other Coding Agent Adapter
 └─ Future Local Builder Adapter
 ```
 
 CEAA 核心不得綁死單一 coding-agent framework。
+
+**技術候選（尚未選定）：** Pi 1.x 與 OpenCode 均可作為 Phase 1.5 的 Builder Runtime reference implementation。OpenCode 以 SDK / HTTP server / coding agent / sub-agent 能力作為候選整合路徑；實際支援的 session、model switching、tool permission、trace、usage 與 isolation 行為必須以固定版本進行 adapter compatibility test。
+
+候選選型應在相同 task set、provider/model、budget、workspace policy 下比較：Skill / AgentArtifact 建立成功率、first-pass tests、修復迭代、token/cost、latency、API/SDK integration overhead、recoverability、audit provenance 與 sandbox enforcement。不得因某 runtime 自帶 reviewer / agent 權限設定就跳過 CEAA 的 Main/Audit 獨立驗證、Docker sandbox、Policy Engine 或 Human Approval。
+
+**Status: Technology candidate only — not integrated or validated.**
 
 Builder 的典型循環：
 

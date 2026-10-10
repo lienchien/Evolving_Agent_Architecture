@@ -363,7 +363,7 @@ Destroy Container
 
 ---
 
-# 4A. Code Evolution Runtime 與 Secure Verification（System Design v1.8）
+# 4A. Code Evolution Runtime 與 Secure Verification（System Design v1.9）
 
 此區為**未來實作技術方向**，目前尚未實作。
 
@@ -373,7 +373,8 @@ Destroy Container
 
 ```text
 CodeBuilderRuntime / AgentRuntimeInterface
-├─ Pi 1.x adapter              ← first reference candidate
+├─ Pi 1.x adapter              ← preferred first evaluation
+├─ OpenCode adapter            ← new comparison candidate
 ├─ Codex-like adapter
 ├─ Native Builder adapter
 └─ future local builder adapter
@@ -410,6 +411,19 @@ Builder 不綁單一 framework，並只允許在 isolated Git/worktree + sandbox
 - CPU / memory / runtime quotas
 - explicit network policy
 - token / cost / iteration budget
+
+### OpenCode — Future Candidate (not integrated)
+
+**OpenCode**（https://github.com/anomalyco/opencode）納入 System Design v1.9 / Phase 1.5 CodeBuilderRuntime 的另一候選技術。評估以 SDK 或 HTTP server 連接 Python CEAA，利用 coding-agent、model/provider、session 與 Sub-Agent 能力進行 Skill / AgentArtifact construction。
+
+- `OpenCodeBuilderAdapter` 必須只輸入受 CEAA policy 約束的 `BuildSpecification`，輸出統一的 `BuildResult` / versioned Candidate Artifact。
+- 與 Pi 1.x 用同一測試任務集、公平的 model/provider/budget/sandbox 條件比較成功率、首次測試通過率、iteration、成本、latency、整合複雜度與 trace 完整性。
+- 設計階段不假設 OpenCode 原生 permission / sub-agent 可以等價於 CEAA governance、container isolation 或獨立 Main/Audit review。
+- 版本固定、契約測試、session recovery、timeout / cancellation、workspace 與 network policy 需驗證後才能確定採用。
+
+**Status：Candidate / Not Installed / Not Implemented / Not Evaluated。**
+
+---
 
 ## 4A.2 Secure Evolution Gate
 

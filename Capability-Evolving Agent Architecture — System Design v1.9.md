@@ -2562,6 +2562,14 @@ HYSET 將 Tool Set 作為整體評分單位，納入工具間的共同使用關�
 
 **Experiment B — Usage-Driven Skill Optimization**：比較 (B1) No Optimization、(B2) Periodic Optimization、(B3) Frequency-only Prioritization、(B4) Frequency × Expected Saving × Confidence / Failure-impact Prioritization。追蹤 skill version、usage/reuse count、regression failures、quality、latency、maintenance/training cost、cumulative saving 與 break-even count；包含高階 Skill 專用化為低成本 Skill 的案例。
 
+**Experiment C — Skill Complexity Compression（研究假設）**：驗證原本需要 L3 複雜推理與多工具協作的 Skill，是否能透過重複執行、經驗累積及版本迭代，在明確限定的相同任務範圍內，逐漸達到 L2 甚至 L1 的執行成本，同時維持成功率、輸出品質與可靠性。
+
+實驗分組：C1 原始 L3 Skill；C2 固定週期優化版本；C3 Experience-driven Skill Optimization 版本；C4 原生 L1/L2 Skill（如適用）。分開記錄 Capability Level 與 Execution Cost Tier，避免將成本下降誤判為能力下降，或將專用化能力誤認為完整泛化能力。
+
+評估指標：Skill Compression Ratio（原始與優化版本的 Cost per Successful Task 比值）、Capability Retention Rate、成功率、延遲、LLM/Tool Calls、重試率、優化與維護成本、累積淨節省、Break-even Reuse Count。採用固定的領域內測試與領域外回歸測試，繪製迭代次數對成本與品質的曲線，並檢查安全與相容性退化。成本下降及能力保留均屬待驗證假設，不預設必然成功。
+
+**新增實驗目的**：評估 CEAA 能否在核心架構、模組介面及治理邊界保持穩定時，透過 Decision Evolution 與 Skill Complexity Compression，持續降低整體 Cost per Successful Task，而不犧牲已驗證的任務能力與安全性。
+
 **共同控制**：固定測試集、模型、工具版本與資源限制；按時間切分 Experience，避免測試資料洩漏；報告統計不確定性及不同難度／風險子群；所有優化版本必須通過既有 Secure Evolution Gate、獨立審核與人員核准，不得將實驗自動套用至生產。
 
 Phase 3 應產生至少以下圖表或結果：

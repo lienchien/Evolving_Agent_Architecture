@@ -267,9 +267,9 @@ AgentArtifact Construction Foundation
 
 ---
 
-## Phase 1.5 Builder Runtime Direction — Pi 1.x
+## Phase 1.5 Builder Runtime Candidates — Pi 1.x / OpenCode
 
-Phase 1.5 的 Code Evolution Runtime 已將 **Pi 1.x** 提升為第一候選 reference implementation，用於 `CodeBuilderRuntime` / `AgentRuntimeInterface`，主要原因是其 multi-provider / model switching / coding-agent runtime 能力可減少自建 Builder loop 與 provider orchestration 的工作量。
+Phase 1.5 的 Code Evolution Runtime 目前規劃以 **Pi 1.x 為優先評估方案**，新增 **OpenCode** 為 Builder Runtime 比較候選，用於 `CodeBuilderRuntime` / `AgentRuntimeInterface`。兩者均須提供與 CEAA 治理層解耦的 coding-agent execution adapter；最後選型需由相同 task / model / budget 條件的整合與驗證實驗決定。
 
 規劃中的責任分工：
 
@@ -297,6 +297,18 @@ Secure Evolution Gate 邊界不變：
 
 ---
 
+### OpenCode candidate evaluation
+
+- [ ] OpenCode SDK / HTTP server adapter proof of concept
+- [ ] Skill / controlled AgentArtifact construction using uniform BuildSpecification
+- [ ] Pi vs OpenCode generation success / test pass / repair iterations / cost / latency comparison
+- [ ] Docker workspace / tool / network restrictions and independent reviewer-context verification
+- [ ] Session failure / cancellation / restart and trace/provenance contract test
+
+**Status: Candidate / Not Integrated / Not Evaluated.**
+
+---
+
 ## Phase 1.5 Experimental Validation Scope
 
 Phase 1.5 已正式加入研究實驗，不只驗證 infrastructure 與 feature completion。
@@ -320,6 +332,7 @@ Phase 1.5 已正式加入研究實驗，不只驗證 infrastructure 與 feature 
 
 | Candidate | Intended role | Timing / dependency | Status |
 |---|---|---|---|
+| **OpenCode** | Optional SDK / HTTP-based CodeBuilderRuntime adapter; compare with Pi 1.x on controlled Skill / AgentArtifact generation | Phase 1.5-E evaluation only; Pi remains first evaluation candidate | Candidate / Not Integrated / Not Evaluated |
 | **Strix** | Optional agentic/dynamic security testing adapter for Secure Evolution Gate, under Audit review | Evaluate after Docker sandbox, deterministic checks, evidence schema and reviewer independence are working; authorized disposable targets only | Candidate / Not Integrated / Not Evaluated |
 | **Render** | Optional static hosting for independently maintained React/Vite CEAA Console / public demo | Plan only after stable versioned API, auth, approval/incident/audit contracts; outside Phase 1.5 | Candidate / Not Selected / Not Deployed |
 

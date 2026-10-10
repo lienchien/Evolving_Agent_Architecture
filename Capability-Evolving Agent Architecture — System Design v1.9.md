@@ -2522,6 +2522,26 @@ provider cost if available
 7. Capability revision / maintenance 是否侵蝕長期成本優勢。
 8. 不同模型強度下，Capability Evolution 是否能降低對大型模型重複推理的依賴。
 
+### HYSET — Set-Level Tool Retrieval Baseline（後續實驗）
+
+參考論文：Hong, Xinyi, Pinjun Dong, Xinyang Yu, and Binyan Jiang (2026), *Tools Are Not Islands: Set-Level Tool Retrieval for LLM Agents via Query-Conditioned Hyperedge Prediction*, arXiv:2607.25718。
+- Paper: https://arxiv.org/abs/2607.25718
+- Code: https://github.com/stormwther18/HYSET
+
+HYSET 將 Tool Set 作為整體評分單位，納入工具間的共同使用關係及集合大小相關的相容性；此方法定位為 CEAA Tool Selection 的外部研究 baseline，不等同於 CEAA 的 Experience-aware Decision Model。
+
+後續實驗在相同任務、工具庫、執行環境與預算限制下比較：
+
+1. LLM-only Tool Selection：由 LLM 直接選擇工具。
+2. Independent Top-K Retrieval：逐一排序工具並取 Top-K。
+3. HYSET Set-Level Retrieval：依原論文與公開實作重現。
+4. CEAA Experience-aware Decision Model：使用歷史執行結果選擇 Agent / Skill / Tool。
+5. Ablation：CEAA 移除 Experience、移除 Cost-aware Ranking，以及移除階層式 Routing。
+
+評估指標：Recall@K、COMP@K、Tool Set Exact Match、End-to-End Task Success、LLM Calls、Total Tokens、Latency、Retry Count、Cost per Successful Task；額外量測不同 Experience / Reuse Count 下的學習曲線與 Break-even Point。
+
+公平比較要求：固定資料切分、模型與工具版本；區分訓練與測試任務，避免 Experience Leakage；將訓練、索引建立與維護成本納入長期成本分析。HYSET 與 CEAA 解決的問題範圍不同，需另外報告 Tool-Selection-only 與 End-to-End 兩組實驗結果。
+
 Phase 3 應產生至少以下圖表或結果：
 
 ```text

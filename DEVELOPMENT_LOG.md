@@ -1010,3 +1010,41 @@ Pi 的 multi-model construction context 僅限 Builder 內部。Main Reviewer �
 ### Status
 
 **Documentation / planning update only**：未新增 Strix / Render dependency、部署、Adapter 或安全測試結果；不變更 Phase 1.5 mandatory exit criteria。
+
+---
+
+## 2026-10-10 — OpenCode added as Builder Runtime candidate (v1.9)
+
+### Decision
+
+在最新 `Capability-Evolving Agent Architecture — System Design v1.9.md` 的設計基準下，將 OpenCode 正式納入 Phase 1.5-E `CodeBuilderRuntime` / `AgentRuntimeInterface` 候選。Pi 1.x 維持第一個優先評估方案，OpenCode 作為獨立比較候選，不採 vendor/framework hard dependency。
+
+### Planned integration
+
+~~~text
+CEAA Evolution Planner / BuildSpecification
+             ↓
+       CodeBuilderRuntime
+         ├─ PiBuilderAdapter
+         ├─ OpenCodeBuilderAdapter
+         ├─ Codex-like Adapter
+         └─ Native Builder
+             ↓
+Versioned Candidate Artifact + BuildResult
+             ↓
+Independent Main / Audit + Secure Evolution Gate
+~~~
+
+OpenCode 可評估 SDK / HTTP Server、session / agent / sub-agent、tool calling 與多模型 routing；這些只是候選 runtime 功能，不等於 CEAA 治理與 Sandbox 已具備。
+
+### Selection benchmark
+
+- 固定相同 task dataset、base revision、model/provider、policy、budget、sandbox；
+- 比較 Skill / AgentArtifact generation success、acceptance-test pass、repair iterations、token/cost、latency、integration effort 與 provenance；
+- 測試 session/cancel/recovery、workspace / network / credential 限制與 Docker sandbox enforcement；
+- Main 與 Audit first-pass 必須獨立，不沿用 Builder conversation；
+- 確認 adapter compatibility、版本鎖定與 rollback 策略後才確定選型。
+
+### Status
+
+**Documentation only / Planned / Not Implemented / Not Evaluated**。未安裝 OpenCode、未編寫 Adapter、未執行 Pi / OpenCode benchmark，亦不變更 Phase 1.5 既有 exit criteria。

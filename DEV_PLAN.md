@@ -294,9 +294,15 @@ Phase 1.5 應先完成這套機制的必要基礎：real provider abstraction、
 
 ---
 
+## Current Architecture Reference — System Design v1.9
+
+`Capability-Evolving Agent Architecture — System Design v1.9.md` is the **current design baseline** on `dev`. The v1.8 section above is retained as historical design context; Phase 1.5 implementations and new technology evaluations should follow v1.9 and preserve its governance invariants.
+
+---
+
 ## Phase 1.5 — Real Infrastructure + Controlled Code Evolution
 
-在上述 Phase 1 Telemetry 退出條件完成後，Phase 1.5 不只替換 mock infrastructure，也開始實作 System Design v1.8 定義的第一條受控 Code Evolution 路徑。
+在上述 Phase 1 Telemetry 退出條件完成後，Phase 1.5 不只替換 mock infrastructure，也開始實作最新 System Design v1.9 延續的受控 Code Evolution 路徑。
 
 ### Phase 1.5-A — Runtime Configuration
 
@@ -334,7 +340,7 @@ Phase 1.5 應先完成這套機制的必要基礎：real provider abstraction、
 
 ### Phase 1.5-E — Code Evolution Runtime / Skill Builder MVP
 
-Phase 1.5 正式加入 v1.8 的程式生成 execution layer。
+Phase 1.5 正式落實 System Design v1.9 的程式生成 execution layer。
 
 第一個實作目標先限定為 **Skill / Capability generation**：
 
@@ -358,7 +364,7 @@ Candidate Capability Artifact
 
 - BuildSpecification domain contract。
 - CodeBuilderRuntime interface。
-- 至少一個 real coding-agent adapter；**Pi 1.x 優先作為第一候選 reference implementation**，Codex-like / Native Builder 等保留為替代 adapter；CEAA core 不綁單一 runtime。
+- 至少一個 real coding-agent adapter；**Pi 1.x 維持首選評估方案，OpenCode 新增為並列比較的候選 adapter**，Codex-like / Native Builder 亦保留為替代方案；CEAA core 不綁單一 runtime。
 - 透過 `AgentRuntimeInterface` / `CodeBuilderRuntime` 封裝 Pi，不讓 BuildSpecification、Evolution Planner 或 governance logic 依賴 Pi-specific session / provider schema。
 - Pi 1.x 的 multi-provider / model switching 能力可用於 Builder 內部的角色化模型組合，例如 Planner、Coder、Debugger / Repair 使用不同 model/provider；模型選擇由 CEAA `ModelPolicy` 控制，而不是由 Pi 自行決定治理策略。
 - Builder runtime 必須回傳 model/provider usage、model switch、latency、cost、tool execution 與 session provenance，供研究與稽核使用。
@@ -370,6 +376,23 @@ Candidate Capability Artifact
 - Main / Audit 可以使用 Pi runtime 作為模型執行層，但必須建立獨立 runtime session，並由 CEAA 決定 reviewer model/provider policy。
 - BuildResult / Candidate Artifact 包含 code diff、tests、dependency change、build log、known limitations、model/provider provenance。
 - 至少完成一個小型 Skill 的 end-to-end「讀 repo → 寫 code → 寫 tests → run → revise → candidate」驗證。
+
+#### Phase 1.5-E.1 — Builder Runtime Candidate Evaluation: Pi vs OpenCode
+
+**Status: Planned / Not Integrated / Not Evaluated.**
+
+- `PiBuilderAdapter`：已規劃的精簡、多模型 coding-agent runtime reference candidate。
+- `OpenCodeBuilderAdapter`：新候選，評估以 OpenCode SDK / HTTP server 驅動 Session、工具與 Sub-Agent / Agent 定義的可行性。
+- 二者需透過同一個 `CodeBuilderRuntime` 契約產生 `BuildResult` / versioned Candidate Artifact；不可將框架私有 session 或 schema 滲入 CEAA domain。
+- 在固定 task dataset、模型/provider、prompt-policy、budget、基準 revision、隔離 workspace 下公平比較，不預設功能較多的一方表現較好。
+- 比較：setup/integration effort、API/SDK maturity、model routing/fallback、Skill / AgentArtifact generation success、acceptance-test pass rate、repair iterations、token/cost、latency、session/restart recovery、trace/evidence completeness、tool permission behavior。
+- 測試 Docker sandbox、Git worktree boundary、network/credential restriction、timeout/cancel/cleanup；OpenCode 內建工具權限不得替代 CEAA Policy Engine。
+- 不論 Builder 選 Pi 或 OpenCode，Main/Audit 都需不同的 independent first-pass session/context；Builder self-review 不計入 Secure Evolution Gate 的兩個 PASS。
+- 契約驗證與安全/成本 benchmark 完成後才確定主要 runtime。若 OpenCode adapter 成熟度不足，保留替換與回退能力。
+
+參考：https://github.com/anomalyco/opencode
+
+---
 
 ### Phase 1.5-F — Secure Evolution Gate
 

@@ -383,6 +383,20 @@ Stage D: Mature Reusable / Deterministic Path
 
 ---
 
+## 2.8 Adaptive Skill Tiering & Performance Evolution
+
+新增兩條相互回饋的演化路徑：**Difficulty-Aware Skill Routing** 與 **Usage-Driven Skill Optimization**。Skill 建立時歸屬 capability_family 並指定初始 tier；同一 family 可同時存在不同能力、成本與風險特性的 Skill 版本。Tier 是適用範圍而非品質保證，須以實測數據校正。
+
+初始分級：L1 Lightweight（模板／確定性流程）、L2 Standard（多步驟整合與驗證）、L3 Advanced（高不確定性與複雜協作）。Skill Registry 增加 `capability_family`、`tier`、`supported_task_types`、`success_rate`、`avg_cost`、`latency`、`risk_class`、`version`、`usage_count`、`retry_rate` 與評估樣本量。
+
+Decision Agent 先估計 task difficulty、risk、success probability 與候選 Skill 的預期總成本，再在成功率與權限約束下選擇執行路徑。不得假設永遠從 L1 開始：低階失敗後升級的重試成本也必須計入。低信心、新型或高風險任務回退至受控 LLM 路徑與既有審核流程。
+
+`SkillOptimizationAgent` 依 Usage Telemetry、失敗率、Retry、Latency、Cost 與預期節省額排序優化候選。優化方向包括 Execution Optimization、Quality Optimization、Capability Specialization；高頻重複的 L3 子任務可提煉成專用低成本 Skill，但須驗證其適用邊界。Optimization Agent 僅產生候選 Skill Version，不可自行啟用或覆寫生產版本；須經 Regression、獨立 Main/Audit Review、Policy Gate、人員核准及可回滾版本治理。
+
+閉環：Task → Difficulty / Risk Estimation → Tier-aware Decision → Skill Execution → Outcome Telemetry → Optimization Candidate → Validation / Approval → Registry Update → Decision Model Learning。主要目標是維持最低成功率與安全門檻下，降低 **Cost per Successful Task**，並記入訓練、測試與維護成本。
+
+---
+
 # 3. 核心設計原則
 
 ## 3.1 Capability First
@@ -2541,6 +2555,14 @@ HYSET 將 Tool Set 作為整體評分單位，納入工具間的共同使用關�
 評估指標：Recall@K、COMP@K、Tool Set Exact Match、End-to-End Task Success、LLM Calls、Total Tokens、Latency、Retry Count、Cost per Successful Task；額外量測不同 Experience / Reuse Count 下的學習曲線與 Break-even Point。
 
 公平比較要求：固定資料切分、模型與工具版本；區分訓練與測試任務，避免 Experience Leakage；將訓練、索引建立與維護成本納入長期成本分析。HYSET 與 CEAA 解決的問題範圍不同，需另外報告 Tool-Selection-only 與 End-to-End 兩組實驗結果。
+
+### Adaptive Skill Tiering & Performance Evolution — Additional Experiments
+
+**Experiment A — Difficulty-Aware Skill Routing**：在相同 task families 與任務難度分層下，比較 (A1) Always-L3、(A2) Always-L1 with escalation、(A3) Rule-based Tier Routing、(A4) Learned Difficulty/Cost-aware Routing；記錄 task success、tier-selection accuracy、escalation/retry rate、latency、total cost、Cost per Successful Task，並依風險與難度分組。
+
+**Experiment B — Usage-Driven Skill Optimization**：比較 (B1) No Optimization、(B2) Periodic Optimization、(B3) Frequency-only Prioritization、(B4) Frequency × Expected Saving × Confidence / Failure-impact Prioritization。追蹤 skill version、usage/reuse count、regression failures、quality、latency、maintenance/training cost、cumulative saving 與 break-even count；包含高階 Skill 專用化為低成本 Skill 的案例。
+
+**共同控制**：固定測試集、模型、工具版本與資源限制；按時間切分 Experience，避免測試資料洩漏；報告統計不確定性及不同難度／風險子群；所有優化版本必須通過既有 Secure Evolution Gate、獨立審核與人員核准，不得將實驗自動套用至生產。
 
 Phase 3 應產生至少以下圖表或結果：
 

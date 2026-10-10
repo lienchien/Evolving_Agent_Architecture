@@ -1,6 +1,6 @@
 # Capability-Evolving Agent — Project Status
 
-更新日期：2026-10-01
+更新日期：2026-10-10
 
 開發分支：`dev`（Token／費用研究功能已合併）
 
@@ -110,6 +110,14 @@ Manager / hierarchical routing 的 future design 已加入 **Decision-first, Rea
 - [ ] decision-model telemetry integration
 
 因此此功能目前是 **Design Planned / Not Implemented / Not Evaluated**，不能解讀為現有 Manager Agent 已使用 Laya。
+
+---
+
+## Current Architecture Baseline — System Design v1.9
+
+`Capability-Evolving Agent Architecture — System Design v1.9.md` 已在 `dev`，為目前最新設計基準。先前的 v1.8 設計與驗證記錄仍保留為歷史脈絡；後續 Phase 1.5 Builder Runtime 候選（Pi 1.x、OpenCode）依 v1.9 的 interface、sandbox、Main/Audit、Human Escalation 邊界評估。
+
+**v1.9 是設計版本，不代表 Phase 1.5 功能已實作。**
 
 ---
 

@@ -1048,3 +1048,47 @@ OpenCode 可評估 SDK / HTTP Server、session / agent / sub-agent、tool callin
 ### Status
 
 **Documentation only / Planned / Not Implemented / Not Evaluated**。未安裝 OpenCode、未編寫 Adapter、未執行 Pi / OpenCode benchmark，亦不變更 Phase 1.5 既有 exit criteria。
+
+---
+
+## 2026-10-18 — Execution Telemetry Database Foundation
+
+### 分支與範圍
+
+從乾淨且與 `origin/dev` 同步的 `dev` 建立
+`feature/execution-telemetry-database`。本輪只建立 Phase 1 Telemetry 的資料庫、domain
+與 repository foundation；尚未將 MainAgent、routing、execution 或 API 自動接入。
+
+### SQLite 先行、PostgreSQL 可替換
+
+- 新增 `ExecutionTrace`、`RoutingDecision`、`ExecutionObservation`、`ExecutionFailure`、
+  `RecoveryAttempt` 與 normalized enums。
+- 新增 backend-neutral `TelemetryRepository`，service 不接觸 SQL、SQLite connection、
+  JSON serialization 或 backend exception。
+- 新增 `SqliteTelemetryRepository`，Container 預設使用相同 database path，也接受
+  注入其他 `TelemetryRepository`，保留未來 PostgreSQL adapter 替換點。
+- ID 由應用程式產生；timestamp 強制帶 timezone；JSON 只在 adapter 內編碼，未來可映射 JSONB。
+
+### Schema 與資料一致性
+
+SQLite schema v1 新增：
+
+- `telemetry_schema_migrations`
+- `execution_traces`
+- `routing_decisions`
+- `execution_observations`
+- `execution_failures`
+- `recovery_attempts`
+
+啟用 foreign keys、busy timeout、WAL 與查詢索引。Composite trace foreign keys 防止跨 trace
+誤接；trace completion 只允許一次；較新未知 schema version 會被舊程式拒絕。Migration
+測試確認既有 Capability 資料不被刪除或改寫。
+
+### 驗證
+
+- 修改前基準：**28 passed, 1 warning in 9.83s**。
+- 新增 7 項 repository contract／schema 測試。
+- 完整結果：**35 passed, 1 warning in 8.93s**。
+- 警告仍為既有 Starlette／AnyIO `BlockingPortal` alias 棄用。
+
+詳細資料契約與下一步見 [TELEMETRY_DATABASE.md](docs/TELEMETRY_DATABASE.md)。

@@ -1,8 +1,8 @@
 # Capability-Evolving Agent — Project Status
 
-更新日期：2026-10-10
+更新日期：2026-10-18
 
-開發分支：`dev`（Token／費用研究功能已合併）
+開發基準：`dev`；本輪實作來源：`feature/execution-telemetry-database`
 
 ## Current Stage
 
@@ -14,7 +14,7 @@ Phase 1 原有的 Core Baseline 開發與驗證條件已完成，但在確認 Ex
 
 核心 mock 流程、FastAPI TestClient 整合、併發一致性與跨程序持久化已取得執行證據。
 獨立 Uvicorn 已完成 loopback HTTP 全流程與停止／重啟持久化驗證；新增 Token／費用
-量測基礎合併後，完整測試結果為 **28 passed, 1 warning in 7.12s**。
+Telemetry database foundation 加入後，完整測試結果為 **35 passed, 1 warning in 8.93s**。
 這不是 production-ready 或任意負載下的效能保證；安全與營運強化仍屬後續工作。
 
 歷史過程見 [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md)；API 行為及升級條件見
@@ -51,6 +51,8 @@ Adaptive Agent Organization 已被列為長期主力研究方向，但**自動�
 目前狀態：
 
 - [x] task-level token / cost / latency measurement foundation
+- [x] backend-neutral telemetry domain／repository contract
+- [x] SQLite telemetry schema v1、migration、WAL、索引與 restart persistence
 - [ ] routing decision persistence
 - [ ] candidate-set / selected-target persistence
 - [ ] normalized failure taxonomy
@@ -61,6 +63,10 @@ Adaptive Agent Organization 已被列為長期主力研究方向，但**自動�
 - [ ] durable raw operational history（success / failure / retry / fallback）
 - [ ] repeated-exception aggregation / systemic-pattern analysis foundation
 - [ ] longitudinal dataset for future Experience Memory、Evolution Signal 與 organization experiments
+
+前三項只代表資料庫 foundation 已可保存這些模型。現有 Agent/runtime 尚未自動寫入
+routing、execution、failure 或 recovery observation，因此其餘退出條件仍維持未完成。
+Schema 與 PostgreSQL 替換邊界見 [TELEMETRY_DATABASE.md](docs/TELEMETRY_DATABASE.md)。
 
 預定資料鏈：
 

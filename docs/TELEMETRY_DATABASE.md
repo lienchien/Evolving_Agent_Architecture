@@ -72,8 +72,9 @@ SQLite adapter 啟用 foreign keys、15 秒 busy timeout 與 WAL。初始化採�
 - 既有 Capability 資料在 migration 後保持不變；
 - 較新未知 schema version 被舊程式拒絕。
 
-2026-10-18 完整測試結果：**35 passed, 1 warning in 8.93s**。警告仍為既有
-Starlette／AnyIO `BlockingPortal` alias 棄用。
+2026-10-18 feature 完整測試結果為 **35 passed, 1 warning in 8.93s**；合併至 `dev`
+後再次執行為 **35 passed, 1 warning in 12.04s**。警告仍為既有 Starlette／AnyIO
+`BlockingPortal` alias 棄用。
 
 ## 下一步
 

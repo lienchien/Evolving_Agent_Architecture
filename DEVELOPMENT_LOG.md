@@ -1092,3 +1092,10 @@ SQLite schema v1 新增：
 - 警告仍為既有 Starlette／AnyIO `BlockingPortal` alias 棄用。
 
 詳細資料契約與下一步見 [TELEMETRY_DATABASE.md](docs/TELEMETRY_DATABASE.md)。
+
+### 提交、推送與 dev 合併
+
+- Feature commit：`abf03b6` — `feat: add SQLite execution telemetry foundation`。
+- Feature 已推送至 `origin/feature/execution-telemetry-database` 並設定 upstream。
+- Merge commit：`0923c7f` — `merge: add SQLite execution telemetry foundation`。
+- 合併後 `dev` 完整測試：**35 passed, 1 warning in 12.04s**。

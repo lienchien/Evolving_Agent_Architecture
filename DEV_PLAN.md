@@ -9,7 +9,7 @@
 本輪實作來源為 `feature/execution-telemetry-database`；既有 Core Baseline 與 Token／費用研究
 功能已完成驗證，但 **Phase 1 尚未退出**。Telemetry 的 backend-neutral domain／repository
 contract 與 SQLite schema v1 已建立；Agent/runtime 自動寫入及 summary API 尚未實作。
-最近完整測試為 **35 passed, 1 warning in 8.93s**。
+合併至 `dev` 後的最近完整測試為 **35 passed, 1 warning in 12.04s**。
 實作仍採 Mock LLM、SQLite、Python subprocess 與 Console Notification。
 本輪實際過程見 [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md)，完成度見
 [PROJECT_STATUS.md](PROJECT_STATUS.md)。

@@ -14,7 +14,8 @@ Phase 1 原有的 Core Baseline 開發與驗證條件已完成，但在確認 Ex
 
 核心 mock 流程、FastAPI TestClient 整合、併發一致性與跨程序持久化已取得執行證據。
 獨立 Uvicorn 已完成 loopback HTTP 全流程與停止／重啟持久化驗證；新增 Token／費用
-Telemetry database foundation 加入後，完整測試結果為 **35 passed, 1 warning in 8.93s**。
+Telemetry database foundation 合併至 `dev` 後，完整測試結果為
+**35 passed, 1 warning in 12.04s**。
 這不是 production-ready 或任意負載下的效能保證；安全與營運強化仍屬後續工作。
 
 歷史過程見 [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md)；API 行為及升級條件見

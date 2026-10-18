@@ -14,8 +14,10 @@ from src.infrastructure.console_notification import ConsoleNotificationProvider
 from src.infrastructure.memory_queue import InMemoryEvolutionQueue
 from src.infrastructure.mock_llm import MockLLMProvider
 from src.infrastructure.sqlite_repository import SqliteCapabilityRepository
+from src.infrastructure.sqlite_telemetry_repository import SqliteTelemetryRepository
 from src.infrastructure.subprocess_sandbox import SubprocessSandbox
 from src.interfaces.llm import LLMProvider
+from src.interfaces.telemetry_repository import TelemetryRepository
 from src.services.approval_service import ApprovalService
 from src.services.audit_service import AuditService
 from src.services.capability_service import CapabilityService
@@ -41,15 +43,20 @@ class Container:
         database_path: str | None = None,
         report_directory: str = "capability_library",
         llm_provider: LLMProvider | None = None,
+        telemetry_repository: TelemetryRepository | None = None,
     ) -> None:
-        repository = SqliteCapabilityRepository(
+        resolved_database_path = (
             database_path if database_path is not None else settings.database_path
         )
+        repository = SqliteCapabilityRepository(resolved_database_path)
         llm_provider = llm_provider or MockLLMProvider()
         sandbox = SubprocessSandbox()
         notification_provider = ConsoleNotificationProvider()
 
         self.queue = InMemoryEvolutionQueue()
+        self.telemetry_repository = telemetry_repository or SqliteTelemetryRepository(
+            resolved_database_path
+        )
         self.report_store = TestReportStore(repository)
         self.audit_service = AuditService(repository)
         self.research_metrics_service = ResearchMetricsService(repository)

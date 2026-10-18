@@ -1,13 +1,15 @@
 # Capability-Evolving Agent — Phase 1 Development Plan
 
-更新日期：2026-10-01
+更新日期：2026-10-18
 
 ## 目前基準
 
 **Phase 1 — In Progress：Core Baseline 已驗證；Execution Experience & Evolution Telemetry Foundation 納入 Phase 1 必做項目。**
 
-目前分支為 `dev`；既有 Core Baseline 與 Token／費用研究功能已完成驗證，但 **Phase 1 尚未退出**。Phase 1 現在必須補齊 Execution Experience & Evolution Telemetry Foundation。既有量測包含 task／LLM interaction
-成本觀測、SQLite 持久化與研究 API。最近完整測試為 **28 passed, 1 warning in 7.12s**。
+本輪實作來源為 `feature/execution-telemetry-database`；既有 Core Baseline 與 Token／費用研究
+功能已完成驗證，但 **Phase 1 尚未退出**。Telemetry 的 backend-neutral domain／repository
+contract 與 SQLite schema v1 已建立；Agent/runtime 自動寫入及 summary API 尚未實作。
+最近完整測試為 **35 passed, 1 warning in 8.93s**。
 實作仍採 Mock LLM、SQLite、Python subprocess 與 Console Notification。
 本輪實際過程見 [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md)，完成度見
 [PROJECT_STATUS.md](PROJECT_STATUS.md)。
@@ -26,6 +28,8 @@
    SQLite 治理資料，以及停止／重啟後的能力重用與資料持久化。
 10. 將 H-cost 研究提前納入 Phase 1：持久化 task 與 LLM interaction 指標，提供
     明細／summary API，資料完整且有 baseline 時才計算 saving 與 break-even reuse count。
+11. 建立 Execution Telemetry database foundation：五個 domain models、backend-neutral
+    repository contract、SQLite schema/migration/indexes、WAL、restart persistence 與 contract tests。
 
 上述行為與資料庫升級細節以 [API_CONCURRENCY.md](docs/API_CONCURRENCY.md) 為準。
 授權與資料控制本輪不啟用；既有安全註記需保留。
@@ -59,6 +63,19 @@
 完整執行紀錄見 [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md)。
 
 ## Phase 1 必做功能：Execution Experience & Evolution Telemetry Foundation
+
+目前資料庫 foundation 已在 `feature/execution-telemetry-database` 完成：
+
+- `execution_traces`
+- `routing_decisions`
+- `execution_observations`
+- `execution_failures`
+- `recovery_attempts`
+- `telemetry_schema_migrations`
+
+詳細 schema、SQLite／PostgreSQL adapter 邊界與驗證見
+[TELEMETRY_DATABASE.md](docs/TELEMETRY_DATABASE.md)。下一個增量是 service／runtime wiring，
+不能因資料表已存在就將 routing persistence、failure aggregation 或 Phase 1 標記完成。
 
 這不是未來才做的 Adaptive Agent Organization 功能，而是**現在就必須建立的研究資料基礎**。
 

@@ -2270,6 +2270,77 @@ source_capability_id
 
 ---
 
+## 55.1 Failure-driven Self-Recovery Architecture（2026-10-19 設計增補）
+
+**狀態：Approved Design / Planned / Not Implemented。** 本節屬 v1.9 設計基準的增補，延續既有 Manager、Telemetry、Experience Memory 與 Secure Evolution Gate，不代表目前 Runtime 已具備自主診斷或修復功能。
+
+### 目標與架構定位
+
+系統在任務失敗且安全重試達上限後，不立即將整個任務視為不可恢復，而是建立結構化 Failure Episode，由 Failure Analysis Manager 選擇必要的診斷 Agent，定位失敗環節、提出修復候選並通過獨立驗證，最後安全恢復或升級給人類管理員。這形成第四條**研究性演化路徑 Reliability Evolution**，與 Capability / Decision / Performance Evolution 共享 Experience Memory 和 Telemetry。
+
+```text
+Task → Manager / Router → Agent / Skill / Tool Execution
+                                    ↓
+                             Result Validator
+                         ┌──────────┴──────────┐
+                       PASS                  FAIL
+                         ↓                     ↓
+                   Final Outcome       Failure Classifier
+                                               ↓
+                                         Retry Controller
+                              ┌────────────────┴────────────────┐
+                         safe & budgeted                exhausted / unsafe
+                              ↓                                ↓
+                        bounded retry              Failure Analysis Manager
+                                                            ↓
+                                        select Trace / Root Cause / Tool /
+                                        Skill / Environment diagnosis agents
+                                                            ↓
+                                             Root-cause evidence + Repair Plan
+                                                            ↓
+                                           Sandbox + Regression + Policy Gate
+                                                            ↓
+                                            Main/Audit Secure Evolution Gate
+                                           ┌────────────────┴───────────────┐
+                                      PASS / authorized             FAIL / UNKNOWN
+                                           ↓                              ↓
+                                   checkpoint resume              halt / human escalation
+                                           ↓                              ↓
+                                     Result Validator          Incident / Audit
+                                           └────────────┬─────────────────┘
+                                                        ↓
+                                       Raw History + Recovery Outcome
+                                                        ↓
+                                       Curated Experience Memory (only
+                                       after independent validation)
+```
+
+### 分層責任與契約
+
+- **Retry Controller**：區分 transient / semantic / policy / authorization / side-effect / permanent failure；判斷冪等性、是否已部分成功、backoff、retry 次數、deadline 與成本上限。非冪等操作不可盲目重試。
+- **Failure Analysis Manager**：依 error taxonomy、歷史經驗、預算與風險，選擇一個或多個專業診斷 Agent；不要求每次啟動全部 Agent。
+- **Diagnostic Agents**：Trace、Root Cause、Tool/API、Skill、Environment 等角色只提出可追溯證據與假說；不得因 LLM 自評而認定根因已證實。
+- **Repair Planner**：產生版本化 `RecoveryPlan`、候選變更、風險與 rollback/checkpoint；不得直接修改 production。
+- **Recovery Gate**：沿用既有 policy、sandbox、deterministic tests、Main/Audit independent review、human escalation；缺失證據、timeout、審查衝突或未知結果一律 fail closed。
+- **Experience Memory**：Raw failure/failed repair 全部保留；只有獨立驗證成功且經治理允許的修復流程，才可提升為可重用 Recovery Skill。
+
+Phase 1 的 backend-neutral interface contract：`RetryPolicyInterface`、`FailureAnalysisInterface`、`RecoveryPlannerInterface`、`RecoveryGateInterface`、`RecoveryOutcomeRepository`。資料契約至少包括 `FailureContext`、`RetryDecision`、`RecoveryPlan`、`RecoveryOutcome`，與既有 `execution_traces`、`execution_failures`、`recovery_attempts`、`routing_decisions` 以 task/trace/failure ID 關聯。所有 token、latency、repair cost 與 validation result 都應記錄；不可取得的值保持 unavailable。
+
+### 階段落地
+
+| 階段 | 功能 | 完成判準 |
+|---|---|---|
+| Phase 1 | Interface / data contracts、failure lineage、bounded retry policy、Mock contract tests；完成既有 telemetry runtime wiring | 能保存失敗→重試→上限→待診斷事件，重啟可查詢；**不需**自主診斷 Agent |
+| Phase 1.5 | Real provider、sandbox、policy、gate、audit、checkpoint 與 human escalation hooks | 失敗候選不得繞過治理；unsafe/unknown case fail closed |
+| Phase 2 | Single Failure Analysis Agent + Repair Planning MVP、受控修復、curated recovery experience | 能在故障注入任務上產生可驗證診斷、候選修復與安全結案 |
+| Phase 3 | 多 Agent 選擇式診斷、experience-aware recovery routing、縱向實驗 | 以獨立 holdout benchmark 驗證品質、成本、恢復與回歸率 |
+
+### 不變的治理限制
+
+Retry、repair cycles、time/cost budget 與 recursive delegation 必須有明確上限；任何恢復均不得提升權限或擴大資料存取；需要處理未知 side effect、重複提交及 rollback。修復 Candidate 必須重新通過完整驗證；高風險操作保留 Human Administrator 核准權。Phase 1 先蒐集原始資料，禁止將未驗證的診斷寫成「成功經驗」。
+
+---
+
 # 56. 研究指標
 
 核心研究指標：
@@ -2593,6 +2664,35 @@ Break-even Reuse Count by Task Family
 此實驗的目標不是預設 CEAA 一定更省 Token，而是實證：
 
 > **Capability accumulation 是否能將一次高成本學習，轉換成後續較低成本的可重用執行經驗。**
+
+---
+
+### Failure-driven Self-Recovery / Reliability Evolution — Experiment Design（新增）
+
+**研究目的與假說**
+
+- **H-R1（Recovery）**：在相同故障分布與成本限制下，達 retry 上限後啟動根因診斷及受控修復，能否比 fixed retry / fallback 提高 end-to-end task success 與 recovery success？
+- **H-R2（Efficiency）**：選擇性啟動單一／多個專業診斷 Agent，能否在維持成功率與安全性的前提下，降低 Cost per Successful Task、平均恢復時間與不必要的診斷開銷？
+- **H-R3（Learning）**：經驗證的修復紀錄沉澱為 Recovery Skill 後，能否隨同類故障重現次數增加，降低 repeated failure rate、分析 Token 與恢復成本？
+- **H-R4（Governance）**：獨立安全審核與回歸測試，能否減少錯誤修復與新增缺陷，而不使恢復成本或人工作業負擔超出可接受門檻？
+
+**實驗機制（Phase 2 單 Agent PoC；Phase 3 完整比較）**
+
+1. 建立具可重現種子的 fault-injection benchmark：provider timeout / 429、network interruption、tool schema mismatch、bad tool selection、skill semantic error、stale cache、permission denial、partial side effect、dependency failure、ambiguous completion；另設不可自動修復的 negative controls。
+2. 每組使用相同任務、模型版本、工具權限、硬體、failure seeds、時間/成本上限與 success oracle；依 fault category、severity、task family 分層，train/dev/test 與 holdout 分離，避免 Experience Leakage。
+3. Baselines：**B0** no retry；**B1** fixed bounded retry；**B2** retry + rule-based fallback；**B3** retry + single diagnosis Agent；**B4** retry + selective multi-Agent diagnosis；**B5 CEAA** adaptive diagnosis + Experience Memory + validated Recovery Skills + governance。
+4. 每次執行完整記錄：trace / original failure / retry lineage / diagnosis agents / proposed root cause / candidate repair / gate decision / checkpoint / final outcome / token / latency / cost / human intervention。對未能恢復的任務亦保留資料。
+5. 消融：移除 Experience Memory、specialist routing、root-cause evidence、regression gate、checkpointing、cost-aware budget、Recovery Skill reuse；並比較不同 retry cap、repair-cycle cap、故障難度與 L1/L3 Skill 等級。
+6. 縱向實驗：對相同 fault family 反覆注入新樣本，觀察 Recovery Skill 從昂貴診斷流程轉成低成本重用後，是否維持能力、安全性與跨環境泛化。
+
+**主要指標與判準**
+
+- End-to-End Task Success、Recovery Success Rate（以符合恢復資格的 failure episode 為分母）、Correct Root Cause Rate（由外部 oracle / evidence 判定）、Repeated Failure Rate、MTTR / P95 recovery latency。
+- Cost per Successful Task = 所有執行、重試、診斷、修復、驗證與治理成本 / 成功任務數；另報告 Recovery Cost、Token、Tool Calls、human review time、break-even reuse count。
+- Unsafe Repair Rate、Regression Rate、False Repair Rate、Unauthorized Action Rate、Human Escalation Rate；安全問題不可因平均成功率提高而被忽略。
+- 對成功率與成本提供重複試驗、置信區間及依 failure family 分層結果；不可只以單次 demo 或單一成功案例宣稱 Self-Recovery 有效。
+
+**實驗預期驗證的研究貢獻**：驗證「失敗→診斷→受控修復→可重用恢復經驗」是否能形成可量化、可治理的 Reliability Evolution 閉環，並檢查 Recovery Skill Complexity Compression 是否可在保持修復能力的情況下降低後續成本。這是**待驗證假說**，非既有實驗結果。
 
 ---
 

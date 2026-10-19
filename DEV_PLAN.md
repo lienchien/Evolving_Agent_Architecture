@@ -209,6 +209,62 @@ Phase 1 不再以既有 28-test Core Baseline 作為完整退出點。既有結�
 
 ---
 
+## Failure-driven Self-Recovery — Phased System Design (2026-10-19)
+
+**Decision: Approved for system design / Planned; NOT implemented.** This section extends the current System Design v1.9 baseline without claiming runtime capability or changing the v1.9 architecture artifact. Implementation must remain behind governance gates.
+
+### Motivation and flow
+
+When an execution fails, a bounded Retry Controller may retry only when the operation is safe and recoverable. If retries are exhausted (or an error is non-retryable), emit a durable failure event and invoke a diagnostic workflow. A Failure Analysis Manager may select one or more specialized agents based on failure category and cost/risk budget; a Repair Planner proposes candidate remediations; an independent Recovery Gate verifies permissions, regression evidence, and side effects before resuming from a safe checkpoint or escalating to a human.
+
+```text
+Task → Execution → Result Validator
+                    ├─ PASS → Outcome / Experience Telemetry
+                    └─ FAIL → Failure Classification / Retry Controller
+                                 ├─ Safe + within attempt/time/cost budgets → bounded retry
+                                 └─ Exhausted / unsafe → Failure Analysis Manager
+                                      → Trace / Root Cause / Tool / Skill / Environment analysis (selective)
+                                      → Repair Plan / Candidate (isolated)
+                                      → Policy + Sandbox + Regression + Secure Recovery Gate
+                                           ├─ PASS → safe checkpoint resume → validation
+                                           └─ FAIL / UNKNOWN / risky → halt + human escalation
+                                      → durable Recovery Outcome / Experience Memory candidate
+```
+
+### Phase 1 — interfaces and evidence foundation (required now)
+
+Build upon existing `execution_traces`, `routing_decisions`, `execution_observations`, `execution_failures`, `recovery_attempts`; do not introduce a parallel logging silo.
+
+- Define backend-neutral contracts (design names, not yet code): `RetryPolicyInterface`, `FailureAnalysisInterface`, `RecoveryPlannerInterface`, `RecoveryGateInterface`, `RecoveryOutcomeRepository`.
+- Minimal structures: `FailureContext` (task/trace/span, failure_id, stage, normalized category, sanitized exception metadata, skill/tool/model/version, checkpoint), `RetryDecision` (recoverable, retry_count/max_retries, idempotency/side-effect status, remaining time/cost budgets, backoff), `RecoveryPlan` (candidate action, scope, risk, evidence requirements, rollback), `RecoveryOutcome` (diagnosis, attempted remediation, gate decision, validation, resolution, cost/latency).
+- Durable event lineage: original failure → retry attempts → escalation/analysis → candidate repair → gate decision → final outcome. Keep both successful and failed executions as denominator for population analysis.
+- Distinguish retryable transient errors from semantic, policy, authorization, state/side-effect and permanent errors. Non-idempotent actions must not be blindly retried; ambiguous completion must first be reconciled.
+- Contract tests with Mock diagnostics: bounded retry, retry exhaustion, unsafe retry blocked, failed/unknown gate fails closed, budget exhaustion, restart-persistent correlation, redacted payloads. **No autonomous repair Agent required for Phase 1 exit.**
+- Existing Phase 1 telemetry runtime wiring and aggregation exit criteria remain required and incomplete until independently verified.
+
+### Phase 1.5 — integration hardening
+
+Connect contracts to real provider fallback/health checks, sandbox execution, identity/policy enforcement, audit and existing Main + Audit Secure Evolution Gate; add time/cost budgets, checkpoint/resume and human escalation hooks. Repair candidates must not mutate production or bypass approval.
+
+### Phase 2 — single-agent diagnostic MVP (planned)
+
+Implement a bounded Failure Analysis Agent with trace/context retrieval, normalized root-cause hypothesis and evidence, repair plan proposal, safe sandbox validation, human-reviewed remediation where needed, and curated Recovery Experience Memory. Compare against fixed retry-only and rule-based fallback baselines. Only validated successful repairs become reusable Recovery Skills.
+
+### Phase 3 — multi-agent adaptive recovery and experiments (planned)
+
+Add selective specialist diagnosis (Trace / Root Cause / Tool/API / Skill / Environment), experience-aware diagnosis routing, repair candidate ranking and cost-aware recovery. Evaluate fixed retry, retry+fallback, single-diagnosis-agent and multi-agent selective diagnosis under the same injected-failure workload. Ablate experience memory, diagnosis routing, independent regression gate and specialized agents. Track recovery success, mean time to recovery, repeated failure rate, repair regression, false repair, human escalation, end-to-end task success and **cost per successful task** including diagnosis/repair overhead and amortized optimization cost.
+
+### Non-negotiable governance and stopping conditions
+
+- No unbounded recursive repair loops; separate retry limit, repair-cycle limit, time/cost ceilings and cancellation.
+- Fail closed on missing evidence, permission denial, Main/Audit disagreement, timeout or unknown security outcome; notify Human Administrator.
+- Maintain independent reviewer context and full provenance/versioning; repaired artifacts pass complete gate again.
+- Protect secrets/PII in trace and memory; no unauthorized tool access or privilege escalation.
+- Keep raw operational history separate from curated, validated recovery experience.
+- Treat **Reliability Evolution** as a research track integrated with Capability, Decision and Performance Evolution; do not claim proven autonomous improvement before experiments.
+
+---
+
 ## Manager Agent Decision Layer — Planned
 
 Manager / hierarchical routing 的後續實作正式加入 Decision Model abstraction，但不改變目前 Phase 1 / Phase 1.5 核心退出條件。

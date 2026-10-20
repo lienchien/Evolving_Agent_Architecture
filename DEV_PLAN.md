@@ -265,6 +265,35 @@ Add selective specialist diagnosis (Trace / Root Cause / Tool/API / Skill / Envi
 
 ---
 
+## Hierarchical Skill Packages / Decision & Execution-Path Memory — Phased Integration (2026-10-20)
+
+**Design accepted / Not implemented.** 將「首次規劃記錄候選、選擇依據與預期結果，後續以 package-local experience 重用已驗證執行路線」納入 v1.9 設計；沿用既有 Manager Decision Layer、Skill Tiering、Telemetry、Experience Memory、Secure Evolution Gate。此處的內部 Skill Package **不同於匯出／分享用 Capability Package**。
+
+### Phase 1（與既有 Telemetry 合併，不擴張至完整 Package 功能）
+
+- 現有 `execution_traces` / `routing_decisions` / `execution_observations` / `execution_failures` / `recovery_attempts` 作為唯一 raw evidence source。先完成既有 runtime wiring、成功與失敗的 denominator、summary API 和 restart correlation。
+- Trace / Decision contract **應可表達** global/local routing、parent decision、node type、`package_id?`、`package_version?`、`path_id?`、`step_id?`、`parent_step_id?`、branch/sequence、candidate/selected target、model/policy/version、failure/retry linkage；Phase 1 可從單層 null package 開始。
+- 第一次規劃的 **Decision Rationale** 使用 *structural summary*，不是模型隱藏的 chain-of-thought：task features、候選方案、選擇標準與證據引用、未選原因簡述、限制、預期成本／風險／效果與不確定性；實際觀測另記錄 `observed_outcome`。Phase 1 定義 optional fields / adapter-neutral envelope / tests；**不要求新的 LLM rationale generator**。
+- Domain + repository contract tests：缺失值 null、task/trace/parent linkage、step ordering、failure path、sanitization、schema migration、restart read-back、版本相容；schema 新欄位若需要，使用 additive migration，絕不直接改寫已部署 v1 schema。
+- **退出邊界不變**：不要求 Package Registry、Local Decision Agent、Validated Path Registry、fast-path execution、adaptive optimization 或完整 cross-package orchestration；它們是未來階段項目。
+
+### Phase 1.5（既定 Real Infrastructure / Governance 工作整合）
+
+實際 LLM provider usage、sandbox、policy permission、trace/audit identity 與完整 artifact/version provenance 接上可選 package/path metadata；避免 local decision 越權、跨租戶讀取 experience 或繞過 Main/Audit gate。
+
+### Phase 2（與既有 Capability Retrieval 整合）
+
+建立初版 `SkillPackageManifest` / Registry、`PackageRouterInterface`、`LocalDecisionInterface`、`ExecutionPathRepository` 及 Package-scoped Experience Lookup。採固定 package classification 或 rule-based routing 起步，再沿用 pgvector/embedding 作語意 retrieval。驗證從完整成功 trace 萃取 validated execution path 的受控 PoC，檢查 task signature、schema、版本、權限、資料新鮮度與 fallback。多包任務僅做有限跨包協作，不實作自動組織重組。
+
+### Phase 3（與既定 Decision/Skill/Token 研究整合）
+
+新增 **Hierarchical Skill Packages × Decision Rationale × Validated Path Reuse** 正式比較：flat routing vs package routing vs local-history vs validated fast-path vs rationale-aware learning；另做無 rationale、無 local history、無 validator、無 lightweight fast-path、無 permission/version gate 的消融，依 Exact/Near/Generalized、skills/packages 規模與冷啟動/重用次數分層。衡量 Task Success、package/skill/path routing accuracy、latency（global/local/total）、tokens、Cost per Successful Task、hit/miss fallback、rationale overhead、regression、安全及 break-even。
+
+### 後續（Organization Evolution，非 Phase 1–3 必需）
+
+以 longitudinal telemetry 提出 Package split/merge、dynamic membership、跨 Package Skill reuse、adaptive Package organization 候選；所有變更需版本化、獨立驗證、權限審核與人工核准（適用時）。避免自動修改 production package 組織。
+
+
 ## Manager Agent Decision Layer — Planned
 
 Manager / hierarchical routing 的後續實作正式加入 Decision Model abstraction，但不改變目前 Phase 1 / Phase 1.5 核心退出條件。

@@ -219,3 +219,85 @@ DOCA Agent Skills 以 `SKILL.md` 提供已核實 API signatures、硬體能力�
 ### 限制
 
 DOCA 範例受 BlueField 硬體與專屬 API 場景限制；65-prompt checklist 與單次示範不足以證明廣泛可遷移性。需要跨領域、跨模型及保留測試集重現，並將維護 Skill 的成本納入比較。**本筆記不修改 CEAA 正式 v1.9 架構。**
+
+
+---
+
+## 2026-10-20 — AMD Ross：MCP × RAG × Expert-authored Skills 的 Agent 工程架構
+
+- **文章／產品**：AMD Brings the Power of Agentic AI to Embedded Design and Development Cycle；AMD Ross Agentic AI Assistant。
+- **官方來源**：https://newsroom.amd.com/news/amd-ross-agentic-ai-embedded-design-development/
+- **官方產品文件**：https://www.amd.com/zh-tw/products/software/ross-agentic-ai.html
+- **官方開發文件**：https://docs.amd.com/r/en-US/ug1400-vitis-embedded/Enabling-the-MCP-and-Skills-in-Agent-Mode
+- **官方參考實作與範例**：https://github.com/xilinx/ross-ai-assistant
+- **發表日期**：2026-09-30（AMD Newsroom）；**研究收錄日期**：2026-10-20。
+- **作者／發布單位**：AMD Newsroom / Advanced Micro Devices（官方產品公告，未以個人論文作者署名）。
+- **研究優先級**：**High**（Skill Architecture / Skill Registry / Capability Evolution / Skill Optimization / Edge AI Tool Integration）。
+- **證據層級**：AMD 官方產品與開發文件；不是 CEAA 或第三方獨立量化比較。
+
+### 核心貢獻（可核實的官方資訊）
+
+AMD Ross 將四個元件組合為嵌入式開發 Agent 工具鏈：**MCP servers**（連接 Vivado、Vitis 等工具）、**AMD Knowledge Base**（文件 RAG，部分環境可本機使用）、**expert-authored Agent Skills**（可分享的結構化工程工作流程）、**ready-to-run design examples**（可執行參考設計）。AMD 官方說明 Skill 以可重用的 Markdown 程序捕捉領域專家實務，並支援從設計、除錯到優化的工具操作。Vitis 文件要求執行 shell / 修改檔案前審查權限與預計操作。
+
+### 與 CEAA 的直接關聯（研究推論，非 AMD 官方主張）
+
+1. **Static Expert Skill vs Evolving Skill**：Ross 的人工撰寫 Skill 適合作為 CEAA 自主生成、修訂、驗證與重用 Skill 的外部設計基準。
+2. **Skill Tree × RAG**：比較文件檢索與可執行程序記憶的分工；檢查按需載入 Skill 是否減少 context 與錯誤工具選擇。
+3. **Manager / Tool Selection**：比較固定工作流程與 Experience-aware Routing、Difficulty-aware Skill Tiering；不要將模型、工具與領域知識效應混為一談。
+4. **Governance**：Skill 前置條件、工具版本、使用者授權與操作審核應與實際工具執行隔離。
+5. **Skill Complexity Compression**：假設高能力、昂貴的探索工作流程可經優化後由較低成本執行策略重用；尚無 Ross 對此的直接證據。
+
+### 建議 Baseline / Experiment / Ablation
+
+- **B0**：同一模型 + 一般文件 RAG + 原始工具呼叫（無 Skill）。
+- **B1**：B0 + 專家預先編寫的靜態 Skill（Ross-style；使用公開範例或在相同模擬任務自行實作）。
+- **B2**：B1 + 明確的 Tool/MCP Schema、前置檢查與版本化 Skill。
+- **CEAA**：B2 + 自主候選 Skill Generation / Optimization + Experience-aware Routing + independent validation + governance。
+- **Ablation**：移除 Skill、RAG、preflight、Experience Memory、cost-aware routing、Skill versioning 或 independent validator。
+- **指標**：Task Success、final-artifact correctness、invalid tool call rate、token、latency、Cost per Successful Task、Skill creation/maintenance cost、Capability Retention、Regression Rate、break-even reuse count。
+- **控制條件**：相同模型、任務集、工具版本與執行預算；先以可重現 mock FPGA/CLI 任務避免專屬硬體干擾，再評估真實嵌入式工作流程。
+
+### 證據與限制
+
+AMD 公告是產品能力描述，**不等於已獨立證實 Skill 自主演化、Token 節省或跨領域泛化**。Ross 專注 AMD 嵌入式工具，CEAA 的通用 Skill 架構需跨領域驗證；若使用專屬工具，需確認硬體、授權與環境限制。所有效能改善應以 CEAA 自己的 holdout benchmark 證明。
+
+---
+
+## 2026-10-20 — OpenClaw Gateway：Role / Scope / Device Identity 與 Tool Permission 治理
+
+- **文章／主題**：OpenClaw Gateway Protocol、Handshake and Roles、Operator Scopes、Node Pairing。
+- **官方原文**：https://docs.openclaw.ai/gateway/protocol
+- **官方 Handshake**：https://docs.openclaw.ai/gateway/protocol/handshake
+- **官方 Operator Scopes**：https://docs.openclaw.ai/gateway/operator-scopes
+- **官方 Node Pairing**：https://docs.openclaw.ai/gateway/pairing
+- **作者／發布單位**：OpenClaw 專案維護團隊（官方持續更新文件，未列單一作者）。
+- **發表日期**：官方動態文件未提供可核實的單一首次發布日期；**查核／研究收錄日期**：2026-10-20。
+- **研究優先級**：**High**（Agent Governance / Tool Permission / Manager & Sub-Agent Authority / Secure Recovery）。
+- **證據層級**：官方協定與操作文件，屬設計與行為規格；尚非 CEAA 安全有效性的實驗證據。
+
+### 核心貢獻（官方規格）
+
+Gateway 使用 WebSocket 控制平面，客戶端連線時宣告角色、scopes、capabilities 與 device identity；握手包含 challenge 與裝置驗證。Gateway 對 operator / node 權限、RPC method scopes、節點允許的 commands / permissions、配對審批進行伺服器端檢查；具更高風險的操作需要更高權限與審核。官方明確指出 operator scopes **不是不可信多租戶間的強隔離**；若要強隔離，需分開 Gateway / OS user / host。
+
+### 與 CEAA 的直接關聯（研究推論）
+
+1. **Agent Identity ≠ User Identity ≠ Tool Authority**：Manager、Sub-Agent、Skill 與 Tool 的操作權限必須在每次執行檢查，不可僅信任 Agent 的工具宣告。
+2. **Hierarchical Delegation**：維持 `P_child ⊆ P_parent ⊆ P_root` 的權限不擴張原則；動態 Sub-Agent、Tool Discovery 與 Skill Registry 更新不得繞過審批。
+3. **Failure-driven Self-Recovery**：診斷 Agent 可讀取最小必要的 sanitised trace；Repair Agent 不可因修復任務而自動取得高權限。未知或拒絕授權的恢復候選必須 fail closed。
+4. **Governance Observability**：保存 identity、scope、approval、tool invocation、failure category 與 recovery outcome 的可追溯事件。
+5. **Protocol Boundary**：研究集中控制平面是否降低權限分散造成的治理缺口；但不可假定單一 Gateway 就能解決租戶隔離。
+
+### 建議 Baseline / Experiment / Ablation
+
+- **B0**：工具權限僅以 Agent prompt / tool description 約束（不應在真實環境部署）。
+- **B1**：固定 per-tool allowlist + deterministic authorization。
+- **B2**：B1 + role/scope/device identity + approval-time permission check（OpenClaw-style）。
+- **CEAA**：B2 + hierarchical delegation + risk-aware routing + Secure Evolution Gate + Recovery-specific permissions。
+- **Security fault injection**：未授權工具呼叫、權限升級、跨使用者工作階段、被竄改 tool descriptor、過期憑證、配對擴權、修復 Agent 越權、審核 timeout 與 ambiguous approval。
+- **Ablation**：移除 device binding、scope check、approval-time check、parent-child permission invariant、audit trace、recovery gate。
+- **指標**：Unauthorized Action Rate、Privilege Escalation Detection、Policy Violation Recall/False Positive、Human Escalation、Task Success、P95 Latency、Token/Cost Overhead、Cost per Successful Task、Recovery Regression Rate。
+- **控制條件**：僅在隔離沙盒與授權測試帳戶執行；固定角色、工具、任務與攻擊案例，保留獨立 holdout。
+
+### 證據與限制
+
+官方文件提供可核對的權限設計，**不代表 OpenClaw 或 CEAA 已在攻擊測試中達成特定安全指標**。協定會演進，需在重現時鎖定 commit / version。官方明確限制 operator scopes 不是強多租戶隔離，CEAA 仍須實作獨立的 tenant/owner/scope 資料治理與 Sandbox。上述 Baseline 和 CEAA 對照均為待實驗驗證的研究規劃；**本次僅新增研究筆記，不修改正式 v1.9 架構或程式碼**。

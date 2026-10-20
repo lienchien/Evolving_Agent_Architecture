@@ -76,6 +76,19 @@ SQLite adapter 啟用 foreign keys、15 秒 busy timeout 與 WAL。初始化採�
 後再次執行為 **35 passed, 1 warning in 12.04s**。警告仍為既有 Starlette／AnyIO
 `BlockingPortal` alias 棄用。
 
+## Planned extension — Package / Path / Decision Rationale evidence（2026-10-20）
+
+**設計預留，尚未實作 schema／migration。** 本文件既有 SQLite v1 六表不變；新增需求必須先經 domain/repository contract 與 additive migration，不能把規劃欄位當成已持久化。
+
+目標：同一份 append-only raw operational history 支援 Global Package Decision → Local Skill Decision → ordered/branched Execution Path → Result Validation → curated reusable path。Package 僅需邏輯隔離；不建立每個 Package 一套獨立 DB。若沒有 package，package ID 保持 null。
+
+**候選欄位／事件**（以 versioned optional envelope 或 future migration 實現）：`package_id`, `package_version`, `path_id`, `path_version`, `step_id`, `parent_step_id`, `sequence/branch`, `decision_scope(global/local)`, `candidate_ids`, `selected_target`, `rationale_summary`, `selection_criteria`, `evidence_refs`, `expected_outcome`, `observed_outcome`, `policy/model_version`, `validation_status`, `cache_hit`, `fallback_reason`。父子決策、失敗／重試與 trace ID 必須能關聯，缺失值用 null，不推估信心與成本。
+
+**Rationale 邊界**：儲存可檢查的簡短決策摘要和候選取捨，不儲存 LLM private chain-of-thought、secret、完整敏感 payload；與事後 observed outcome 分離。不要讓遙測寫入失敗改變主要 task outcome，但需可觀測 instrumentation failure。
+
+**階段**：Phase 1 僅確立 optional schema contract、必要 lineage、測試及現有 telemetry wiring；Phase 2 建立 curated Validated Execution Path Registry / package-local read models；Phase 3 驗證決策理由與快取的增益、成本及安全回歸。curated paths 與 raw traces 保持不同生命週期與驗證流程。
+
+
 ## 下一步
 
 1. 建立 telemetry service／transaction boundary。

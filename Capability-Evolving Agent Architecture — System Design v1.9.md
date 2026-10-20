@@ -397,6 +397,65 @@ Decision Agent 先估計 task difficulty、risk、success probability 與候選 
 
 ---
 
+## 2.9 Skill Packages, Hierarchical Decisions & Execution-Path Experience（2026-10-20 設計增補）
+
+**Status: Design Defined / Not Implemented.** 本節延伸既有 2.5 Reasoning Compilation、2.6 Agent Organization、2.7 Decision Evolution、2.8 Skill Tiering，並使用第 55 節的 Telemetry；不是取代現有 Capability Registry、Manager abstraction 或 Security Gate。**Skill Package 是內部能力組織單位，不等同於第 34 節的能力匯出／分享壓縮套件。**
+
+### 核心問題與責任分層
+
+當 Skill 數量增加，讓 Main Agent 每次逐一考慮所有候選並重新生成完整 Workflow，可能導致路由延遲、Context 成本與選錯路線風險。研究提出三級分工：
+
+```text
+Task / Requirements
+  → Global Manager / Package Router
+      ├─ risk, permission, candidate packages, global decision record
+      ├─ single-package route → Package-local Decision
+      └─ cross-package task → Governed Workflow Planner → selected Packages
+  → Package Manifest (supported tasks, constraints, interfaces, version)
+  → Package-local Decision (small model / rules / cache first; LLM on demand)
+      ├─ package-scoped experience lookup
+      ├─ validated execution-path candidate(s)
+      └─ local Skill / Tool / Model / Workflow planning
+  → Policy/Permission Check → Skill Execution → Independent Outcome Validation
+  → Durable Trace + Decision Rationale + Actual Outcome
+  → Experience Distillation (only verified patterns)
+      ├─ Validated Execution Path Registry → fast-path reuse
+      └─ Decision Experience → future routing / optimization experiments
+```
+
+**Global Decision** 決定 Package 或跨 Package 工作流程，保留全域風險、預算、授權和路由結果；**Local Decision** 只決定 Package 內 Skill、Tool、Model、Workflow 和 fallback。Local Decision 可先採規則、已驗證 Path 查詢或小型模型，僅在新型／低信心／高風險情境升級至強模型。Main Agent 不應每次重做 Package 內部規劃，也不必取得所有 Package 的詳細紀錄。
+
+Package 可引用同一 Registry 中的版本化共享 Skill（many-to-many）；不複製或隱式轉移資料權限。Package 可有邏輯隔離的 local experience，但 Phase 1 優先共用 backend-neutral Telemetry Repository，以 `package_id`／`package_version`／`trace_id` 索引；不建立每包獨立資料庫。跨 Package Workflow 必須記錄完整 parent-child decisions，並分別遵守 scope、budget 與 policy。
+
+### 三類分離的研究資產
+
+1. **Capability / Skill Registry**：描述能執行什麼（ID、版本、適用任務、輸入輸出、前置條件、權限和依賴）。
+2. **Raw Execution Trace / Path Evidence**：逐次事實紀錄（已選與未選候選、Global/Local decisions、branch/step order、Tool/Skill/Model version、retry/fallback、結果、時間、token/cost）。每次成功與失敗都保留，且與 task / trace correlation 一致。
+3. **Curated Validated Execution Path + Decision Experience**：從獨立驗證過的 trace 萃取 task pattern、適用限制、版本相容、具體可重用 DAG / step plan、失效條件、實際效能統計與回退策略。未經驗證的建議不升級為 reusable path。
+
+每次**首次計畫建立**應與 execution plan 同時保存**結構化 Decision Rationale**，但不保存、索取或假設能取得 LLM 私有內部 chain-of-thought。內容是可稽核的**簡短決策依據摘要**：task features、candidate IDs、selection criteria、可檢查 evidence refs、rejected-alternative summary、constraints、predicted outcome / uncertainty、decision model / prompt / policy version。將 `expected_outcome` 與之後獨立觀測的 `observed_outcome` 分開，避免事後合理化或把模型自述當作根因證明。敏感輸入／secret 不進 rationale。
+
+### Fast Path 與失效保護
+
+重複任務先比對 task signature、input schema、package/skill/tool/model versions、前置條件、權限、資料新鮮度、風險和允許成本，再採用已有驗證的 Path；重用的是 **plan，不是舊的 task output / secrets / stale state**。高信心時以 deterministic / lightweight lookup 直接執行，仍保留必要 policy checks 和 output validation。低信心、environment drift、version mismatch、risk escalation、validation failure，則回到完整 Local/Global Planner 或既有 Recovery Flow。不可將模糊相似度當作重用授權。
+
+預期收益是少做重複的多層 LLM planning；額外 package routing 與 lookup 仍有成本，且 Global 選錯 package 可能放大後續錯誤。因此此處屬**待測假說**，不是已驗證加速結果。路線可以有多個版本和候選；在相同安全與正確率門檻下由 Decision policy 依歷史表現選擇，所有優化候選須通過 Regression + Main/Audit + human approval（適用時），禁止覆寫 active path。
+
+### Interface / data contract（依階段導入）
+
+- `SkillPackageManifest`: package ID/version、capability/task coverage、member skill refs、permission scope、risk、dependencies、compatible model/tool versions。
+- `PackageRouterInterface`、`LocalDecisionInterface`、`ExecutionPathRepository`、`PathValidationInterface`、`DecisionExperienceRepository`：平台無關的設計介面，**尚無 runtime 實作**。
+- `DecisionEvidence`：`decision_id`、`parent_decision_id`、`task_id`、`trace_id`、`package_id?`、`candidate_set`、`selected_target`、`selection_criteria`、`rationale_summary?`、`evidence_refs?`、`expected_outcome?`、`observed_outcome?`、`policy/model_version?`、`confidence?`、`latency?`。未知值必須 null/unavailable，不得猜測。
+- `ExecutionPathEvidence`：`path_id`、`path_version`、`parent_path_id?`、step/branch edges、skill/tool/model refs、task signature、input schema、preconditions、validation result、outcome、failure/retry linkage。
+- Phase 1 **只實作 trace/decision/step lineage 的最低必要擴充與 schema contract**，若要增加欄位必須 migration + backward compatibility + tests；不把尚未實作的 Manifest、local router、path registry、LLM rationale generation 視為 Phase 1 退出條件。沒有 provenance 的 rationale 必須保留 unavailable。
+- Phase 1.5：與實際 provider、policy/sandbox、權限、版本管理及完整 trace 介面整合。
+- Phase 2：靜態 Package Manifest / Registry、Package-local lookup、單一 Package 的 Path Registry 與簡單 fast path；語意路由沿用既定 embedding/pgvector 計畫。
+- Phase 3：Experience-aware Global+Local Routing、Decision Rationale Outcome Calibration、Path Optimization、Skill Complexity Compression、cross-package benchmark／消融。
+- 更遠期：受治理的 Package split/merge／adaptive organization，且必須以觀測資料證明其價值，不自動重組 production。
+
+---
+
+
 # 3. 核心設計原則
 
 ## 3.1 Capability First
@@ -2666,6 +2725,29 @@ Break-even Reuse Count by Task Family
 > **Capability accumulation 是否能將一次高成本學習，轉換成後續較低成本的可重用執行經驗。**
 
 ---
+
+### Hierarchical Skill Packages × Decision Rationale × Validated Path Reuse — New Research Experiment
+
+**研究目的**：驗證 Skill 增長時，分層 Package Routing + Package-local Experience 是否可以透過避免重複多層推論，降低端到端 latency、tokens 與 **Cost per Successful Task**；並驗證第一次規劃保存的**結構化 Decision Rationale**是否比只有 execution path 的紀錄多提供可量化的決策改進。與既有 Decision Evolution、Skill Tiering / Complexity Compression、Failure-driven Recovery 實驗整合，**不取代**其 baseline。
+
+**研究假說**：H-P1 分層路由在大 Skill Pool 中勝過 flat route（扣除額外 lookup / local decision 開銷）；H-P2 validated plan reuse 對 exact / near-similar 任務比每次重新規劃有效；H-P3 rationale + expected/observed comparison 改善 routing error diagnosis 和未來 selection accuracy；H-P4 local experience 的益處隨使用次數增長，但有冷啟動與 drift 的失效邊界。
+
+**統一實驗組**（同樣的 task family、相同模型與版本、工具、風險政策、資源配額及成功 oracle）：
+
+- A：Flat Agent → 全量 Skill routing，每次重新規劃。
+- B：Global Package Router → Local Decision，但不存取 Experience。
+- C：B + Raw Execution Path History（僅 path evidence，不含 rationale 或已驗證快取）。
+- D：C + Validated Execution Path Registry / fast path。
+- E：D + structured Decision Rationale + predicted-vs-observed feedback + experience-aware policies（完整 CEAA candidate）。
+
+**控制與消融**：另外移除 local memory、rationale、path validator、fast path、version/permission matching、lightweight router、fallback；固定 retry/policy 以避免安全差異干擾比較。分層檢查 package selection error、local selection error、跨 package coordination error、unavailable skill、distribution shift、new environment、false-positive match、cache staleness。候選方案與決策理由不得包含隱藏推理；所有評估以 externally validated outcome 為準。
+
+**工作負載**：Exact / Near-similar / Generalized，1→N 相同 task-family 序列、不同 package 數量與 skill 數量（含跨包任務）；新型與 high-risk 任務獨立分析。train/dev/holdout 按 task family 和時間切分，避免 Experience Leakage。每次執行留下 trace、rationale summary、decision model/version、candidate IDs、predicted outcome、actual outcome、cache hit/miss、lookups、validation 與全部成本。
+
+**主要指標**：end-to-end Task Success、validated plan reuse correctness、package/skill/path selection accuracy、error propagation、routing tokens、global/local routing latency、p50/p95 total latency、fast-path hit rate、hit/miss fallback cost、TTFT（如有）、total tokens、Cost per Successful Task、rationale recording overhead、regression/unsafe reuse rate、cold-start / break-even reuse count、樣本數與置信區間。分析決策記錄長度與資訊價值，禁止僅因 candidate count 減少就宣稱加速。對照最短可行流程與 no-package baseline。
+
+**Phase 1 限制**：只準備可追溯資料契約與可測試的 Telemetry foundation，不要求這些實驗在 Phase 1 完成。Phase 2 PoC 驗證 replay / fast-path contract，Phase 3 正式測試成效。
+
 
 ### Failure-driven Self-Recovery / Reliability Evolution — Experiment Design（新增）
 

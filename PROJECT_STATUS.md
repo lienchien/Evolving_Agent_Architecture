@@ -101,6 +101,17 @@ Raw History
 
 ---
 
+## Skill Packages / Decision Evidence / Validated Execution Paths — Planned（2026-10-20）
+
+設計已補充至 System Design v1.9（§2.9）及 DEV_PLAN。**尚未實作** Package Router、Package-local Decision、Path Registry、LLM Decision Rationale generation 或 Experience Fast Path。這是對既有 Manager Decision / Telemetry / Skill Tiering 的整合，不代表 Phase 1 工作已完成。
+
+- Phase 1：先完成現有 Telemetry runtime wiring，為 global/local decision、parent-child step/path、optional rationale/expected-vs-observed evidence 定義 backend-neutral contract 與必要測試；不要求自動產生理由或 Package 執行。
+- Phase 1.5：接真實 provider、security policy、sandbox、audit/version。
+- Phase 2：package-scoped experience、Manifest/Registry、受控 validated path fast-path PoC。
+- Phase 3：flat vs hierarchical vs history vs fast-path vs rationale-aware Decision 的正式實驗、消融和 Cost per Successful Task 分析。
+- 更遠期：受治理的 Package split/merge / adaptive organization。
+
+
 ## Manager Decision Layer — Future Design Update
 
 Manager / hierarchical routing 的 future design 已加入 **Decision-first, Reasoning-on-demand**：高頻、有限候選的 routing / gating / scoring 優先交給 `DecisionModelInterface`，只有低 confidence、衝突、新穎或高風險情境才升級到 reasoning LLM / stronger model。

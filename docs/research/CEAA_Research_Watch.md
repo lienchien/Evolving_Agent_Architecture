@@ -301,3 +301,46 @@ Gateway 使用 WebSocket 控制平面，客戶端連線時宣告角色、scopes�
 ### 證據與限制
 
 官方文件提供可核對的權限設計，**不代表 OpenClaw 或 CEAA 已在攻擊測試中達成特定安全指標**。協定會演進，需在重現時鎖定 commit / version。官方明確限制 operator scopes 不是強多租戶隔離，CEAA 仍須實作獨立的 tenant/owner/scope 資料治理與 Sandbox。上述 Baseline 和 CEAA 對照均為待實驗驗證的研究規劃；**本次僅新增研究筆記，不修改正式 v1.9 架構或程式碼**。
+
+
+---
+
+## 2026-10-21 — Context Rot：長上下文可靠性與 CEAA 按需記憶路由
+
+- **原文**：[Context Rot: How Increasing Input Tokens Impacts LLM Performance](https://www.trychroma.com/research/context-rot)
+- **作者**：Kelly Hong、Anton Troynikov、Jeff Huber（Chroma）。
+- **原文發表**：2025-07-14；**研究收錄**：2026-10-21。
+- **可重現程式碼**：https://github.com/chroma-core/context-rot
+- **研究優先級**：**High**（Context Engineering、Package-local Experience Memory、Experience-aware Routing、Skill Complexity Compression）。
+- **證據層級**：Chroma 原始技術報告與公開實驗程式碼；非 CEAA 實驗結果。
+
+### 核心貢獻（原文研究事實與作者主張）
+
+Chroma 評估 18 個 LLM，涵蓋 GPT-4.1、Claude 4、Gemini 2.5、Qwen3 等，使用擴展 Needle-in-a-Haystack（語意匹配與干擾內容）、LongMemEval 與 Repeated Words 等控制實驗。作者觀察到：隨輸入 token 增加，模型表現可能下降且非均勻變化；即使相關資訊仍在上下文內，也不保證可靠使用。研究強調上下文的選取、呈現方式與干擾資訊的重要性，不能只以 context-window 最大長度或簡單詞彙匹配 NIAH 成績推定實務可靠性。這是受控任務上的觀察，並非證明所有模型在所有任務上皆單調下降。
+
+### 與 CEAA 的關聯（以下為待驗證研究推論，非原文結論）
+
+1. **Skill Tree × RAG / Context Budget**：Manager 只讀 Skill metadata；選定 Package 後按需讀取 Skill contract、必要參考資料及歷史經驗，避免全量注入。
+2. **Package-local Experience Memory**：以任務類型、Skill 版本、成功判準及 failure taxonomy 檢索局部經驗；同時設計跨 Package 搜尋與 fallback，防止局部記憶遺漏關鍵證據。
+3. **Experience-aware Routing**：比較檢索到的 execution path 是否有助於路由正確率與端到端任務成功，而非只計算節省的 token。
+4. **Skill Complexity Compression**：將 context 壓縮和能力維持分開驗證；較短 prompt 不必然有較高準確率，也可能因資訊遺失而降低成功率。
+5. **Governance / Observability**：記錄 context selection policy、retrieved memory IDs、token budget、decision trace、驗證結果、重試與總成本；避免在 trace 中儲存敏感原文與 token。
+
+### 建議 Baseline / Experiment / Ablation
+
+- **B0 Full Context**：相同模型、任務與工具下，注入全部相關 Skill 文件與歷史經驗（受模型 context limit 約束）。
+- **B1 Top-K RAG**：全域語意檢索 Top-K；固定 token budget。
+- **B2 Package-local Retrieval**：先選 Package，再在局部 Skill / Experience Memory 中檢索。
+- **B3 Experience-aware Retrieval**：B2 + 成功／失敗路徑、版本與驗證結果排序；必要時 fallback 全域檢索。
+- **B4 Execution Path Fast Path**：B3 + 只在任務匹配與風險門檻通過時重用已驗證路徑，否則重新規劃。
+- **Ablation**：移除 Package 分流、Experience Memory、failure-aware ranking、global fallback、context budget、fast-path validator；另外在固定有效資訊下逐步增加無關與語意相近干擾內容。
+- **KPI**：Task Success、evidence retrieval recall、route accuracy、hallucination / wrong-tool rate、context tokens、P50/P95 latency、retry rate、Cost per Successful Task、Capability Retention Rate、regression rate；將索引、檢索、路由、驗證及失敗重試成本計入總成本。
+- **實驗控制**：固定模型版本、工具與任務集；控制 context token budget、資訊位置、干擾密度及檢索品質；採多次重複、分層難度與獨立 holdout。檢查縮短 context 是否只是刪掉困難證據，以及 Package routing error 是否抵銷收益。
+
+### 證據與限制
+
+原文是受控長上下文測試，**未直接評估 CEAA、Skill Package、Experience-aware Routing 或 Cost per Successful Task**。不同模型、任務、語意干擾與上下文位置的效應可能不同；按需檢索可能造成資訊遺失或額外延遲。CEAA 需透過獨立端到端任務與成本量測驗證，不能把 Context Rot 直接當成架構優越性的證據。
+
+### 建議下一步
+
+優先設計 **Context Budget × Memory Scope × Routing Policy** 的 factorial experiment，先驗證 B0–B2 的成功率／成本曲線，再加入 B3–B4 與安全回退。**僅為研究筆記，不修改正式 v1.9 架構文件或實作。**

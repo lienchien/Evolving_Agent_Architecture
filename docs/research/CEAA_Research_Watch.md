@@ -344,3 +344,50 @@ Chroma 評估 18 個 LLM，涵蓋 GPT-4.1、Claude 4、Gemini 2.5、Qwen3 等，
 ### 建議下一步
 
 優先設計 **Context Budget × Memory Scope × Routing Policy** 的 factorial experiment，先驗證 B0–B2 的成功率／成本曲線，再加入 B3–B4 與安全回退。**僅為研究筆記，不修改正式 v1.9 架構文件或實作。**
+
+
+### CEAA 獨立實驗章節：Direct LLM Tool Planning vs Experience-aware Hierarchical Decision
+
+- **提出日期**：2026-10-21；**狀態**：研究設計／尚未執行；**優先級**：High。
+- **研究問題**：相同使用者問題、模型與工具條件下，讓單一 LLM 自主讀取工具清單、選擇工具並規劃流程，或先由 CEAA 決策層根據歷史執行經驗選擇 Package、執行計畫與工具，何者具較高的端到端回覆可靠性？效率與成本是否有取捨？
+- **研究假設 H1**：Experience-aware Hierarchical Decision 對重複或相似任務可能提高 end-to-end Task Success / Answer Groundedness，並減少錯誤工具呼叫與不必要 Context。
+- **競爭假設 H0／風險**：額外決策層可能誤路由、受過時經驗影響、增加延遲；對新穎或跨領域任務可能不優於直接 LLM。兩者須實測，不預設 CEAA 勝出。
+
+#### 比較組別（固定同一基礎 LLM、可用工具集合、工具版本、任務與權限）
+
+| Group | 設計 | 用途 |
+| --- | --- | --- |
+| A Direct LLM Agent | 直接給使用者問題與全部可用工具 metadata，由 LLM 自主選工具、規劃、必要時重試；不提供歷史路由經驗 | 使用者提出的直接決策 baseline |
+| B Direct LLM + Retrieved Experience | 同 A，但可檢索與 C 相同的歷史紀錄及品質標籤 | 拆出「有經驗」本身的效果，避免 C 因獨享資訊取得不公平優勢 |
+| C Hierarchical Decision (no memory) | Manager/Package Decision 分流、選擇工具及執行計畫，但不使用歷史經驗 | 拆出分層與縮小工具／Context 空間的效果 |
+| D CEAA Experience-aware Decision | C + 基於過往已驗證執行路線與失敗經驗排序，按需載入 Skill／工具、風險檢查及失敗 fallback | 主要實驗組 |
+
+#### 執行流程
+
+1. 建立任務基準：至少涵蓋單工具、複數工具、有相依順序、工具功能重疊、跨 Package、需要澄清、未知工具／未見任務、過時歷史經驗及工具失敗等類型；分層報告，不用單一總分掩蓋失敗。
+2. 各組接受**相同使用者輸入**、後端資料快照與可用能力；區分「可發現工具集合」與「實際放入 prompt 的工具描述」，記錄兩者差異。使用相同驗證器、安全規則、最大呼叫次數與任務 deadline。
+3. 設定相同模型版本與推理參數；每題多個隨機種子／重複執行，隨機化測試順序，排除外部 API 狀態波動；訓練／記憶庫與保留測試集切分，避免答案或路線洩漏。
+4. 記錄路由候選、路由原因摘要、選定 execution plan、Skill/tool ID 與版本、檢索記憶來源、上下文 token、每次工具輸入與輸出（敏感資訊去識別化）、最終答案及獨立評估結果。
+5. **雙層檢驗**：工具使用是否正確、任務產物／答案是否正確且有證據；HTTP 200／工具呼叫成功不得直接算 Task Success。
+6. C/D 若無合適 Package、信心不足、記憶失效或驗證失敗，允許明確定義的 global search / replan fallback；fallback 次數及成本必須列入。
+7. 先在可重播 mock tools 與固定資料集測試，再做受控真實工具任務；任何具副作用操作一律於沙盒或經授權環境，全部組別維持相同政策閘門。
+
+#### 主要衡量指標與統計
+
+- **Primary：End-to-end Task Success Rate**（獨立 ground truth／artifact verifier；必要時盲評）、**Answer Reliability**（正確、完整、引用證據一致；同時記錄不確定時適當拒答）。
+- **Secondary：Tool Selection Accuracy**、Invalid/Wrong Tool Call Rate、Plan Validity、Tool Call Count、Retry/Fallback Rate、Missing Evidence Rate、Hallucination Rate、Context Tokens、P50/P95 End-to-end Latency。
+- **Efficiency：Cost per Successful Task = 全部執行／規劃／檢索／驗證／重試成本總和 ÷ 成功任務數**；另列記憶建置、維護與 amortized cost，零成功組須標示未定義，不可宣稱為零。
+- **分析方法**：依任務類型分層，對同題配對成功／失敗做差異比較與信賴區間（例如配對 bootstrap；二元成功可用 McNemar test），並報告延遲與成本分布。預先規定最小有意義改善門檻，不僅比較平均數。
+
+#### 關鍵消融與因果歸因
+
+- D 移除 Experience Memory；D 移除 Package Decision；D 移除 validated path reuse；D 移除 failure-aware ranking；D 移除 fallback；比較歷史資訊過時／錯誤時的耐受性。
+- **Context-matched comparison**：A/B/C/D 限定相近 token budget；另做 context-size sweep 與相同資訊量條件，分辨收益是來自少讀資訊、改變路由流程還是歷史經驗品質。
+- **Cold-start vs Warm-start**：新任務無歷史、相似舊任務有歷史；另比較跨領域／跨 Package 轉移。記憶庫不得包含 holdout 標準答案或測試執行軌跡。
+- **複雜度 × 工具數量**：測試工具由少到多、描述相似性升高時的失敗率，評估「縮小決策空間」是否確實改善工具挑選。
+
+#### 成功判準與研究限制
+
+若 D 相較 A 在 holdout 上有可重現、具實務意義的任務成功率／答案可靠性改善，且對 B、C 仍有增量貢獻，才能支持「歷史經驗導向的分層決策」具有獨立價值。若只在 D 對 A 勝出而不勝 B 或 C，應分別歸因為資訊取得或分層優勢；若複雜度較高任務表現反轉，採用按任務難度動態選擇路由策略的後續假設。Context Rot 只提供研究動機，**不是 CEAA 分層架構有效性的既有實驗證據**。
+
+**治理邊界**：本章是研究方案，尚無數據或結論；不得自動修改正式 CEAA v1.9 架構文件、程式與部署設定。正式採納須由使用者審核。

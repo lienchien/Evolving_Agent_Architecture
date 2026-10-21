@@ -351,6 +351,7 @@ Chroma 評估 18 個 LLM，涵蓋 GPT-4.1、Claude 4、Gemini 2.5、Qwen3 等，
 - **提出日期**：2026-10-21；**狀態**：研究設計／尚未執行；**優先級**：High。
 - **研究問題**：相同使用者問題、模型與工具條件下，讓單一 LLM 自主讀取工具清單、選擇工具並規劃流程，或先由 CEAA 決策層根據歷史執行經驗選擇 Package、執行計畫與工具，何者具較高的端到端回覆可靠性？效率與成本是否有取捨？
 - **研究假設 H1**：Experience-aware Hierarchical Decision 對重複或相似任務可能提高 end-to-end Task Success / Answer Groundedness，並減少錯誤工具呼叫與不必要 Context。
+- **研究假設 H2（Decision Stability）**：在同題多次重跑或同類任務反覆執行時，CEAA 的 validated path reuse 可能降低不必要的規劃與工具選擇變異；但穩定不代表正確，必須與任務成功率及適應新情境的能力共同驗證。
 - **競爭假設 H0／風險**：額外決策層可能誤路由、受過時經驗影響、增加延遲；對新穎或跨領域任務可能不優於直接 LLM。兩者須實測，不預設 CEAA 勝出。
 
 #### 比較組別（固定同一基礎 LLM、可用工具集合、工具版本、任務與權限）
@@ -379,11 +380,26 @@ Chroma 評估 18 個 LLM，涵蓋 GPT-4.1、Claude 4、Gemini 2.5、Qwen3 等，
 - **Efficiency：Cost per Successful Task = 全部執行／規劃／檢索／驗證／重試成本總和 ÷ 成功任務數**；另列記憶建置、維護與 amortized cost，零成功組須標示未定義，不可宣稱為零。
 - **分析方法**：依任務類型分層，對同題配對成功／失敗做差異比較與信賴區間（例如配對 bootstrap；二元成功可用 McNemar test），並報告延遲與成本分布。預先規定最小有意義改善門檻，不僅比較平均數。
 
+#### 決策穩定性（Decision Stability / Execution Consistency）
+
+此維度作為**正式評估項目**，用以量化相同條件下決策重現程度，而不是要求回答文字完全一致。每一個 benchmark task 在**固定使用者輸入、模型與版本、工具清單／版本、資料快照、權限與記憶快照**下，每組重跑建議至少 20–30 次（依試點變異與功效分析調整），並記錄 seed（若 API 支援）、prompt 與檢索版本、plan、tool call trace、結果正確性。另在相似但輸入條件改變的任務上測試**適應性**，不可把應有的策略改變計成失穩。
+
+- **Plan Consistency**：將執行計畫標準化為目的／相依步驟／必要檢查的等效類別，測量同題重跑落在相同或功能等效計畫的比例。
+- **Tool Selection Consistency**：比較工具選擇集合與必要呼叫順序的一致程度（考慮可交換步驟及功能等效工具）；同時回報正確工具選擇率。
+- **Execution Path Entropy**：將完成的執行路線按功能等效規則分群，計算 `H(P) = -Σ p_i log₂(p_i)`；越低表示路線越集中，**不代表越正確**。可輔以最常見路線占比及不同類別數量。
+- **Answer Consistency**：針對相同證據快照，比較可驗證事實、數值、結論及必要引用的一致率，避免以純文字相似度代理正確性。
+- **Consistency × Correctness**：額外呈現「穩定且正確」、「穩定但錯誤」、「不穩定但正確」與「不穩定且錯誤」；各組分別報告 Task Success Rate、錯誤路徑重複率與信賴區間。
+- **Adaptation / Stale-memory Robustness**：當工具 schema、任務約束或來源資料改變時，量測系統是否適當改選路線及觸發 fallback；避免經驗重用造成穩定的系統性錯誤。
+- **Learning Curve**：對 cold-start、5／20／50 筆合格歷史案例（依可用資料調整）的 memory snapshot，追蹤各穩定性指標、成功率、平均工具呼叫量及 Cost per Successful Task，禁止把同題 holdout 答案回灌記憶庫。
+
+**主張成立條件**：只有在正確率／可靠性不下降且決策變異減少、總成本可接受時，才視為有益的穩定性提升；優先報告「正確路徑的一致性」，而非盲目追求最低 entropy。
+
 #### 關鍵消融與因果歸因
 
 - D 移除 Experience Memory；D 移除 Package Decision；D 移除 validated path reuse；D 移除 failure-aware ranking；D 移除 fallback；比較歷史資訊過時／錯誤時的耐受性。
 - **Context-matched comparison**：A/B/C/D 限定相近 token budget；另做 context-size sweep 與相同資訊量條件，分辨收益是來自少讀資訊、改變路由流程還是歷史經驗品質。
 - **Cold-start vs Warm-start**：新任務無歷史、相似舊任務有歷史；另比較跨領域／跨 Package 轉移。記憶庫不得包含 holdout 標準答案或測試執行軌跡。
+- **Stability ablation**：比較 D 關閉 validated path reuse、固定／擾動 experience retrieval 順序、注入過時經驗、移除決策層；觀察一致性提升是否只是凍結同一條錯誤路徑。
 - **複雜度 × 工具數量**：測試工具由少到多、描述相似性升高時的失敗率，評估「縮小決策空間」是否確實改善工具挑選。
 
 #### 成功判準與研究限制

@@ -354,6 +354,16 @@ Phase 1.5 已正式加入研究實驗，不只驗證 infrastructure 與 feature 
 
 ---
 
+## Graphify Parallel Phase 1.5 Tooling (Feature Branch)
+
+Graphify has been added as an **optional developer-facing PoC**, running locally in `--code-only` mode for CEAA repository structure and dependency exploration. The feature branch adds [docs/GRAPHIFY_CODE_INTELLIGENCE_POC.md](docs/GRAPHIFY_CODE_INTELLIGENCE_POC.md), `scripts/graphify_poc.py`, and ignores `graphify-out/`.
+
+Graphify is **not installed or verified in the actual CEAA execution environment**, and no `CodeKnowledgeInterface` / `GraphifyAdapter`, runtime coupling, model benchmark, security gate or Agent decision integration has been implemented.
+
+Verification to do: run Graphify on the repo, inspect graph versions, manually validate code dependencies, compare with grep/read baseline, confirm worktree/index freshness and data privacy. Main/Audit, CEAA governance and telemetry remain authoritative. This is **not** a Phase 1.5 exit requirement.
+
+---
+
 ## Optional Future Technology Candidates
 
 | Candidate | Intended role | Timing / dependency | Status |

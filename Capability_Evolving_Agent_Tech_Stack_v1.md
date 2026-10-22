@@ -425,6 +425,18 @@ Builder 不綁單一 framework，並只允許在 isolated Git/worktree + sandbox
 
 ---
 
+### Graphify — Parallel Code Intelligence PoC (Optional)
+
+- Open-source candidate: https://github.com/Graphify-Labs/graphify; offline code-only AST extraction into a local queryable repository graph.
+- Pilot now as developer tooling: `uv tool install graphifyy`, then `graphify extract . --code-only`; see [Graphify PoC guide](docs/GRAPHIFY_CODE_INTELLIGENCE_POC.md).
+- Later expose via `CodeKnowledgeInterface` / `GraphifyAdapter` as an **optional** context retrieval input to Pi/OpenCode Builders; not an Agent / Experience Graph or a replacement for PostgreSQL.
+- Keep generated `graphify-out/` ignored; no automatic document/media semantic extraction or Graphify Cloud connection for CEAA proprietary code without explicit approval.
+- Treat graph edges as uncertain evidence; require graph/schema/revision freshness and preserve Main/Audit independent verification. Graphify is not a CI gate or production runtime dependency.
+
+**Status: opt-in PoC source/tooling only; not installed, benchmarked or wired into runtime.**
+
+---
+
 ## 4A.2 Secure Evolution Gate
 
 安全驗證採兩層 evidence：

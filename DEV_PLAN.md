@@ -294,6 +294,18 @@ Add selective specialist diagnosis (Trace / Root Cause / Tool/API / Skill / Envi
 以 longitudinal telemetry 提出 Package split/merge、dynamic membership、跨 Package Skill reuse、adaptive Package organization 候選；所有變更需版本化、獨立驗證、權限審核與人工核准（適用時）。避免自動修改 production package 組織。
 
 
+## Future Research — Agent Scaling Efficiency（延期；不影響當前 Phase 1）
+
+已將 **Experiment F — Agent Scaling Efficiency & Aggregate Token Demand** 加入 [Future Vision](docs/AGENT_PLATFORM_FUTURE_VISION.md) 和 [Token／費用研究量測](docs/TOKEN_COST_RESEARCH.md)：
+
+- **Phase 3：** 沿用既有每成功任務 Token／Cost baseline 與 Skill／execution path reuse 研究，先驗證單任務節省率和品質。
+- **Phase 3 後期：** 使用既有 telemetry、離線 trace replay 與合成流量情境研究總 Token 消耗對任務量／使用者數／Agent 活躍度的敏感性。結果需標記 *simulated*，不能與真實 token usage 混淆。
+- **更遠期：** 只有取得足夠硬體或雲端預算後，才進行多 Agent／多租戶大規模並行負載與容量驗證。
+
+**Status: Deferred / Design Only / Not Implemented / Not Evaluated.** 目前本機硬體不適合大型並行實測。不可藉此提前增加 Phase 1 / Phase 1.5 的 scope 或退出條件。
+
+---
+
 ## Manager Agent Decision Layer — Planned
 
 Manager / hierarchical routing 的後續實作正式加入 Decision Model abstraction，但不改變目前 Phase 1 / Phase 1.5 核心退出條件。

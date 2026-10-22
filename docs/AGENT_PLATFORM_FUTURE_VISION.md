@@ -4822,6 +4822,21 @@ For illustration only: 60% fewer tokens/task coupled with 3× completed tasks yi
 
 **Exit evidence for a later execution decision:** representative task mixes and trusted telemetry, reproducible static-agent baselines, controlled replay scenarios and uncertainty ranges, comparable quality/success, agreed budget / concurrency target, and sufficient load-test infrastructure. Keep real-market GPU supply/demand inference explicitly **out of scope**.
 
+
+##### Experiment F.1 — Cloud–Edge Autonomous Operations Scenario (Deferred)
+
+Extend Experiment F with **edge devices, on-prem inference, and cloud escalation** as separate workload segments, rather than assuming every edge event creates a data-center GPU token request. Scope includes 24/7 industrial monitoring, robots, vehicles, device health checks, autonomous diagnosis, and controlled remediation.
+
+Research questions:
+
+1. As edge endpoints scale, how do local inference events, cloud escalations, autonomous repair workflows, and coordination overhead change?
+2. Does higher edge autonomy **substitute for** centralized inference or **induce** new end-to-end workloads? Estimate both mechanisms and net cloud demand under explicit scenario assumptions.
+3. How do edge decision thresholds, local-model accuracy, network availability, retry rates, security gates, and privacy requirements affect successful resolutions and compute cost?
+
+Track separately: number of devices / active endpoints, edge events/device/day, locally resolved event share, escalation rate, cloud LLM calls/tokens per escalation, edge CPU/GPU/NPU utilization and energy when measured, fleet-wide cost, task success, latency, and failure/retry counts. Distinguish **edge inference operations and compute units** from **cloud provider-reported tokens**; never directly convert a token count into aggregate GPU purchase demand without an accelerator, throughput, and deployment model.
+
+Start with a small representative task/trace sample and *synthetic* fleet-size / event-rate scenarios (L2); real fleet-wide edge/cloud concurrency and device-energy tests belong to future L3, subject to sufficient devices, monitoring, load-generation infrastructure, and budget. No Phase 1/1.5 scope change; no claim that exponential scaling or net cloud-GPU growth is established.
+
 ### Development Position
 
 This direction should be treated as a **future primary development line**, but it must not destabilize the current CEAA research scope.

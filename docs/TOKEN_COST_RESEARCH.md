@@ -104,3 +104,17 @@ Starlette／AnyIO `BlockingPortal` alias 棄用。
 
 Phase 1.5 應讓真實 provider adapter 回傳原生 usage 與可靠價格；Phase 3 再執行完整
 baseline／模型組合／相似度／長序列研究，檢驗節省是否以成功率或維護成本為代價。
+
+## Future Experiment F — Agent Scaling Efficiency / Aggregate Token Demand（延期）
+
+**狀態：僅規劃，尚未實作或驗證。** 對應 [Future Vision](AGENT_PLATFORM_FUTURE_VISION.md) 的 Experiment F。此研究不得新增 Phase 1／1.5 退出門檻，也不要求現有單機執行大規模並行 Agent 壓力測試。
+
+- **L1 單任務（Phase 3 既有研究）**：固定相同任務、品質與成功定義，比較 static-agent 和 CEAA 的 provider-reported token、Cost per Successful Task、延遲與重試。
+- **L2 總量情境（後期離線研究）**：用匿名化歷史 trace replay 與合成工作負載，改變使用者數、每日任務數、Agent 活躍度、任務難度分布及路徑重用率，推演總 Tokens／日與成本；標記為**模擬值**，不可冒充真實使用量。
+- **L3 真實規模（硬體／雲端資源充足後）**：擴充負載測試至實際並行請求、多 Agent 與多租戶，衡量 throughput、p95 latency、排隊深度、資源利用率、成功率、可靠性、Tokens／日與總成本。
+
+簡化關係式：\`Aggregate Tokens = Σ(Completed Tasks × Measured Tokens per Successful Task)\`；假設相同任務組成及品質，單任務節省率為 \`s\`，總工作量成長倍率為 \`g\`，則總 Token 倍率近似 \`g × (1 − s)\`。這是條件式情境模型，無法單憑效率提升推論真實市場採用率或 GPU 採購量。
+
+資料完整性沿用本文件現有規範：不得推估缺失的 provider usage；模型差異、cached/input/output/reasoning tokens、任務成功率及成本須分層比較。L2 合成用量應保存在獨立 scenario/replay dataset，與實際 telemetry 分離。
+
+**執行門檻：** Phase 3 真實 baseline／完整 usage 與驗證過的成功品質先成立；L3 另須可重現的負載架構、資源監測、預算與足夠硬體或雲端配額。現階段不購置額外 GPU，也不啟動大規模實驗。

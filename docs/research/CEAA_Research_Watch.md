@@ -407,3 +407,56 @@ Chroma 評估 18 個 LLM，涵蓋 GPT-4.1、Claude 4、Gemini 2.5、Qwen3 等，
 若 D 相較 A 在 holdout 上有可重現、具實務意義的任務成功率／答案可靠性改善，且對 B、C 仍有增量貢獻，才能支持「歷史經驗導向的分層決策」具有獨立價值。若只在 D 對 A 勝出而不勝 B 或 C，應分別歸因為資訊取得或分層優勢；若複雜度較高任務表現反轉，採用按任務難度動態選擇路由策略的後續假設。Context Rot 只提供研究動機，**不是 CEAA 分層架構有效性的既有實驗證據**。
 
 **治理邊界**：本章是研究方案，尚無數據或結論；不得自動修改正式 CEAA v1.9 架構文件、程式與部署設定。正式採納須由使用者審核。
+
+
+---
+
+## 2026-10-22 — NVIDIA OpenShell / Sentry：獨立於 Agent 的執行期治理與硬體隔離
+
+- **官方公告**：[NVIDIA Launches OpenShell Reference Architecture for Safe AI Agents](https://nvidianews.nvidia.com/news/openshell-reference-architecture)
+- **技術原文**：[Inside NVIDIA Sentry: Secure AI Agents at Runtime](https://developer.nvidia.com/blog/inside-nvidia-sentry-secure-ai-agents-at-runtime/)
+- **技術文章作者**：Ofir Arkin、Ariel Kit、Itay Ozery（NVIDIA）；**原文日期**：2026-10-21；**研究收錄日期**：2026-10-22。
+- **來源／證據層級**：NVIDIA 官方公告與設計解說；為供應商架構及能力宣稱，非獨立安全測試或 CEAA 效能實驗。
+- **研究優先級**：**High**（Governance、Policy Enforcement、Independent Validation、Execution Observability、Manager/Tool Authority）。
+
+### 核心貢獻：來源事實與供應商主張
+
+NVIDIA 公布 OpenShell 企業 Agent 參考架構，結合開源 OpenShell 隔離執行環境、Vera CPU 執行 Agent harness、Vera Rubin 推論資源及 BlueField-4 DPU 上的 Sentry 安全框架。Sentry 將部分觀測與政策執行放在 Agent／Host 以外的隔離信任域，形成 defense in depth。NVIDIA 的技術文件將以下列為設計元件：
+
+1. **DOCA Flow + DOCA Tower**：L4/L7 流量管制、Proxy、MCP/A2A/API 連線檢查。
+2. **OPA / Rego**：以身分、操作、資源與執行期證據判定是否授權；與 OpenShell policy 結合。
+3. **DOCA Argus**：從隔離層觀測進程、容器、執行狀態及記憶體等 runtime context。
+4. **Workload Identity 與安全 Telemetry**：整合 SPIFFE/SPIRE，產生 tamper-evident / attested activity record，供稽核與事件鑑識。
+5. **Inline / Out-of-band Classification**：分析工具請求／回覆與 Agent 行為；可能阻擋禁止的操作及敏感資料外洩。
+
+NVIDIA 宣稱可進行毫秒級硬體隔離，以及低延遲本地政策判定；這些是**供應商宣稱而非已獨立量測的通用效能保證**。完整 Sentry 方案預計 2027 年初推出；**已公開的 OpenShell 軟體 ≠ 現在即可取得完整 BlueField-4 Sentry 硬體方案**。
+
+### 與 CEAA 的直接關聯（研究推論，非 NVIDIA 結論）
+
+- **Manager/Decision Agent 與權限分離**：Decision Agent 僅提出 Plan / Tool Request；獨立 Policy Enforcement Point 依 Skill ID、Agent identity、tool scope、資料分類與操作風險判定是否允許執行。不可讓 Manager 自行核准自己的高風險動作。
+- **Skill Governance / Versioning**：將 Skill version、允許工具、前置條件、批准狀態與風險等級綁定 Policy Decision；重用歷史 execution path 也必須重新檢查當下授權與環境完整性。
+- **Execution Telemetry**：建立跨 Manager → Package → Skill → Tool → Validator 的 trace 與獨立 audit event，追蹤政策阻擋、風險警示、fallback 與結果。
+- **Reliability ≠ Security**：同一 Agent 即使正確完成任務仍可能越權。CEAA 的 Task Success、Decision Stability 與 Policy Compliance 必須分開量測。
+- **部署選項**：先以一般 CPU／容器上的 policy sidecar、OPA、network proxy、OpenTelemetry 與 sandbox 建立硬體無關的 PoC；未來再比較 DPU out-of-band enforcement，避免將 CEAA 與專有硬體綁死。
+
+### 可借鑑的方法與最小設計
+
+定義 `DecisionProposal(task_id, agent_id, skill_id, skill_version, tool_id, action, resource, risk_tier, context_hash)`；每項執行前由獨立 Policy Enforcement Point 確認「身分／資源／動作／權限／版本／風險」並留下 `PolicyDecision(allow|deny|require_approval, policy_version, reason_code, trace_id)`。禁止 Agent 直接改寫政策及稽核紀錄；對 secrets、個資、模型輸入輸出及 trace 採最小化存取與遮罩。實際 API/Tool 權限仍須由可信任執行層強制落實，不能只用 Prompt 或日誌取代。
+
+### 建議 Baseline / Experiment / Ablation
+
+- **B0**：Direct LLM tool planning + 沙盒內統一基礎權限規則；不加入額外語意 policy layer。
+- **B1**：CEAA Manager/Package routing + 相同基礎權限規則（隔離路由設計的效果）。
+- **B2**：B1 + 獨立 software policy gateway / OPA + versioned Skill permissions + audit trace。
+- **B3**：B2 + runtime context-aware policy、異常偵測、授權重驗與可測試的 fail-closed quarantine（軟體 PoC）。
+- **Optional B4**：若未來可取得獨立硬體觀測方案，再比較 host-independent enforcement；不作為初版 CEAA 驗證前提。
+- **Ablation**：分別移除獨立 policy enforcement、per-tool scopes、版本驗證、runtime context、監測／告警、不可竄改稽核、approval gate；在一致任務集上衡量對安全與任務可靠性的影響。
+- **Fault-injection**：未授權 MCP tool call、越權子 Agent、竄改工具描述、prompt injection、過期憑證、錯誤版本 Skill、重播過時的 validated path、資料外洩嘗試、審核逾時與 sandbox escape 模擬；僅限隔離測試環境。
+- **Evaluation**：Policy Violation Rate、Unauthorized Action Block Rate、False Allow / False Block、Containment Latency、Trace Completeness、Task Success Rate、Correct Decision Consistency、P95 Latency、Governance Overhead、Cost per Successful Task。區分「違規企圖數」與「真正成功違規數」。
+- **研究控制**：保持任務、模型、工具、權限意圖、政策與資料快照一致；使用 holdout 攻擊與正常業務案例，避免僅因封鎖所有工具而虛增安全分數；紀錄人工作業成本與服務中斷影響。
+
+### 證據、限制與建議優先序
+
+本文是 NVIDIA 產品架構與技術解說，**不是完整安全評估報告**。毫秒級阻擋、監測準確度、誤判率與總成本尚需獨立驗證；部分能力依賴 BlueField-4 和 NVIDIA 軟體堆疊，可能有相容性、供應與採購限制。CEAA 首先驗證**獨立授權檢查與可稽核執行**的軟體方案，再決定是否研究硬體隔離；評估必須同時觀察安全性、任務成功率、決策穩定性及效能成本。
+
+**僅新增研究筆記與候選實驗，不修改正式 v1.9 架構文件或實作程式；後續架構變更須使用者核准。**

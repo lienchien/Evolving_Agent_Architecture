@@ -4792,6 +4792,36 @@ vs
 Experience-Guided Self-Organizing Hierarchy
 ~~~
 
+#### Experiment F — Agent Scaling Efficiency & Aggregate Token Demand (Deferred)
+
+**Status: Future research / design only; not implemented or evaluated.** This experiment is deliberately deferred beyond the current Phase 1 / Phase 1.5 exit criteria. Large-scale concurrent execution requires additional infrastructure or cloud capacity and must not be represented as feasible on the present local hardware.
+
+**Research question:** Can CEAA reduce tokens and cost *per successful task* through Skill / execution-path reuse, historical decisions, and model routing while *aggregate* token consumption rises as user adoption, task frequency, workload diversity, or autonomous-Agent activity expand?
+
+Distinguish three levels rather than treating token optimization and total compute demand as contradictory:
+
+| Level | Question | Prerequisite / execution strategy |
+| --- | --- | --- |
+| L1 — Micro efficiency | For the same tasks and quality threshold, how much does CEAA reduce tokens, cost, latency, and retries per successful task? | Align with existing Phase 3 baseline / Exact–Near–Generalized reuse evaluations. |
+| L2 — Aggregate workload scenarios | How does total token consumption respond to controlled changes in users, tasks/user, Agent activity, reuse rate, and task mix? | Offline trace replay, parameterized synthetic arrivals and numerical simulation; feasible before heavy load testing, but simulations are **not** observed adoption or GPU-demand evidence. |
+| L3 — Real concurrent scale | At increasing real user/Agent concurrency, what are the throughput, p95 latency, quality, utilization, queue depth, and total token/cost limits? | After proven L1/L2 validity and when distributed workers / load generators and sufficient hardware or cloud budget exist; deferred. |
+
+**Comparison:** static / LLM-per-task baseline vs CEAA reuse / package-local decision / model routing, at **identical completed-task workloads**, followed by clearly labelled *scenario* analyses with larger workload volumes. Control task difficulty mix, success definition, provider/model/version, price assumptions, cache behavior and retries.
+
+**Minimum measurements:** completed tasks, unique users/tenants (only when available and privacy-safe), task arrivals/user/day, Agent executions and LLM calls/task, reuse/path-hit rate, input/output/reasoning/cached tokens (provider-reported where available), cost per successful task, total tokens/day, total cost/day, success/quality, latency p50/p95, throughput, failure/retry/fallback rate. Clearly separate measured provider usage, deterministic trace replays and synthetic extrapolation. Do not invent unavailable tokens or imply token count maps one-to-one to GPU demand across models / accelerators.
+
+**Accounting:**
+
+\`\`\`text
+Aggregate Tokens = Σ_workload_segment (Completed Tasks × Measured Tokens per Completed Task)
+Relative aggregate demand = Workload expansion factor × (1 − per-task token saving rate)
+Break-even expansion factor = 1 / (1 − saving rate), for saving rate < 1
+\`\`\`
+
+For illustration only: 60% fewer tokens/task coupled with 3× completed tasks yields 1.2× aggregate tokens, all else held equal. This is a conditional *rebound / Jevons-type* scenario, **not** proof that adoption will rise that much.
+
+**Exit evidence for a later execution decision:** representative task mixes and trusted telemetry, reproducible static-agent baselines, controlled replay scenarios and uncertainty ranges, comparable quality/success, agreed budget / concurrency target, and sufficient load-test infrastructure. Keep real-market GPU supply/demand inference explicitly **out of scope**.
+
 ### Development Position
 
 This direction should be treated as a **future primary development line**, but it must not destabilize the current CEAA research scope.

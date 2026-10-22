@@ -1099,3 +1099,29 @@ SQLite schema v1 新增：
 - Feature 已推送至 `origin/feature/execution-telemetry-database` 並設定 upstream。
 - Merge commit：`0923c7f` — `merge: add SQLite execution telemetry foundation`。
 - 合併後 `dev` 完整測試：**35 passed, 1 warning in 12.04s**。
+
+---
+
+## 2026-10-22 — Graphify early Phase 1.5 parallel code-intelligence PoC
+
+### Decision
+
+允許 Graphify 作為 Phase 1.5 初期 **非阻塞、可選的 Developer Tooling / Code Intelligence PoC**，與 Execution Telemetry、PostgreSQL、Pi/OpenCode Builder 研究並行。不得將 Graphify 專案圖譜等同 CEAA 的 Agent Capability / Experience / Routing History 資料庫。
+
+### Changes on feature branch
+
+- `docs/GRAPHIFY_CODE_INTELLIGENCE_POC.md`: local code-only setup, baseline comparison, API boundary, privacy and freshness constraints。
+- `scripts/graphify_poc.py`: runs locally installed `graphify` CLI with `extract . --code-only`, optional query, and writes an ignored smoke-run JSON summary。
+- `.gitignore`: excludes generated `graphify-out/`。
+- `DEV_PLAN.md`, technical stack, project status: register parallel PoC and future optional `CodeKnowledgeInterface` / `GraphifyAdapter`.
+
+### Required follow-up verification
+
+- Install pinned Graphify package in a developer environment and run PoC; confirm actual CLI version/output path/schema.
+- Manually verify graph relations and source locations, compare with repository search baseline.
+- Run controlled Builder with/without graph context only after Builder integration exists.
+- Confirm no external semantic extraction, no sensitive graph publication, no stale candidate workspace graph.
+
+### State
+
+**Documentation + optional local CLI runner committed to feature branch; CLI not installed or executed in CEAA environment; Graphify runtime adapter and benchmark not implemented.** No changes to mandatory Phase 1 or Phase 1.5 exit criteria.

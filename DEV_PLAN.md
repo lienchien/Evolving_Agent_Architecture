@@ -509,6 +509,27 @@ Candidate Capability Artifact
 
 ---
 
+### Phase 1.5-E.2 — Parallel Graphify Code Intelligence PoC (Optional)
+
+**Current status: local developer-tool PoC available on feature branch; no runtime adapter, no successful extraction or performance benchmark verified.**
+
+Graphify is a **code-repository knowledge-graph tool** and must not be confused with CEAA's durable execution experience, Agent/Capability graph, or manager decision database. It can be piloted in parallel with telemetry/database work and the initial Builder integration, but is not a prerequisite for Phase 1.5 completion.
+
+Initial scope:
+
+- Use separately installed `graphifyy` and `graphify extract . --code-only` to index CEAA source locally; do not add it as a CEAA runtime package dependency.
+- Keep `graphify-out/` outside version control; output graph can contain sensitive file paths and symbol relationships.
+- Run the optional `scripts/graphify_poc.py` for deterministic local extraction/query smoke check; guidance in [docs/GRAPHIFY_CODE_INTELLIGENCE_POC.md](docs/GRAPHIFY_CODE_INTELLIGENCE_POC.md).
+- Evaluate `query`, `path`, `explain` against manually verified code dependencies before using the results as Builder context.
+- In a later stage define `CodeKnowledgeInterface` and optional `GraphifyAdapter` alongside a simple repository-search baseline; return bounded subgraph, source provenance, freshness/revision, ambiguity and latency.
+- Re-index for every Builder candidate workspace revision; never treat stale graph output or inferred edges as sufficient evidence for correctness/security.
+- Compare Pi/OpenCode Builder runs **with and without Graphify** under identical task, model, budget and source revision; measure context tokens, retrieval latency, modification/test success and impact-analysis recall.
+- No additional permissions, automatic code writes, production target scanning, external semantic extraction or bypass of independent Main/Audit validation.
+
+Acceptance: local code-only graph is generated, query/path/explain evidence verified, version/freshness checks defined, no mandatory dependency introduced; result is a feasibility assessment, **not** a new phase exit criterion.
+
+---
+
 ### Phase 1.5-F — Secure Evolution Gate
 
 新生成 Skill 不得因 Builder 自測成功而取得信任。

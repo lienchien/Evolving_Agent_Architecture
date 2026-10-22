@@ -4812,11 +4812,11 @@ Distinguish three levels rather than treating token optimization and total compu
 
 **Accounting:**
 
-\`\`\`text
-Aggregate Tokens = Σ_workload_segment (Completed Tasks × Measured Tokens per Completed Task)
-Relative aggregate demand = Workload expansion factor × (1 − per-task token saving rate)
+```text
+Aggregate Tokens = Σ_all recorded provider interactions (input + output + other billed token categories, without double-counting)
+Approximate relative aggregate demand = Workload expansion factor × (1 − per-task token saving rate), at fixed task mix and success/retry distribution
 Break-even expansion factor = 1 / (1 − saving rate), for saving rate < 1
-\`\`\`
+```
 
 For illustration only: 60% fewer tokens/task coupled with 3× completed tasks yields 1.2× aggregate tokens, all else held equal. This is a conditional *rebound / Jevons-type* scenario, **not** proof that adoption will rise that much.
 

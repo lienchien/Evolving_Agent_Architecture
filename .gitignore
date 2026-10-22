@@ -15,6 +15,9 @@ __pycache__/
 .env.*
 !.env.example
 
+# Graphify generated local code graph / exploratory run artifacts
+graphify-out/
+
 # IDE
 .vscode/
 .idea/

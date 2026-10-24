@@ -462,7 +462,7 @@ Package 可引用同一 Registry 中的版本化共享 Skill（many-to-many）�
 
 ### 2.10.1 定位與設計邊界
 
-**Memory-assisted Decision Engine（MADE）** 是 **Decision Agent + Memory Router 的邏輯協作層**，不是取代 Main Agent、Global Manager、Package-local Decision，也不是新增一個必須運行大型 LLM 的 Agent。Decision Agent 可由既有 \`DecisionModelInterface\`、規則、小型模型或受控 Reasoning LLM 提供；Memory Router 是共享、可替換的檢索協調能力，初期可以是同一個 process 內的模組，無須微服務化或建立每包獨立 DB。
+**Memory-assisted Decision Engine（MADE）** 是 **Decision Agent + Memory Router 的邏輯協作層**，不是取代 Main Agent、Global Manager、Package-local Decision，也不是新增一個必須運行大型 LLM 的 Agent。Decision Agent 可由既有 `DecisionModelInterface`、規則、小型模型或受控 Reasoning LLM 提供；Memory Router 是共享、可替換的檢索協調能力，初期可以是同一個 process 內的模組，無須微服務化或建立每包獨立 DB。
 
 設計主張：**Reason Once, Validate, Reuse When Applicable, Replan When Necessary**。對相似任務，優先搜尋可檢查的歷史證據；只在條件相容且可信時重用**執行計畫／決策經驗**，不直接重用舊答案、secret、過時狀態或未驗證的結果。首次探索與後續重用皆必須保留治理與獨立驗證。
 
@@ -475,7 +475,7 @@ Package 可引用同一 Registry 中的版本化共享 Skill（many-to-many）�
 
 此圖表達 Global Decision 與 Local Decision **共用檢索協調介面、但各自受其資料範圍限制**。圖中箭頭表示邏輯依賴，不要求物理上所有呼叫必須經過同一服務或由 Memory Router 再次決定目標 Agent。**選擇目標仍由 Decision Agent 負責。**
 
-\`\`\`mermaid
+```mermaid
 flowchart TB
     T["Task / Request"] --> M["Main Agent"]
     M --> F["Task Feature Extraction"]
@@ -509,7 +509,7 @@ flowchart TB
     classDef memory fill:#176447,color:#fff,stroke:#176447
     class D,LD decision
     class MR,EM,VP memory
-\`\`\`
+```
 
 ### 2.10.3 兩階段信心與初始路由（Mermaid）
 
@@ -517,9 +517,9 @@ flowchart TB
 
 **Stage 2 — Path Applicability / Execution Confidence**：Memory Router 回傳具體候選後，由 Decision Agent 結合任務條件、資料來源、已觀測成功／失敗證據、樣本量、版本／schema 相容、權限、資料新鮮度、風險與 validator 做 final choice。未取得足夠證據時不得跳過規劃。
 
-決策成熟度僅用作研究概念：\`D-Mature\`（可優先查 validated path）、\`D-Assisted\`（參考歷史後重新規劃）、\`D-Explore\`（無合適經驗、需要探索）。**不得與既有 §2.8 Skill Tier L1/L2/L3 混淆**。初期分類器只做候選 routing，不能僅靠高相似度直接宣告成熟路徑適用。
+決策成熟度僅用作研究概念：`D-Mature`（可優先查 validated path）、`D-Assisted`（參考歷史後重新規劃）、`D-Explore`（無合適經驗、需要探索）。**不得與既有 §2.8 Skill Tier L1/L2/L3 混淆**。初期分類器只做候選 routing，不能僅靠高相似度直接宣告成熟路徑適用。
 
-\`\`\`mermaid
+```mermaid
 flowchart TD
     T["Task + Constraints"] --> F["Task Features / Signature"]
     F --> D["Lightweight Decision Model"]
@@ -542,7 +542,7 @@ flowchart TD
 
     classDef focus fill:#176447,color:#fff,stroke:#176447
     class MR,R,P focus
-\`\`\`
+```
 
 高風險行為即使 path 命中，也仍需 policy / approval；低風險成熟路線可減少大型 LLM 的重複規劃，**不能省略必要執行驗證**。檢索未命中、工具／環境漂移、結果未通過驗證或權限不足時，遵循 Fail Closed 與既有 Recovery / Escalation，不允許「為提高命中率」而放寬安全條件。
 
@@ -550,7 +550,7 @@ flowchart TD
 
 檢索流程以 **scope / ACL 先限制候選**，後續 ranking 不得逆轉資料可見性。排序可組合 semantic similarity、task/context compatibility、verified outcome、版本／freshness、failure history 與 evidence provenance。相似度是候選訊號，**不是使用權限或已驗證正確性的證明**。
 
-\`\`\`mermaid
+```mermaid
 flowchart TB
     Q["Memory Retrieval Request"] --> P["Caller Identity / Scope / ACL"]
     P --> F["Task Feature + Source Selection"]
@@ -566,27 +566,27 @@ flowchart TB
 
     classDef memory fill:#176447,color:#fff,stroke:#176447
     class H,R,B memory
-\`\`\`
+```
 
 記憶類型可包含 Task Pattern、Decision Evidence、Execution Path、Failure/Recovery 與 Skill/Package Metadata，但**記憶類別為可擴充的通用 taxonomy，不是固定的產業特化資料表**。Memory Router 不負責將不可信原文轉成權威指令；檢索內容應與系統指令隔離，並做 prompt-injection 防護／敏感資料遮罩。
 
 ### 2.10.5 Decision / Retrieval / Evidence Interface（初期合約候選）
 
-下列 contract 是 **proposed interfaces**，優先延伸既有 \`DecisionModelInterface\`、\`DecisionEvidence\`、\`DecisionExperienceRepository\`、\`ExecutionPathRepository\`；不是立即建立新部署單元或改動既有 schema。
+下列 contract 是 **proposed interfaces**，優先延伸既有 `DecisionModelInterface`、`DecisionEvidence`、`DecisionExperienceRepository`、`ExecutionPathRepository`；不是立即建立新部署單元或改動既有 schema。
 
 | Contract | 職責 | 最小欄位／約束 |
 | --- | --- | --- |
-| \`MemoryRouterInterface.retrieve(request)\` | scoped search / ranking / provenance | task_id、trace_id、caller_agent_id、scope、task_signature、candidate_package_refs?、memory_types、budget、retrieval_policy_version |
-| \`MemoryEvidenceBundle\` | 供 Decision Agent 使用的可稽核結果 | evidence_refs、source/type、task/path/version、validation_state、observed_outcome、timestamp、applicability_constraints、rank/confidence?、missing_evidence_flags |
-| \`DecisionModelInterface.decide(...)\` | 根據任務與 evidence 選擇策略 | candidate_set、selected_target、choice_type、confidence?、rationale_summary?、evidence_refs、policy/model version、fallback_reason? |
-| \`MemoryRetrievalEvidence\` | 檢索觀測與基準實驗 | retrieved_ids、filtered_count、ranked_ids、scope、miss_reason?、retrieval_latency、tokens、version、retrieval_cost |
-| \`ExperienceRepositoryInterface\`（邏輯 alias） | 讀取版本化歷史證據 | 既有 DecisionExperienceRepository / ExecutionPathRepository 的 facade；不建立另一份真值來源 |
+| `MemoryRouterInterface.retrieve(request)` | scoped search / ranking / provenance | task_id、trace_id、caller_agent_id、scope、task_signature、candidate_package_refs?、memory_types、budget、retrieval_policy_version |
+| `MemoryEvidenceBundle` | 供 Decision Agent 使用的可稽核結果 | evidence_refs、source/type、task/path/version、validation_state、observed_outcome、timestamp、applicability_constraints、rank/confidence?、missing_evidence_flags |
+| `DecisionModelInterface.decide(...)` | 根據任務與 evidence 選擇策略 | candidate_set、selected_target、choice_type、confidence?、rationale_summary?、evidence_refs、policy/model version、fallback_reason? |
+| `MemoryRetrievalEvidence` | 檢索觀測與基準實驗 | retrieved_ids、filtered_count、ranked_ids、scope、miss_reason?、retrieval_latency、tokens、version、retrieval_cost |
+| `ExperienceRepositoryInterface`（邏輯 alias） | 讀取版本化歷史證據 | 既有 DecisionExperienceRepository / ExecutionPathRepository 的 facade；不建立另一份真值來源 |
 
-新增欄位應採 optional、backward-compatible contract，遵守 \`task_id\` / \`trace_id\` / \`parent_decision_id\` lineage；未經測量的 confidence、success probability 或 cost 必須標為 null / unavailable。不得記錄或索取模型私有 chain-of-thought；只保存結構化、可稽核的決策摘要與 provenance。Experience 的成功率必須包含樣本量、失敗／中止紀錄及版本條件，避免 survivorship bias。
+新增欄位應採 optional、backward-compatible contract，遵守 `task_id` / `trace_id` / `parent_decision_id` lineage；未經測量的 confidence、success probability 或 cost 必須標為 null / unavailable。不得記錄或索取模型私有 chain-of-thought；只保存結構化、可稽核的決策摘要與 provenance。Experience 的成功率必須包含樣本量、失敗／中止紀錄及版本條件，避免 survivorship bias。
 
 ### 2.10.6 Experience Feedback / Decision Evolution（Mermaid）
 
-\`\`\`mermaid
+```mermaid
 flowchart LR
     T["Task"] --> D["Decision"]
     D --> E["Execution"]
@@ -600,7 +600,7 @@ flowchart LR
     Q -. "Governed Path Candidate" .-> A["Regression + Approval"]
     A --> S[("Validated Path Registry")]
     S -. "Scoped lookup" .-> D
-\`\`\`
+```
 
 此循環對應既有 **Stage A: LLM Exploration → Stage B: Experience-Assisted Decision → Stage C: Small Learned Decision Model → Stage D: Mature Reusable / Deterministic Path**。只有驗證與治理通過的 path 才能成為可重用資產；評估路由策略改善時，同時追蹤其檢索／維護／訓練成本，不因重複使用而自動認定其正確。
 
@@ -623,10 +623,10 @@ flowchart LR
 
 ### 2.10.8 階段整合與非目標
 
-- **Phase 1**：沿用原有 Telemetry/Decision Evidence／Trace contract，僅保留 MA​DE 所需的未來 optional evidence 欄位候選；**不要求 Memory Router runtime、Path Registry 或新模型**，不得變更既有退出條件。
+- **Phase 1**：沿用原有 Telemetry/Decision Evidence／Trace contract，僅保留 MADE 所需的未來 optional evidence 欄位候選；**不要求 Memory Router runtime、Path Registry 或新模型**，不得變更既有退出條件。
 - **Phase 1.5**：將 provider、sandbox、permission、versioned trace 的現有硬化工作視為前置依賴；不提前擴張自動執行能力。
-- **Phase 2（候選）**：在既有 Capability Retrieval / pgvector / Package-scoped lookup 基礎上，提供最小 \`MemoryRouterInterface\`，先做 deterministic filtering + hybrid retrieval + Version Check + confidence fallback。
-- **Phase 3（候選）**：與既有 Decision/Skill/Token 實驗整合 MA​DE vs Direct LLM、Memory Retrieval、Decision Stability、Governance 與 Cost per Successful Task 的 Baseline／Ablation；使用真實執行證據評估是否值得部署。
+- **Phase 2（候選）**：在既有 Capability Retrieval / pgvector / Package-scoped lookup 基礎上，提供最小 `MemoryRouterInterface`，先做 deterministic filtering + hybrid retrieval + Version Check + confidence fallback。
+- **Phase 3（候選）**：與既有 Decision/Skill/Token 實驗整合 MADE vs Direct LLM、Memory Retrieval、Decision Stability、Governance 與 Cost per Successful Task 的 Baseline／Ablation；使用真實執行證據評估是否值得部署。
 - **Non-goals**：不綁定任何特定領域、不預設新的子 Agent 拓撲、不將 Memory Router 視為 Policy Engine、不強制 microservices、不複製歷史資料庫、不將低 context 或路線固定性本身視為成功。
 
 **Design-only boundary：** 本節是架構與實驗候選，尚未獲得 CEAA 實測結果；日後如需實際資料庫 migration、API、服務部署或路由模型訓練，仍須分階段設計與驗證。

@@ -460,3 +460,78 @@ NVIDIA 宣稱可進行毫秒級硬體隔離，以及低延遲本地政策判定�
 本文是 NVIDIA 產品架構與技術解說，**不是完整安全評估報告**。毫秒級阻擋、監測準確度、誤判率與總成本尚需獨立驗證；部分能力依賴 BlueField-4 和 NVIDIA 軟體堆疊，可能有相容性、供應與採購限制。CEAA 首先驗證**獨立授權檢查與可稽核執行**的軟體方案，再決定是否研究硬體隔離；評估必須同時觀察安全性、任務成功率、決策穩定性及效能成本。
 
 **僅新增研究筆記與候選實驗，不修改正式 v1.9 架構文件或實作程式；後續架構變更須使用者核准。**
+
+
+---
+
+## 2026-10-24 — Meta Muse Wonder：Active Memory × Active Focus 與長任務 Agent
+
+- **原文**：[Muse Wonder: A Frontier Model For Personal & Professional AI Agents](https://research.meta.ai/blog/muse-wonder)
+- **相關原始技術**：[Introducing Muse Code and Muse Spark 1.2](https://research.meta.ai/blog/introducing-muse-code-and-muse-spark-1-2)；[Introducing Muse Spark 1.3](https://research.meta.ai/blog/introducing-muse-spark-1-3)
+- **作者／發布單位**：Meta AI Research / Meta Superintelligence Labs（官方頁面未列可確認的個人作者）。
+- **原文日期**：2026-10-12；**研究收錄日期**：2026-10-24；**來源**：2026-10-23 DeepLearning.AI《The Batch》電子報提及 Muse Wonder / Muse Spark Open，進一步查核官方原文。
+- **優先級**：**High**（Experience Memory、Context Engineering、Long-horizon Agent、Decision Stability、Tool/Model Selection、Cost per Successful Task）。
+- **證據層級**：模型發布方的技術介紹及內部評估；不是 CEAA 的獨立實驗證據。
+
+### 核心貢獻（官方描述）
+
+Meta 將 **Active Memory** 描述為跨對話保存重要背景並在當前任務主動檢索相關資訊的能力；將 **Active Focus** 描述為長時間維持目標、遭遇阻礙時嘗試替代路徑、整合新資訊、必要時澄清與重要操作前確認。官方提到以 **FocusBench** 與 **SWE-Marathon** 等測試持續工作能力。Muse Wonder 透過 Meta Model API 與 Muse Code 提供；Muse Wonder Full 以 Muse Code 訂閱提供。Meta 另主張模型在記憶、Agent 與 Coding benchmark 上具競爭力，但成績及泛化能力須獨立複驗。
+
+### 與 CEAA 的關聯（研究推論，非原文已證實結論）
+
+1. **Active Memory ↔ Package-local Experience Memory**：記憶不應等於全部歷史上下文；CEAA 可以比較 task-scoped retrieval、全域 RAG 與完整歷史注入，控制 memory freshness、evidence recall 及錯誤檢索。
+2. **Active Focus ↔ Manager / Decision Agent**：將 goal persistence、計畫更新、遇錯重試、風險授權與必要時澄清分為可觀測狀態，而非僅以「模型願意持續推理」判定成功。
+3. **Decision Stability**：對同類任務多次執行，衡量正確 plan/tool/path 一致性；「穩定但錯誤」與「合理調整策略」需分開統計。
+4. **Tool/Model Selection**：比較 Direct LLM（使用長上下文與模型內建持續推理）與 CEAA 外部 Experience-aware Hierarchical Decision；不能因 Meta 模型較強就推論外部決策層不需要。
+5. **Cost/Context Budget**：將記憶檢索、推理努力、驗證、重試、fallback 及維護成本納入 Cost per Successful Task，並檢查 context rot。
+
+### 建議 Baseline / Experiment / Ablation
+
+- **B0**：Direct LLM + full history / full tool metadata（相同模型、任務與權限）。
+- **B1**：Direct LLM + task-scoped RAG memory；允許內部自主規劃與重試。
+- **B2**：CEAA Manager/Package routing，無 Experience Memory。
+- **B3**：CEAA Experience-aware routing + validated execution path + fallback。
+- **B4（可選）**：以 Muse Wonder 作為額外模型軸，重跑 B0–B3；與架構軸分開，避免模型能力混淆。
+- **Ablation**：移除 Memory retrieval、路徑重用、goal-state checkpoint、fallback、驗證器、重要操作前授權；擾動歷史資訊位置／相似干擾／過時案例。
+- **KPI**：Verified Task Success、Answer Groundedness、Correct Decision Consistency、Plan/Tool Consistency、Execution Path Entropy、Memory Retrieval Recall、Goal Completion、Wrong Tool Rate、P95 Latency、Cost per Successful Task、Stale-memory Failure Rate。
+- **控制**：相同輸入／工具／資料與記憶快照，20–30 次重複（依功效分析調整）；分 cold-start/warm-start、已見／未見任務與高風險操作；所有組別使用相同安全 gate，記錄失敗與成功案例。
+
+### 證據與限制
+
+官方公開內容未證明 Active Memory／Focus 能獨立提高 CEAA 的穩定性，也未提供足夠資訊將性能提升歸因於記憶策略、模型規模或訓練。產品能力、基準測試與企業工作負載之間存在落差。**本條僅是研究筆記及候選對照設計，不修改 CEAA v1.9 正式架構或程式碼。**
+
+
+---
+
+## 2026-10-24 — TurboVLA：以輕量感知—動作路徑取代每步 LLM 推論的 Edge AI 對照
+
+- **原始論文**：[TurboVLA: Real-Time Vision-Language-Action Model at 32 Hz on an RTX 4090 with <1 GB VRAM](https://arxiv.org/abs/2607.27205)
+- **作者**：Hengyi Xie、Chenfei Yao、Xianjin Wu、Xuanyang Xi、Yiping Tang、Di Xu、Yingying Zhu、Dingkang Liang、Xiang Bai、Han Ding。
+- **原文首次提交**：2026-07-29（arXiv:2607.27205，後續版本可能更新）；**研究收錄日期**：2026-10-24；**來源**：2026-10-23 DeepLearning.AI《The Batch》電子報報導，另查核原始論文。
+- **程式碼**：https://github.com/H-EmbodVis/TurboVLA
+- **優先級**：**High（Edge AI / Model & Workflow Selection / Skill Complexity Compression 的方法參考）**；**證據層級**：公開預印本、作者自述基準與開源程式碼，尚非 CEAA 驗證結果。
+
+### 核心貢獻（論文作者主張）
+
+常見 VLA 使用 `Vision → LLM → Action`，每次機器人控制都依賴大模型推論，增加延遲與記憶體成本。TurboVLA 改為 `Vision + Language → Action`：獨立的視覺與語言編碼器、輕量跨模態交互及小型動作解碼器。論文在 LIBERO 模擬任務報告約 **97.6–97.7%** 平均成功率、**0.2B** 參數、**31.2 ms** 推論延遲及 RTX 4090 上約 **0.9 GB** 推論 VRAM（不同版本數值略有差異）。此為特定任務及硬體上的作者結果，**不是所有機器人任務都不需要 LLM**。
+
+### 與 CEAA 的關聯（跨領域研究推論，非論文原結論）
+
+1. **High-level Decision vs Low-level Execution**：讓 Manager/Decision Agent 負責新任務規劃、選擇 Skill 與異常升級；已驗證、重複且低風險的子任務交由專用模型／決定性程序執行，而非每步重新呼叫通用 LLM。
+2. **Skill Complexity Compression**：可借鏡「高能力規劃 → 輕量可重用執行器」的拆分方式，但 TurboVLA 本身**不是** CEAA Skill 降級或 Agent routing 的實驗。
+3. **Edge/Cloud Escalation**：在 edge 端以輕量策略執行可驗證的已知工作；遇到低信心、未見狀況或風險事件才上送雲端 Manager，保留安全停機及人工接管。
+4. **Reliability-first**：必須同時驗證任務成功、適應性、安全性與延遲，避免僅因節省算力就部署失效的輕量模型。
+
+### 建議 Baseline / Experiment / Ablation
+
+- **B0**：每個控制步驟皆由大型 VLA／LLM 決定（在可重現模擬器內）。
+- **B1**：固定輕量 VLA／專用 Skill executor；不啟用雲端升級。
+- **B2**：CEAA Manager 選擇專用 executor；已知任務走快路徑，未知／失敗任務升級 LLM 重新規劃。
+- **B3**：B2 + Experience-aware routing、失敗記錄、驗證過的回退策略及安全 gate。
+- **Ablation**：移除任務分類、經驗路由、升級閾值、獨立驗證器、錯誤回退與安全停止；改變感知噪聲、任務分布、設備能力與網路中斷條件。
+- **KPI**：Task Success、Safety Violation、Correct Route Consistency、OOD Recovery、Edge VRAM、CPU/GPU Utilization、Power、P95 End-to-end Latency、Cloud Escalation Rate、Cost per Successful Task。
+- **控制**：先採用作者公開程式碼及固定版本 LIBERO 模擬環境，分清模擬結果與真實機器部署；在固定任務、工具與感測條件下重複試驗。若無實體機器人，僅研究模擬／方法，不推論真實世界可靠性。
+
+### 證據與限制
+
+TurboVLA 的成果限於論文指定模擬與少量真機任務，且模型對複雜開放式規劃的適用性未獲全面證明。其設計與 CEAA 的架構類比需要新的對照實驗，不能把 TurboVLA 數據當成 CEAA 的性能證據。**本次只收錄研究筆記，不修改 v1.9 正式架構或實作。**

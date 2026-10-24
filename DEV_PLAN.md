@@ -812,7 +812,7 @@ Human-approved Goal Contract
 
 ### Multi-Audit Architecture（future extension to existing Main + Audit）
 
-**現有 `8A Main functional / architecture review + Audit security review 必須保留為強制最低基線**。未來可加入 `AuditCoordinator`，依事先核准的風險政策**增加**專業化審查：Functional Auditor（Goal / independent acceptance）、Security Auditor（permissions / secrets / exploit checks）、Architecture Auditor（interfaces / schema / contract）、Regression Auditor（protected suite / CI / upgrade）。不是所有變更固定呼叫四個大型模型，可用 deterministic tools + risk-adaptive reviewers 降低費用。
+**現有第 8A 節的 Main functional / architecture review + Audit security review 必須保留為強制最低基線**。未來可加入 `AuditCoordinator`，依事先核准的風險政策**增加**專業化審查：Functional Auditor（Goal / independent acceptance）、Security Auditor（permissions / secrets / exploit checks）、Architecture Auditor（interfaces / schema / contract）、Regression Auditor（protected suite / CI / upgrade）。不是所有變更固定呼叫四個大型模型，可用 deterministic tools + risk-adaptive reviewers 降低費用。
 
 - Auditor 的 first-pass context 與 Builder／其他 Reviewer 隔離；不能依 Developer 自評或多數決覆蓋必要檢查。
 - 任一 mandatory finding = FAIL / ERROR / UNKNOWN / timeout / unresolved conflict，**不得自動 PASS**。Coordinator 無權取消既有必要 Main/Audit Review、降低權限政策或繞過 Human Escalation。

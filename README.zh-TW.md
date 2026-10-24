@@ -1,258 +1,133 @@
-# Capability-Evolving Agent Architecture
+# Capability-Evolving Agent Architecture（CEAA）
 
 **語言：** [English](README.md) | 繁體中文
 
 ![Status](https://img.shields.io/badge/status-experimental-orange)
 ![Phase](https://img.shields.io/badge/phase-1--in%20progress-blue)
-![Validation](https://img.shields.io/badge/automated%20tests-28%20passed-green)
+![Recorded tests](https://img.shields.io/badge/recorded%20tests-35%20passed-green)
 
 > [!WARNING]
-> 本實驗性研究原型已通過核心、API、併發自動化測試及獨立 Uvicorn/HTTP 驗證；認證、資料存取控制、執行限制強制套用與 production hardening 仍待完成，尚非 production-ready 系統。
+> **研究原型，尚非可部署於生產環境的系統。** 現有 Runtime 使用 Mock LLM、SQLite、Python subprocess 與 Console Notification。真實 LLM Provider、正式安全隔離、完整認證授權、獨立 Main/Audit Secure Evolution Gate、Memory Router 與 Decision Agent Runtime **尚未整合**。35 項測試是 **2026-10-18 的歷史驗證紀錄**，不是本次 README 更新後重新執行的結果。
 
-這是一個研究導向的 Agent 架構，探索 AI Agent 是否能夠**辨識自身缺少的能力、建立新的可執行能力、進行驗證與測試、產生可稽核報告、請求人類核准、啟用通過的能力，並在未來任務中重複使用**。
+CEAA 研究如何將 Agent 的實際執行經驗轉換成**經驗證、可重用、可版本管理、可治理的能力與決策資產**，在維持安全與結果驗證的前提下減少不必要的重複推論。架構保持**領域中立**，特定應用只作為實驗工作負載，不成為核心設計依賴。
 
-長期目標是研究：Agent 的效能是否能透過 **Capability Accumulation（能力累積）**持續成長，而不只依賴更強的基礎模型。
+目前的 [System Design v1.9](Capability-Evolving%20Agent%20Architecture%20%E2%80%94%20System%20Design%20v1.9.md) 已定義兩條互補的研究路線：
+
+1. **Capability Evolution（能力演化）**：確認能力缺口、產生並測試候選、完成治理與必要核准、啟用版本化能力，再供未來任務重用。
+2. **Experience-guided Decision Evolution（經驗輔助決策演化）**：以 **Decision Agent × Memory Router** 檢索權限範圍內、有來源證據的歷史經驗，在成熟計畫重用、經驗輔助規劃與全新推論／能力演化之間選擇。
+
+Skill Complexity Optimization、Reliability Evolution、階層式 Package 與長期推論成本攤提都是**待實驗驗證**的延伸方向，不能當作已經證明的性能結果。
 
 ---
 
 ## 專案狀態
 
-> **目前階段（2026-09-30）：Phase 1 進行中 — Core Baseline 已驗證；Execution Experience & Evolution Telemetry 為退出 Phase 1 前必做項目**
+**文件已於 2026-10-24 對齊 v1.9。當前開發階段：Phase 1 — In Progress / Core Baseline Verified / Telemetry Runtime Wiring Outstanding。**
 
-目前 repository 已完成並驗證 Phase 1 Core Baseline，包括架構骨架、核心 domain model、service、interface、Agent orchestration、API route、持久化、併發控制與 Token／費用量測基礎。**Phase 1 尚未 Complete**；目前必須補齊 Execution Experience & Evolution Telemetry Foundation，完成後才進入 Phase 1.5。
+| 功能 | 目前狀態 |
+| --- | --- |
+| Task → Capability Gap → Mock Generation → Validation / Testing → Approval → Active → Reuse | 核心已實作，有受控測試紀錄 |
+| FastAPI、SQLite Capability/Report/Approval/Audit、併發及重啟持久化 | 已實作，已有歷史驗證 |
+| Token / Cost Research Foundation 與研究 API | 已實作；缺少的真實 Provider Usage 維持 unavailable |
+| ExecutionTrace / RoutingDecision / Failure / Recovery Domain、TelemetryRepository、SQLite Schema v1 | **資料層基礎已建立**，Repository 測試已記錄 |
+| Runtime 自動寫入、Task/Trace 關聯、重試／錯誤聚合、Telemetry Summary API | **Phase 1 尚待完成** |
+| Real LLM、Docker Sandbox、PostgreSQL Adapter、CodeBuilderRuntime、獨立 Main/Audit Gate、完整 Auth/Policy | **Phase 1.5 規劃中，未實作** |
+| MemoryRouterInterface、DecisionModelInterface、Static Skill Packages、Validated Path Registry | **Phase 2 PoC 規劃中，未實作** |
+| 完整自動修復、遞迴多 Agent 組織、Capability Sharing / Marketplace | 遠期研究／可選商品化 |
 
-最近完整測試為 **28 passed**，另有一項既有 Starlette/AnyIO 棄用警告。除已驗證的 HTTP 與持久化流程外，Phase 1 現在會為 token efficiency／cost amortization 研究記錄 task 層級成本觀測與每次 LLM interaction；provider 未回報的 token 明確維持 unavailable，不以字數或其他方式估算。
+**最近記錄的完整整合測試：2026-10-18，35 passed、1 warning。** 詳見 [PROJECT_STATUS.md](PROJECT_STATUS.md) 與 [DEV_PLAN.md](DEV_PLAN.md)；本次文件修改並未重新執行測試。
 
-詳見[專案狀態](PROJECT_STATUS.md)、[開發紀錄](DEVELOPMENT_LOG.md)及[API 併發行為](docs/API_CONCURRENCY.md)。下方架構圖包含長期設計：目前同步演化直接處理自己的 gap，queue 預留給未來背景 worker；報告、核准與 audit 已共用 SQLite 儲存。
+**下一個真正的工程里程碑**是完成 Phase 1 Telemetry Runtime Wiring，讓 Routing Decision、候選集合、執行成功與失敗、Retry/Fallback、Final Outcome 都能以一致 Task/Trace ID 關聯至現有 Token/Cost Metrics。詳見 [Telemetry Database](docs/TELEMETRY_DATABASE.md)。
 
-[Token／費用研究契約](docs/TOKEN_COST_RESEARCH.md)及其實作已整合至 `dev`。目前完整 Core Baseline 為 **28 passed, 1 warning**，並包含 `/api/research/*` 量測端點；Phase 1 目前尚待完成 Execution Experience & Evolution Telemetry Foundation。
-
-目前狀態：
-
-```text
-設計文件                         ✓
-架構骨架                         ✓
-Main Agent                      ✓
-Evolution Agent                 ✓
-Capability lifecycle            ✓
-Validation abstraction          ✓
-Testing skeleton                ✓
-Test report structure           ✓
-Human approval flow             ✓
-Notification abstraction        ✓
-Audit skeleton                  ✓
-FastAPI routes                  ✓
-Unit / lifecycle tests          ✓
-End-to-end test definition      ✓
-
-pytest 實際執行                  28 passed
-FastAPI TestClient 測試          Passed
-Mock 核心循環                   Passed
-獨立 Uvicorn / HTTP             Passed
-Token／費用量測基礎              Passed
-真實 Provider Usage 資料         Pending
-真實 LLM 整合                    Pending
-PostgreSQL runtime adapter      Pending
-Docker sandbox                  Pending
-Semantic retrieval              Pending
-Observability                   Pending
-Background workers              Pending
-Capability sharing              Future Reserved
-Marketplace                     Future Reserved
-```
-
-下一個研究里程碑是：
-
-> **真實 provider token／費用擷取與受控 baseline 比較**
-
-完整 mock 流程與獨立伺服器路徑皆已通過；Phase 1 現在也會保存比較首次建立與後續重用所需的量測資料：
+**現有已實作的 Mock 核心流程**（與 v1.9 完整目標架構不同）：
 
 ```text
-Task
-→ Capability Search
-→ Capability Gap
-→ Generate
-→ Validate
-→ Autonomous Test
-→ Test Report
-→ Notify Administrator
-→ Human Approval
-→ Activate
-→ Reuse
-→ 持久化 LLM interaction 與 task cost metrics
-→ 以明確 baseline 比較 cumulative CEAA usage
+Task → Search Active Capability
+  ├─ Match → Execute Existing Capability
+  └─ Miss → Capability Gap → Mock Generate → Validate / Test
+          → Test Report → Pending Approval → Human Approval
+          → Activate for Future Reuse
 ```
-
-量測語意、API 與 Phase 1 基礎／Phase 3 正式實驗的邊界，見
-[Token／費用研究量測](docs/TOKEN_COST_RESEARCH.md)。
 
 ---
 
 # 1. 研究動機
 
-目前多數 Agent 系統主要透過以下方式提升能力：
+CEAA 的研究問題是：Agent 能否透過**累積經驗證的能力與正確決策經驗**改善長期任務表現，而不是每次都從零重新規劃？更強的基礎模型、上下文與人工加入工具仍有其價值，但不一定是唯一的能力成長方式。
 
-- 更強的語言模型
-- 人工加入工具
-- Workflow 重構
-- Prompt Engineering
-- Memory
-- RAG
-- 模型 Fine-tuning
-
-本專案希望探索另一個成長維度：
-
-## Capability Scaling
-
-核心研究假說是：
-
-> **即使底層模型保持不變，Agent 仍可能透過累積經驗證、可重用的能力而持續提升。**
-
-本架構將兩種成長機制分開：
-
-### Model Scaling
-
-提升 Agent 面對未知問題時的推理能力。
-
-### Capability Scaling
-
-提升 Agent 重複使用過去已學會、已驗證解法的能力。
-
-未來可能設計下列比較實驗：
-
-| Group | Model | Capability Evolution |
-|---|---|---|
-| A | Strong | No |
-| B | Medium | No |
-| C | Medium | Yes |
-| D | Strong | Yes |
-
-核心研究問題之一是：
-
-> **Medium Model + Capability Evolution**
-
-是否能在重複任務或長期任務中接近甚至超過：
-
-> **Strong Model + Static Capabilities**
+具體研究假設包含 **Capability Accumulation、Task-aware Memory Routing、Decision Stability、Validated Path Reuse、Skill Optimization 與 Governed Recovery** 是否能提高經獨立驗證的任務成功率，並降低 **Cost per Successful Task**。實驗須控制模型／工具／權限／成本，使用 Exact、Near-Similar、Generalized 任務、獨立 Outcome Oracle 與合適 Baseline；**不能預先宣稱效果已經證實**。
 
 ---
 
 # 2. 核心概念
 
-本架構將 **Capability** 視為一等系統物件（first-class system object）。
+CEAA 將 **Capability** 視為一等系統資產：可執行、可檢查、可測試、可版本管理、可稽核、可撤銷、可重用，而不只是 Prompt 或 Memory。
 
-Capability 並不只是 Prompt 或 Memory，而應具備：
+系統邏輯上分離三類證據：
 
-- 可執行
-- 可檢查
-- 可測試
-- 可版本管理
-- 可稽核
-- 可重用
-- 可回滾
-- 可攜移
+- **Capability / Skill Registry**：系統目前有哪些能力，包括介面、版本、適用限制與權限。
+- **Raw Operational History**：實際如何路由、呼叫、執行、重試、失敗或回退，及最終觀測結果。
+- **Curated Decision Experience / Validated Execution Paths**：經獨立驗證、可追溯來源且有明確相容／失效條件的可重用計畫。
 
-未來 Capability 可能代表：
+**Memory Router 負責提供證據；Decision Agent 負責選擇策略；Policy Engine 負責授權；獨立 Validator 負責判定結果。** 找到相似歷史記憶，不代表取得工具執行權限，也不代表可以直接啟用新的 Artifact。重用的是**已驗證的執行計畫**，不是舊答案、祕密或過時狀態。
 
-- Python 程式碼
-- API Workflow
-- Tool Sequence
-- Data Processing Pipeline
-- Agent Workflow
-- Containerized Service
-- Domain-specific Procedure
-- Enterprise Automation
-- Security Detection / Response Logic
+> **Reason Once, Validate, Reuse When Applicable, Replan When Necessary.**
 
-核心循環：
+### 現階段的經驗資料基礎
+
+目前 SQLite TelemetryRepository 與 Schema 已建立，但 Main Agent／Runtime 自動寫入與統計尚未完成。Phase 1 要建立的資料鏈為：
 
 ```text
-Problem
-  ↓
-Capability Gap
-  ↓
-Generate Candidate Capability
-  ↓
-Validate
-  ↓
-Autonomous Testing
-  ↓
-Test Report
-  ↓
-Human Review
-  ↓
-Approve / Reject / Revise
-  ↓
-Activate
-  ↓
-Reuse
+Task / Trace → Routing Decision / Candidate Set / Selected Target
+ → Execution Attempt → Success / Failure / Retry / Fallback
+ → Independent Outcome / Cost → Durable Raw History
+    ├─ Validated Episode → Curated Experience（未來）
+    └─ Population Analysis → Evolution Signals（未來）
 ```
+
+詳見 [Telemetry Database](docs/TELEMETRY_DATABASE.md) 與 [DEV_PLAN.md](DEV_PLAN.md)。
 
 ---
 
 # 3. 高階系統架構
 
-```text
-                         User / Task
-                              │
-                              ▼
-                       Main Agent Service
-                              │
-                      Capability Search
-                              │
-              ┌───────────────┴───────────────┐
-              │                               │
-      Existing Capability             Capability Missing
-              │                               │
-              ▼                               ▼
-     Capability Executor              Gap Detection
-                                              │
-                                       Evolution Queue
-                                              │
-                                       Evolution Agent
-                                              │
-                                      Capability Builder
-                                              │
-                                      Validation Service
-                                              │
-                                   Capability Testing Agent
-                                              │
-                                         Test Report
-                                              │
-                                         Policy Engine
-                                              │
-                                     Capability Registry
-                                              │
-                                      Pending Approval
-                                              │
-                                     Notification Service
-                                              │
-                                        Administrator
-                                              │
-                                      Approval Service
-                                              │
-                                        Active Capability
+**以下 Mermaid 為 v1.9 的通用目標架構，不代表現有 Phase 1 Runtime 已實作所有元件。**
+
+```mermaid
+flowchart TB
+    T["Task / Request"] --> MAIN["Main Agent"]
+    MAIN --> DEC["Decision Agent"]
+    DEC <-->|"Authorized evidence"| MR["Memory Router"]
+    MR <--> EX[("Experience Memory")]
+    MR <--> PR[("Validated Path Registry")]
+    MR <--> CR[("Capability / Skill Registry")]
+    DEC --> S{"Decision Strategy"}
+    S -->|"Verified / compatible"| RE["Reusable Execution Plan"]
+    S -->|"Partial history"| PL["Experience-assisted Planning"]
+    S -->|"Novel / gap"| GA["Reasoning / Capability Gap"]
+    RE --> LD["Agent / Package / Local Decision"]
+    PL --> LD
+    GA --> G{"Capability missing?"}
+    G -->|"No"| LD
+    G -->|"Yes"| B["Candidate / Code Builder"]
+    B --> SG["Testing + Secure Evolution Gate"]
+    SG --> HA["Human Approval as Required"]
+    HA --> CR
+    LD --> PO["Runtime Policy / Permissions"]
+    PO --> RUN["Execute Current Input"]
+    RUN --> VA["Independent Outcome Validation"]
+    VA --> TR["Trace / Observed Outcome"]
+    TR --> CU["Governed Experience Curation"]
+    CU -. "Verified evidence" .-> EX
+    CU -. "Approved paths" .-> PR
+
+    classDef focus fill:#176447,color:#ffffff,stroke:#176447
+    class DEC,MR focus
 ```
 
-本架構遵守一個核心邊界原則：
+Global／Local Decision 是後續架構中不同層級的決策責任；Memory Router **不是**獨立的任務分派 Agent，也不能繞過 Scope、Policy 或 Independent Validation。既有已核准且相容的執行計畫不必每次都重新跑新 Artifact 審查，但仍要當次授權與結果驗證；新建或更改 Artifact 必須進入對應的 Secure Evolution Gate。
 
-> **Agent logic 不應直接依賴具體 Infrastructure implementation。**
-
-建議依賴方向：
-
-```text
-Agent
-→ Service
-→ Interface
-→ Infrastructure Adapter
-```
-
-而不是：
-
-```text
-Agent
-→ Database / Docker / Vendor API
-```
+**依賴原則**：Agent → Service → Interface → Infrastructure Adapter，不綁定特定 LLM、向量資料庫或 Builder。
 
 ---
 
@@ -449,427 +324,105 @@ Capability Registry
 
 # 8. 目前 Repository 結構
 
+2026-10-24 從 `dev` 核對的代表性路徑：
+
 ```text
-Evolving_Agent_Architecture/
-├── README.md
-├── README.zh-TW.md
-├── Capability-Evolving Agent Architecture — System Design v1.8.md
-├── Capability-Evolving Agent Architecture — System Design v1.7.md
-├── Capability_Evolving_Agent_Tech_Stack_v1.md
-├── DEV_PLAN.md
-├── PROJECT_STATUS.md
-├── DEVELOPMENT_LOG.md
-├── requirements.txt
-├── env.example
-├── pytest.ini
-│
-├── src/
-│   ├── main.py
-│   ├── config.py
-│   │
-│   ├── agents/
-│   │   ├── main_agent.py
-│   │   └── evolution_agent.py
-│   │
-│   ├── domain/
-│   │   ├── capability.py
-│   │   ├── gap.py
-│   │   ├── report.py
-│   │   ├── approval.py
-│   │   └── events.py
-│   │
-│   ├── interfaces/
-│   │   ├── llm.py
-│   │   ├── queue.py
-│   │   ├── sandbox.py
-│   │   ├── notification.py
-│   │   └── repository.py
-│   │
-│   ├── infrastructure/
-│   │   ├── mock_llm.py
-│   │   ├── memory_queue.py
-│   │   ├── sqlite_repository.py
-│   │   ├── subprocess_sandbox.py
-│   │   └── console_notification.py
-│   │
-│   ├── services/
-│   │   ├── capability_service.py
-│   │   ├── gap_detection_service.py
-│   │   ├── evolution_service.py
-│   │   ├── validation_service.py
-│   │   ├── testing_service.py
-│   │   ├── policy_service.py
-│   │   ├── approval_service.py
-│   │   ├── notification_service.py
-│   │   ├── execution_service.py
-│   │   ├── report_store.py
-│   │   └── audit_service.py
-│   │
-│   └── api/
-│       └── routes/
-│           ├── tasks.py
-│           ├── capabilities.py
-│           ├── evolution.py
-│           ├── approvals.py
-│           └── audit.py
-│
-└── tests/
-    ├── test_capability_schema.py
-    ├── test_capability_service.py
-    └── test_full_loop.py
+src/
+├── main.py / config.py
+├── agents/main_agent.py / agents/evolution_agent.py
+├── domain/
+│   ├── capability.py / gap.py / approval.py / report.py
+│   └── research.py / telemetry.py / events.py / errors.py
+├── interfaces/
+│   ├── llm.py / queue.py / sandbox.py / notification.py
+│   └── repository.py / telemetry_repository.py
+├── infrastructure/
+│   ├── mock_llm.py / memory_queue.py / subprocess_sandbox.py
+│   ├── sqlite_repository.py / sqlite_telemetry_repository.py
+│   └── console_notification.py
+├── services/
+│   ├── capability_service.py / gap_detection_service.py
+│   ├── evolution_service.py / execution_service.py
+│   ├── testing_service.py / validation_service.py
+│   ├── approval_service.py / audit_service.py / policy_service.py
+│   └── notification_service.py / report_store.py / research_metrics_service.py
+└── api/routes/
+    ├── tasks.py / capabilities.py / evolution.py
+    └── approvals.py / audit.py / research.py
+
+tests/
+├── test_api.py / test_full_loop.py / test_concurrency.py
+├── test_research_metrics.py / test_telemetry_repository.py
+└── test_capability_*.py / support.py
 ```
+
+規劃中的 Decision / Memory 元件目前是**邏輯介面設計，不是已存在的程式目錄或服務**；參考 System Design v1.9 §70。
 
 ---
 
 # 9. 目前 Phase 1 Implementation
 
-目前 implementation 刻意使用較輕量的 local adapter，先驗證架構，再導入外部 infrastructure。
-
-目前 adapter：
-
-| Interface | Phase 1 Implementation |
-|---|---|
-| LLM Provider | `MockLLMProvider` |
-| Queue | `InMemoryEvolutionQueue` |
-| Capability Repository | SQLite |
-| Sandbox | Python subprocess |
+| 職責 | 現有 Adapter |
+| --- | --- |
+| LLM | `MockLLMProvider`（固定模板，不是真實推論 Provider） |
+| Capability Persistence | SQLite |
+| Execution Evidence | SQLite `TelemetryRepository` **基礎已建立**，Runtime Writing 尚未完成 |
+| Queue | `InMemoryEvolutionQueue`（非持久化背景 Worker） |
+| Sandbox | Python subprocess（**不等於正式安全隔離**） |
 | Notification | Console |
+| API / Orchestration | FastAPI / LangGraph |
 
-以上皆為暫時 implementation。
-
-預計長期轉換路徑：
-
-```text
-MockLLMProvider
-→ LiteLLMProvider
-→ NVIDIA NIM / OpenRouter / Local Provider
-```
-
-```text
-SQLite
-→ PostgreSQL
-```
-
-```text
-SubprocessSandbox
-→ DockerSandbox
-→ stronger isolation if required
-```
-
-```text
-InMemoryQueue
-→ Redis / RQ
-```
+目前能驗證受控的核准與能力重用流程，但不能宣稱具備 Production Auth、Multi-tenant Isolation、完整 CodeBuilderRuntime 或 MADE 的執行能力。
 
 ---
 
 # 10. 目前技術棧
 
-目前程式依賴包括：
+**已整合程式依賴：** Python、FastAPI、Pydantic、LangGraph、pytest、httpx、SQLite。
 
-- Python
-- FastAPI
-- Pydantic
-- LangGraph
-- pytest
-- httpx
-- SQLite
+**Phase 1.5 候選：** LiteLLM、NVIDIA NIM／OpenRouter 等真實 Provider、PostgreSQL、Docker Sandbox；Pi 1.x 與 OpenCode 為尚未選定的 Builder Runtime 候選；Auth/Policy 與獨立 Main/Audit Reviews。
 
-規劃中的技術包括：
+**Phase 2–3：** Embedding／pgvector 等可替換檢索後端、`MemoryRouterInterface`、`DecisionModelInterface`、Static Packages / Path Registry，以及可選 Phoenix／DeepEval／MLflow。CPU-first 的小型 Decision Model 可以在 Phase 2/3 研究，不需要等待完整 Local Reasoning LLM。
 
-### LLM Layer
-
-- LiteLLM
-- NVIDIA NIM
-- OpenRouter
-- 未來本地 OpenAI-compatible Provider
-
-### Persistence
-
-- PostgreSQL
-- pgvector
-
-### Validation
-
-- Docker
-- 未來視需求加入 gVisor / Firecracker / Kata Containers
-
-### Evaluation and Observability
-
-- Arize Phoenix 或同等工具
-- DeepEval
-- MLflow
-
-### Background Processing
-
-- Redis
-- RQ
-
-### UI
-
-- 研究階段使用 Streamlit
-- 商品化後使用正式 Admin UI
+**更遠期可選：** Redis/RQ、gVisor／Firecracker／Kata、Streamlit／Admin UI、Ollama／llama.cpp／vLLM。技術與硬體是否適用仍須以受控實測決定；目前 Mock Baseline 沒有證明真實推論成本節省。
 
 ---
 
 # 11. Phase 1 Runtime Validation
 
-自動化測試已實際通過：28 passed，另有一項既有套件警告。包含受控競爭、跨兩個 app 的 24 請求併發、獨立 Python 程序，以及 Token／費用量測持久化與 amortization 計算；不代表 production 負載基準，也不代表目前 Mock provider 已證明可節省真實 token。
+最近記錄的完整整合測試為 **2026-10-18：35 passed、1 warning**（已包含 Telemetry Repository 契約測試）。受控併發、HTTP/Uvicorn 與重啟持久化證據詳見 [PROJECT_STATUS.md](PROJECT_STATUS.md)。**本次 README 修訂未重新執行測試**；這些結果也不代表 Production 安全驗證、真實 Token 節省或 MADE 已實作。
 
-驗證指令（在已安裝相依套件的環境中）：
+本機已安裝相依套件時可執行：
 
 ```bash
 pip install -r requirements.txt
-pytest
-```
-
-啟動 API：
-
-```bash
+pytest -q
 uvicorn src.main:app --reload
 ```
 
-然後查看：
+伺服器啟動後可至 `http://localhost:8000/docs` 查看 API。
 
-```text
-http://localhost:8000/docs
-```
-
-自動化套件已涵蓋以下流程；需再對獨立伺服器操作並保存證據，才標記 Phase 1 完成：
-
-1. 未知任務建立 Capability Gap
-2. Evolution Agent 建立 Candidate Capability
-3. Validation 成功執行
-4. Autonomous Testing 產生 Test Report
-5. Capability 進入 `pending_approval`
-6. 管理員核准後 Capability 進入 `active`
-7. 相同類型任務能重用既有 Capability
-8. 不會為重複任務建立重複 Capability
-9. 送審與核准決策留有 Audit Record
+只有當成功／失敗／路由／重試／回退的 Runtime Telemetry、Task/Trace Correlation、Summary API 與 Restart Tests 都符合 [正式 Phase 1 退出條件](DEV_PLAN.md) 時，才能標記 Phase 1 Complete。
 
 ---
 
-# 12. Roadmap
+# 12. Roadmap — 依實作狀態區分
 
-## Phase 1 — Core MVP + Execution Experience Foundation
+| 階段 | 核心目標 | 狀態 |
+| --- | --- | --- |
+| **Phase 1 — Core + Telemetry** | Mock Capability Lifecycle、Token/Cost 基礎與完整執行／路由／失敗資料 | **進行中**：Core 已驗證、Telemetry Runtime 尚未完成 |
+| **Phase 1.5 — Real Infrastructure + Governed Builder** | 真實 Provider、PostgreSQL、Docker、CodeBuilderRuntime、Main/Audit、Auth/Policy 與 Human Governance | **規劃中，未實作** |
+| **Phase 2 — Retrieval + MADE PoC** | Capability/Memory Retrieval、Decision Routing、Static Skill Packages、Validated Path 與有限 Recovery | **規劃中，未實作** |
+| **Phase 3 — Evaluation** | E1 Capability/Cost、E2 Memory×Decision、E3 Skill Optimization、E4 Package Hierarchy、E5 Recovery、可選 E6 HYSET | **研究設計完成，尚未實驗驗證** |
+| **Phase 4–7** | Background Workers、強化隔離、Dashboard、完整本地 Reasoning LLM | **遠期／可選** |
+| **Phase 8–9** | 領域中立企業驗證與可選資安研究 | **遠期** |
+| **Phase 10–11** | Opt-in Capability Sharing、Shared Registry、Marketplace | **遠期預留** |
 
-**目前階段**
+**Phase 1.5：** Pi 1.x 與 OpenCode 是待比較的 Builder 候選，不是已部署元件。未來 Builder 產生的新 Skill／AgentArtifact 需有獨立 Main/Audit 審查、沙箱、安全證據、Fail Closed 與必要人工核准。
 
-已建立：
+**Phase 2：** Memory Router 與 Decision Agent 是可被不同任務共用的**通用決策基礎設施**，不應綁定系統錯誤、ERP 或其他特定領域；記憶讀取授權、路徑適用性與工具執行授權是不同檢查。
 
-- architecture skeleton
-- Main Agent
-- Evolution Agent
-- lifecycle models
-- validation abstraction
-- testing abstraction
-- approval
-- notification
-- audit
-- API
-- tests written
-
-尚需完成：
-
-- 獨立 Uvicorn / HTTP 驗證及 runtime 證據留存
-- 長時間負載與程序中止復原驗證
-
----
-
-## Phase 1.5 — Real Infrastructure + Controlled Code Evolution
-
-規劃：
-
-- runtime configuration / environment profile
-- LiteLLM adapter、NVIDIA NIM、OpenRouter、provider fallback / health check
-- PostgreSQL repository / migration
-- Docker sandbox、filesystem / network / resource isolation
-- Skill-oriented CodeBuilderRuntime 與 ephemeral Builder Agent
-- isolated Git / worktree candidate workspace
-- versioned BuildSpecification / BuildResult / Candidate Artifact
-- Main Agent independent functional / architecture review
-- Audit Agent independent adversarial security review
-- 高風險 review 的 frontier-model semantic verification
-- deterministic security evidence 與 adversarial test generation
-- fail-closed Secure Evolution Gate
-- Validation Incident 與 mandatory Human Administrator escalation
-- authentication / authorization / policy / quota / lease / crash recovery
-- Skill pipeline 穩定後建立 AgentArtifact / Sub-Agent construction foundation
-- Skill 自動生成正式實驗：Simple / Medium / Complex 任務
-- 受控 Sub-Agent 自動生成實驗
-- reviewer ablation：Builder self-review / Main only / Audit only / Main+Audit
-- known-defect security benchmark 與 adversarial validation
-- reviewer 模型配置比較，包含 cross-model / cross-provider
-- Human Escalation effectiveness / 人工審查負擔量測
-- detection / FP / FN / agreement / escalation / cost / latency 指標
-
-目標：
-
-> 把 CEAA 從已驗證的 mock prototype，提升成能在真實 infrastructure 上自主建立 Skill 與受控 Sub-Agent，透過 Main/Audit 獨立交叉驗證與 Human Escalation 安全治理，並以正式實驗量化驗證效果的研究平台。
-
-完整 Recursive Multi-Agent Organization 仍維持後續階段。
-
----
-
-## Phase 2 — Capability Retrieval and Reuse Intelligence
-
-規劃：
-
-- pgvector
-- Embedding Provider
-- semantic capability search
-- compatibility filtering
-- ranking
-- duplicate prevention
-- reuse metrics
-
-目標流程：
-
-```text
-Task
- ↓
-Embedding
- ↓
-Capability Search
- ↓
-Compatibility Filter
- ↓
-Reuse or Gap
-```
-
----
-
-## Phase 3 — Research Evaluation and Observability
-
-規劃：
-
-- Agent tracing
-- experiment tracking
-- token / cost / latency metrics
-- capability generation success rate
-- capability reuse rate
-- generalization rate
-- regression rate
-- repeated failure rate
-
-可能使用：
-
-- Phoenix
-- DeepEval
-- MLflow
-
----
-
-## Phase 4 — Background Evolution
-
-規劃：
-
-```text
-Main Agent
-   ↓
-Capability Gap
-   ↓
-Queue
-   ↓
-Evolution Worker
-   ↓
-Validation / Testing
-```
-
-可能使用：
-
-- Redis
-- RQ
-
-這讓 Capability Evolution 不會阻塞正常 Agent 執行。
-
----
-
-## Phase 5 — Stronger Isolation
-
-未來可能的 Sandbox：
-
-- gVisor
-- Firecracker
-- Kata Containers
-- VM-based validation
-
-只有在風險需求提高時才導入更強隔離。
-
----
-
-## Phase 6 — Admin / Research Dashboard
-
-規劃畫面：
-
-- Capability Registry
-- lifecycle state
-- test reports
-- pending approvals
-- audit trail
-- notifications
-- reuse metrics
-- cost / latency metrics
-
----
-
-## Phase 7 — Local LLM Support
-
-未來可能支援：
-
-- Ollama
-- llama.cpp
-- vLLM
-- LM Studio
-- Private OpenAI-compatible inference server
-
-架構目標是透過 Provider abstraction，讓 local 與 cloud model 可以互換。
-
----
-
-## Phase 8 — Enterprise Domain Validation
-
-可能的受控領域：
-
-- File Processing
-- Data Transformation
-- IT Automation
-- DevOps Troubleshooting
-- Workflow Automation
-- Enterprise Procedures
-
-目的：
-
-> 驗證 Capability Evolution 是否能跨領域泛化，而不是只適用於單一任務類型。
-
----
-
-## Phase 9 — Cybersecurity Extension
-
-Cybersecurity 被規劃為後期高難度驗證領域，而不是初始 MVP。
-
-可能元件：
-
-- MITRE ATT&CK
-- Atomic Red Team
-- Wazuh
-- Sysmon
-- Velociraptor
-- Zeek
-- Suricata
-- CALDERA
-- Cyber Range
-
-核心 lifecycle 應保持：
-
-```text
-Generate
-→ Validate
-→ Test
-→ Report
-→ Human Approval
-→ Activate
-```
+**Phase 3：** [v1.9 §56–60](Capability-Evolving%20Agent%20Architecture%20%E2%80%94%20System%20Design%20v1.9.md) 統一定義 Verified Task Success、Retrieval Applicability、Correct Decision Consistency（區別穩定但錯誤）、False Reuse、Policy Safety、Latency 與 **Cost per Successful Task**，納入檢索、驗證、重試和維護成本。單純提高命中率或降低 Token 不代表架構較好。
 
 ---
 
@@ -998,160 +551,68 @@ Agent B gains Capability X
 
 # 16. Security 與 Governance 原則
 
-本專案從一開始就保留以下治理邊界：
+新產生的 Artifact 必須先經獨立驗證與治理；**新建或修改 Skill／Workflow／Agent／Path 版本**需走對應的 Secure Evolution Gate，包括適用的 Main/Audit 審查及人類授權。**既有、已核准且相容的計畫重用**不必每次再做完整新能力生成審查，但不能跳過當次 Policy、風險限制與結果驗證。
 
-- generated capability 不會自動被信任
-- 新 capability 必須經過 validation
-- 新 capability 啟用前必須經過 human approval
-- external capability 必須重新做 local validation
-- sharing 採 opt-in
-- capability origin 與 lineage 應被保存
-- capability 必須支援 revocation
-- capability execution 應逐步移往 sandbox isolation
-- 關鍵 lifecycle action 必須可稽核
+Memory Retrieval 須依可信身份、Tenant、Branch、Resource、資料分類與授權範圍過濾。父子 Agent 權限不可往下擴張；高相似度或高信心無法蓋過 DENY。Raw Trace、Embedding、Decision Rationale 與私有記憶不會自動隨 Capability 分享。
 
-未來 Enterprise 與 Cybersecurity deployment 可能另外需要：
-
-- digital signatures
-- artifact integrity validation
-- secret scanning
-- tenant isolation
-- stronger sandboxing
-- role-based approval
-- organization policy engines
+**這些是目標治理不變量**，不代表現在的 Mock／Subprocess Runtime 已具備完整 Production 安全能力；真正的授權、隔離與獨立審查要在 Phase 1.5 之後逐步實作。
 
 ---
 
 # 17. 文件管理
 
-Repository 以不同文件負責不同的專案管理用途。
-
 | 文件 | 用途 |
-|---|---|
-| `README.md` | 英文專案入口與總覽 |
-| `README.zh-TW.md` | 繁體中文專案入口與總覽 |
-| `Capability-Evolving Agent Architecture — System Design v1.8.md` | 目前長期系統架構；新增 Code Evolution Runtime 與 Secure Evolution Gate |
-| `Capability-Evolving Agent Architecture — System Design v1.7.md` | 歷史設計快照，保留架構演進可追溯性 |
-| `Capability_Evolving_Agent_Tech_Stack_v1.md` | 技術棧與分階段導入規劃 |
-| `DEV_PLAN.md` | 目前 implementation plan 與替換路徑 |
-| `PROJECT_STATUS.md` | 目前開發階段、完成狀態與里程碑 |
-| `DEVELOPMENT_LOG.md` | 詳細開發歷程、決策、修改與驗證結果 |
+| --- | --- |
+| [System Design v1.9](Capability-Evolving%20Agent%20Architecture%20%E2%80%94%20System%20Design%20v1.9.md) | **目前正式架構基準**：MADE、治理、研究指標、開發階段 |
+| [DEV_PLAN.md](DEV_PLAN.md) | 近期開發計畫與 Phase 1/1.5 退出條件 |
+| [PROJECT_STATUS.md](PROJECT_STATUS.md) | 實際已記錄的實作狀態、測試與待辦 |
+| [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md) | 開發歷程與驗證紀錄 |
+| [Telemetry Database](docs/TELEMETRY_DATABASE.md) | 已建立的 SQLite 資料層及未來 Runtime 整合 |
+| [Token/Cost Research](docs/TOKEN_COST_RESEARCH.md) | 量測契約與限制 |
+| [Multi-Agent Organization Design](docs/MULTI_AGENT_ORGANIZATION_DESIGN.md) | 未來階層權限、Branch Governance |
+| [Future Platform Vision](docs/AGENT_PLATFORM_FUTURE_VISION.md) | 研究驗證後才考慮的商品化願景 |
+| System Design v1.8 / v1.7 | 歷史設計快照，**不是最新架構基準** |
 
-文件維護原則：
-
-- Architecture decision → System Design
-- Technology decision → Tech Stack
-- 近期工作 → DEV_PLAN
-- 目前進度 → PROJECT_STATUS
-- 已實際發生的歷史開發 → DEVELOPMENT_LOG
+真實功能應以 `dev` 原始碼與測試為準；PROJECT_STATUS 提供最後已記錄的實作證據，DEV_PLAN 提供階段退出條件，v1.9 定義**目標設計**。不能因文件畫出新架構就視為已實作。
 
 ---
 
 # 18. Development Philosophy
 
-本專案刻意避免一開始就導入所有 Production Infrastructure。
+> **Implement simple, interface for complex — 同時保留證據與治理。**
 
-開發順序：
+先建立可驗證的本地核心、完成 Durable Telemetry，再導入 Real Provider / Secure Evolution；之後才驗證通用 Memory-assisted Decision 與執行路徑重用。只有在實驗證明有價值時才增加 Agent 層級、常駐服務與組織複雜度。
 
 ```text
-Architecture Skeleton
-        ↓
-Verified Local MVP
-        ↓
-Real Infrastructure
-        ↓
-Semantic Capability Reuse
-        ↓
-Research Evaluation
-        ↓
-Background Evolution
-        ↓
-Enterprise Validation
-        ↓
-High-Risk Domain Validation
-        ↓
-Capability Sharing / Productization
+Verified Core → Runtime Telemetry → Real Provider / Secure Evolution
+ → Capability + Memory / Decision PoC → Independent Evaluation
+ → Evidence-justified Scale / Optional Productization
 ```
 
-核心原則：
-
-> **Implement simple, interface for complex.**
-
-目標是在不過早增加 infrastructure complexity 的前提下，讓架構仍能持續演進。
+研究允許發現某種記憶路由或階層策略不划算，負面結果仍是有效研究證據。
 
 ---
 
 # 19. 長期願景
 
-長期目標並不只是建立一個「會自己寫工具的 Agent」。
-
-而是建立具有完整治理能力的 Capability Learning Lifecycle：
+CEAA 希望成為**通用、可治理、能依經驗持續改進的 Agent 架構**。Capability Evolution、Decision Evolution、Performance / Efficiency Optimization 及 Reliability Evolution 都以可驗證的真實執行證據為基礎。
 
 ```text
-Discover Gap
-→ Learn
-→ Build
-→ Test
-→ Explain
-→ Govern
-→ Activate
-→ Reuse
+Task → Decision / Authorized Retrieval / Exploration
+ → Policy-constrained Execution → Independent Validation
+ → Raw Experience → Governed Curation
+    ├─ Capability：Build / Test / Approve / Activate
+    ├─ Decision：Route / Reuse / Replan
+    ├─ Efficiency：Optimize / Compress / Evaluate
+    └─ Reliability：Diagnose / Recover / Verify
+ → Versioned Evidence and Approved Assets for Future Tasks
 ```
 
-未來商品化後可能再延伸：
-
-```text
-Share
-→ Discover
-→ Transfer
-→ Validate Locally
-→ Adopt
-```
-
-概念上的分工：
-
-### Foundation Model
-
-負責面對新的、未知的問題進行推理。
-
-### Capability Library
-
-保存 Agent 已經學會如何完成的事情。
-
-### Evolution Engine
-
-辨識 Agent 還不會的事情，並嘗試建立新的 Capability。
-
-### Code Evolution Runtime（System Design v1.8，尚未實作）
-
-當 Main Agent 已確認 Capability Gap 或未來 Agent Gap 後，規劃透過可替換 Builder Runtime，在隔離 workspace 中實際讀取 repository、寫程式、建立測試、執行除錯並輸出版本化 Candidate Artifact。成功生成本身不代表可信。
-
-所有新 Skill / Workflow / 未來 Sub-Agent 都規劃由 Main Agent 與 Audit Agent進行獨立 first-pass 交叉驗證，再結合 deterministic runtime / security evidence。只有 `Main=PASS AND Audit=PASS` 才可自動繼續；任一 failure、error、unknown、timeout 或 disagreement 都必須中止流程並通知人類管理員。
-
----
-
-### Testing Layer
-
-挑戰新產生的 Capability，並產生可驗證的 evidence。
-
-### Governance Layer
-
-讓人類保有對 Capability 啟用與分享的最終控制權。
-
-本研究最終希望驗證：
-
-> Agent 是否能在不持續重新訓練模型的情況下，透過**經驗證的 Capability 累積**持續提升自身能力。
-
----
+長期資產不只是 Capability Library，還包括 **Capability/Skill Registry、Decision Experience、Validated Execution Paths、Raw Traces、Governance Policies**。未來 Capability Sharing 需要使用者明確 opt-in 與本地驗證，不會隱含輸出私有記憶。
 
 ## 目前立即優先事項
 
-目前專案只應優先處理一件事：
-
-> **完成 Phase 1 的 Execution Experience & Evolution Telemetry Foundation，開始累積未來 Experience Memory 與 Capability / Agent / Organization Evolution 所需的 operational history。**
-
-實際 infrastructure 整合前的 Phase 1 收尾工作見 [DEV_PLAN.md](DEV_PLAN.md)。
-
+**先完成 Phase 1 的 Execution Experience & Evolution Telemetry Runtime Wiring、資料關聯、Aggregation 與重啟測試，再開始 Phase 1.5 的真實 Provider、Sandbox 與 Builder 整合。** 詳見 [DEV_PLAN.md](DEV_PLAN.md)。
 
 ---
 

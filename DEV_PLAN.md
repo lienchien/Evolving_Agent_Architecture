@@ -783,6 +783,57 @@ Unnecessary human escalation ↓
 
 ---
 
+## Future Research — Goal-driven Autonomous Development & Multi-Audit Verification（2026-10-24）
+
+**Status: Future Research / Design Backlog / Not Implemented / Not Evaluated.** 本方向研究 CEAA 在非人類工作時間，依預先授權的目標契約進行有界任務規劃、程式開發、測試、修復、審查與結果交付，並量化所需人類監督量能。**不新增 Phase 1 Telemetry 或 Phase 1.5 Main/Audit Gate 退出條件；也不是目前 Runtime 可用功能。**
+
+### Goal Contract / Bounded Autonomous Development（planned）
+
+人類先核准 versioned `DevelopmentGoalContract`，包含：
+
+- 身分／版本：goal/task ID、repo/base commit、允許分支／路徑、owner、policy version、授權期限。
+- Goal、Expected Outcomes、可客觀測量的 Acceptance Criteria、受保護測試／Outcome Oracle、Definition of Done。
+- Tool/data permissions、sandbox、模型／Provider、token/cost/time/retry limits，以及禁止修改的 Secrets、Policy、Protected Tests。
+- Stop / Escalation：scope 擴張、缺少權限、critical defect、審查矛盾、未知結果、預算耗盡、不可逆行為、無法恢復的執行狀態。
+- Deliverable：isolated candidate branch／PR、驗證證據、結案報告；**不預設自動 Merge、Activate 或 Deploy**。
+
+```text
+Human-approved Goal Contract
+ → Durable Queue / Checkpoint
+ → CEAA Planning / Scoped Memory Retrieval
+ → Development Agent / Isolated Workspace
+ → Implementation + Independent Tests + Bounded Repair
+ → Candidate PR (commit SHA bound)
+ → Multi-Audit Verification + Governance Gate
+    ├─ All mandatory checks PASS → Verified Candidate + Final Report
+    ├─ Repairable FAIL → limited repair and complete applicable revalidation
+    └─ UNKNOWN / Risk / Conflict / Budget Exhausted → Block + Human Escalation
+```
+
+### Multi-Audit Architecture（future extension to existing Main + Audit）
+
+**現有 `8A Main functional / architecture review + Audit security review 必須保留為強制最低基線**。未來可加入 `AuditCoordinator`，依事先核准的風險政策**增加**專業化審查：Functional Auditor（Goal / independent acceptance）、Security Auditor（permissions / secrets / exploit checks）、Architecture Auditor（interfaces / schema / contract）、Regression Auditor（protected suite / CI / upgrade）。不是所有變更固定呼叫四個大型模型，可用 deterministic tools + risk-adaptive reviewers 降低費用。
+
+- Auditor 的 first-pass context 與 Builder／其他 Reviewer 隔離；不能依 Developer 自評或多數決覆蓋必要檢查。
+- 任一 mandatory finding = FAIL / ERROR / UNKNOWN / timeout / unresolved conflict，**不得自動 PASS**。Coordinator 無權取消既有必要 Main/Audit Review、降低權限政策或繞過 Human Escalation。
+- Protected Acceptance / Regression / Security Tests 與 CI Gate 不由被審查的 Development Agent 控制；每次 Revision 需重做適用的完整驗證。
+- 自主工作時僅在 Preapproved Scope 內操作；PR delivery 不等於自動合併、Capability Activation 或生產部署。`8A` 必要的 Human Approval 仍須滿足。
+
+### Unified Verification Report（planned contract）
+
+`AutonomousDevelopmentVerificationReport` 至少記錄 goal ID、task/trace IDs、PR、base/candidate commit SHA、模型／Reviewer／Oracle／Policy 版本、每一 Acceptance Criterion 的 expected-vs-observed 結果、獨立審查結論與 evidence refs、CI/Regression/Sandbox 結果、發現與嚴重度、未驗證風險、retries/tokens/cost/latency、人工介入及最終 gate status：`VERIFIED_CANDIDATE / BLOCKED / ESCALATE / INCOMPLETE`。**Report PASS 不等於已核准 Merge / Activation / Deployment**；報告與受測 Artifact 版本必須可核對，拒絕／失敗歷史保留供稽核。
+
+### Research Protocol & Adoption Gates（deferred）
+
+- **Prerequisites**：Phase 1 durable telemetry、Phase 1.5 trusted Builder / Secure Gate / Auth/Sandbox、後續 Decision/Memory PoC，以及具 checkpoint/resume、lease、idempotency 與資源配額的 Background Execution；依風險逐步導入而非一次建立全天候平台。
+- **Baselines**：single Auditor、mandatory Main+Audit、specialized Multi-Audit、risk-adaptive Multi-Audit。省略強制審查的對照**僅能離線／合成測試**。
+- **Metrics**：Verified Goal Completion Rate、Known-defect Detection / False-negative、Escaped Defect / Regression、Human Escalation、Review Queue Backlog、P95 Verification Latency、Human Oversight Minutes per Verified Goal、Verification Cost per Accepted PR、Task Success、Cost per Successful Task、unattended execution reliability。
+- **Hypothesis**：在相同品質與安全條件下，Goal Contract + Multi-Audit + Result Report 是否能增加每單位人類監督時間的**可信交付量**。不預設 Reviewer 越多越好、24h 有效開發或指數加速成立。
+
+完整長期規劃見 `docs/AGENT_PLATFORM_FUTURE_VISION.md`。此段是 Future Research Reservation，不改寫既有正式 Phase Exit Criteria。
+
+---
+
 ## Future Console Deployment Candidate — Render
 
 **Reserved for later platformization; not part of Phase 1.5 scope or exit criteria.**

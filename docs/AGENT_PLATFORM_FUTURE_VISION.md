@@ -4890,7 +4890,7 @@ This is intended to become one of the platform's primary future research and pro
 
 ## 14.2 Future Research — Goal-driven Autonomous Development, Multi-Audit and Human Oversight Scalability（2026-10-24）
 
-**Status: Future Direction / Conceptual Design / Not Implemented / Not Evaluated.** 本方向延伸現有 `14 的組織決策、`5.4 的受治理能力生成、System Design v1.9 `8A 的 Main/Audit Cross-Validation。研究目標是：**Human Architect 事先定義開發任務目標、Expected Outcomes、Acceptance Criteria、權限與資源上限；CEAA 在非人類工作時間自主分工、實作、測試、有限修復與獨立驗證，並產出可追溯的 Candidate PR 和結果報告。**
+**Status: Future Direction / Conceptual Design / Not Implemented / Not Evaluated.** 本方向延伸現有第 14 節的組織決策、第 5.4 節的受治理能力生成，以及 System Design v1.9 第 8A 節的 Main/Audit Cross-Validation。研究目標是：**Human Architect 事先定義開發任務目標、Expected Outcomes、Acceptance Criteria、權限與資源上限；CEAA 在非人類工作時間自主分工、實作、測試、有限修復與獨立驗證，並產出可追溯的 Candidate PR 和結果報告。**
 
 關鍵不是允許 Agent 無限制 24/7 生成程式碼，而是在**固定的人類監督量能、可信安全邊界與可驗證成果**下，提高有效交付量。此方向尚不擴張現行 Phase 1 / 1.5 的工程退出條件。
 

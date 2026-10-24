@@ -573,6 +573,31 @@ flowchart TB
 
 記憶類型可包含 Task Pattern、Decision Evidence、Execution Path、Failure/Recovery 與 Skill/Package Metadata，但**記憶類別為可擴充的通用 taxonomy，不是固定的產業特化資料表**。Memory Router 不負責將不可信原文轉成權威指令；檢索內容應與系統指令隔離，並做 prompt-injection 防護／敏感資料遮罩。
 
+#### Memory Retrieval Security Contract（2026-10-24 治理一致性補強）
+
+Memory Router 必須在 **可信任的 Policy / Data Gateway 邊界內**實施存取控制，不能由 LLM 根據提示自行判斷 ACL。共用檢索服務的 service identity 不是資料授權；調用者的有效權限是經身份驗證、Tenant/Branch/Resource Ownership、父層授權、資料分類、Task-scoped Grant、Grant 有效期限及資源政策交集計算的結果。沿用 docs/MULTI_AGENT_ORGANIZATION_DESIGN.md `4–10：
+
+- **P_child ⊆ P_parent ⊆ P_root**，**G_child ⊆ G_parent ⊆ G_root**；Branch-local by default，跨 Branch/租戶必須有明確可稽核 grant。高階管理 Agent 並不因身分較高而自動取得所有私有資料。
+- **可搜尋 metadata 與可讀取 payload 是不同權限**。未授權候選不得出現在向量搜尋候選、Top-K、snippet、LLM context、可識別的結果筆數或一般日誌中。
+- **先以授權範圍限制底層查詢，再對每筆回傳證據二次檢查** resource ACL、scope、授權期限、版本、撤銷、驗證狀態及前置條件。若 backend 無法執行安全的 scoped query，不得退回 unrestricted global retrieval；一律 fail closed。
+- Embedding、原始 trace、Decision Rationale、Failure Evidence、Cache、Index、Memory Bundle 均繼承來源資料的敏感等級；對取出的內容做 redaction 與 injection isolation，不能當成更高優先序的 system/tool instructions。
+- 檢索命中不代表可執行；尚須由 Decision Agent 評估適用性，並由 Runtime Policy Gate 做當次授權。過時／撤銷／污染記憶可保留稽核證據，但不得成為可重用的 active path。
+
+```mermaid
+flowchart TD
+    Q["Memory Request"] --> I["Authenticated Caller / Delegation"]
+    I --> A{"Metadata / Payload Permission"}
+    A -->|"Denied / Unknown"| Z["Deny + Audit / No Scope Escalation"]
+    A -->|"Allowed"| S["Scope-Constrained Search"]
+    S --> K["Per-Resource ACL / Version / Revocation Check"]
+    K --> E{"Eligible Evidence?"}
+    E -->|"Yes"| R["Rank + Redact + Provenance Bundle"]
+    E -->|"No"| N["Authorized Miss / Fallback"]
+    R --> D["Decision Agent"]
+    N --> D
+    Z --> D
+```
+
 ### 2.10.5 Decision / Retrieval / Evidence Interface（初期合約候選）
 
 下列 contract 是 **proposed interfaces**，優先延伸既有 `DecisionModelInterface`、`DecisionEvidence`、`DecisionExperienceRepository`、`ExecutionPathRepository`；不是立即建立新部署單元或改動既有 schema。
@@ -586,6 +611,22 @@ flowchart TB
 | `ExperienceRepositoryInterface`（邏輯 alias） | 讀取版本化歷史證據 | 既有 DecisionExperienceRepository / ExecutionPathRepository 的 facade；不建立另一份真值來源 |
 
 新增欄位應採 optional、backward-compatible contract，遵守 `task_id` / `trace_id` / `parent_decision_id` lineage；未經測量的 confidence、success probability 或 cost 必須標為 null / unavailable。不得記錄或索取模型私有 chain-of-thought；只保存結構化、可稽核的決策摘要與 provenance。Experience 的成功率必須包含樣本量、失敗／中止紀錄及版本條件，避免 survivorship bias。
+
+#### Decision / Retrieval Contract — Authorization and Evidence（planned）
+
+下列內容是 `2.10.5 既有表格的**增量約束**，不是已實作的介面或資料庫欄位；要延續既有 `DecisionModelInterface`、`DecisionEvidence`、`DecisionExperienceRepository`、`ExecutionPathRepository`，不能建立另一個未同步的權威資料源。
+
+| Logical contract | Minimum semantics |
+| --- | --- |
+| `MemoryRetrievalRequest` | request_id、task/trace/decision ID、可信 caller principal / agent ID、tenant/branch/resource scope、requested memory types、task signature、retrieval policy version、context budget |
+| `MemoryAccessDecision` | PERMIT / DENY / UNKNOWN、metadata_read_allowed、payload_read_allowed、grant/policy ref、reason_code；UNKNOWN = DENY |
+| `MemoryEvidenceBundle` | 僅包含授權可見 evidence refs、source/version、validation_state、observed_outcome?、applicability constraints、provenance、redaction state、rank/score? |
+| `PathEligibilityDecision` | path ID/version、environment/precondition compatibility、validation/revocation status、risk、ELIGIBLE / INELIGIBLE / UNKNOWN、reason code；eligible **不等於** `can_execute` |
+| `MemoryRetrievalEvidence` | request_id、selected authorized refs、hit/miss/denied、index/version snapshot?、stale/revocation reasons、latency、token/cost?、fallback；禁止保存 denied candidates 的敏感名稱或內容 |
+
+Stage 1 confidence 只表示「值得嘗試檢索」，Stage 2 才檢查特定 Path 的適用證據；權限、安全規則永遠是 hard constraints。必須將 MEMORY_ACCESS_DENIED、NO_ELIGIBLE_MEMORY、STALE_VERSION、INSUFFICIENT_EVIDENCE、VALIDATION_FAILED 與正常的 zero-hit 分開；前者不得藉由放寬 scope 重新搜尋。未報告的 probability、token、cost 記為 null / unavailable，Decision Rationale 只存結構化簡要依據，不取用隱藏 chain-of-thought。
+
+Runtime schema 導入須經 additive migration、backward compatibility、index/cache ACL isolation、revocation race、restart read-back 及 cross-tenant negative tests；**不提高 Phase 1 當前退出門檻**。
 
 ### 2.10.6 Experience Feedback / Decision Evolution（Mermaid）
 
@@ -1376,6 +1417,38 @@ G_child ⊆ G_parent ⊆ G_root
 
 ---
 
+## 8A.14 Existing Plan Reuse vs Artifact Evolution（2026-10-24 治理一致性補強）
+
+**已核准計畫的執行**與**新能力／新版本的生成或改寫**必須分開治理。`2.9–2.10 的 Memory Router 只提供已授權的歷史證據；Decision Agent 選擇路徑不能取代 Runtime Policy，也不能自行批准新增 Artifact。
+
+| Situation | Enforcement | Full Secure Evolution Gate |
+| --- | --- | --- |
+| 使用現有 active、已驗證且版本相容的 Capability / Execution Path | 當次身份、scope、版本、precondition、risk、`can_execute`、必要 human approval 與結果驗證 | **不需為每次重用重新進行 Artifact Generation Review** |
+| 在既有核准 manifest 的允許範圍內調整參數 | 檢查 schema、permission、side effects、版本、run-time limits；仍須執行授權 | 未改變受驗證語意者不需；越界視為新候選 |
+| 建立／修改 Skill、程式碼、AgentArtifact、Workflow semantics、執行 Path 版本或擴張權限 | 新候選、版本化、Sandbox / Regression、獨立 Main/Audit Review、Policy、Human Approval（適用時） | **必須通過適用的完整驗證及啟用流程** |
+| 無授權、證據不可信、版本失效、前置條件不符或路徑遭撤銷 | Fail closed；重新規劃／人工升級，禁止自動使用失效 Path | 不能靠 Router 命中繞過 Gate |
+
+```mermaid
+flowchart TD
+    Q["Selected Plan / Candidate"] --> C{"Existing Approved & Unchanged?"}
+    C -->|"Yes"| V["Scope / Version / Preconditions / Revocation"]
+    V -->|"Pass"| P["Runtime Policy + Risk Approval"]
+    P -->|"Authorized"| E["Execute Current Inputs"]
+    E --> O["Independent Outcome Validation"]
+    V -->|"Fail / Unknown"| H["Fail Closed / Replan / Escalate"]
+    P -->|"Denied / Unknown"| H
+    C -->|"New / Changed"| B["New Candidate Artifact / Path Version"]
+    B --> G["Sandbox + Tests + Independent Main/Audit"]
+    G --> A{"Governance / Approval?"}
+    A -->|"Pass"| R["Registry / Approved Activation"]
+    A -->|"Fail / Unknown"| H
+    R -. "Future reuse" .-> V
+```
+
+**界線不變**：重用不能繞過執行權限與結果驗證；新 Artifact 不能繞過完整 Secure Evolution Gate。Runtime 成功 trace 只代表觀測結果，不會自動將未核准候選變成 active reusable path。修復流程 `55.1 也遵守此分類。
+
+---
+
 # 9. Capability 定義
 
 Capability 是：
@@ -1777,6 +1850,30 @@ SharedCapabilityUpdateAvailable
 
 ---
 
+### 25.1 Planned Decision / Memory Events
+
+以下是通用的 **logical event vocabulary**，不是 Phase 1 runtime 已完成或強制新增的資料表：
+
+```text
+DecisionRouteSelected
+MemoryRetrievalRequested
+MemoryAccessAllowed
+MemoryAccessDenied
+MemoryRetrievalCompleted
+MemoryRetrievalMissed
+MemoryEvidenceRejected
+PathEligibilityEvaluated
+ValidatedPathReuseSelected
+ValidatedPathReuseRejected
+ExecutionPlanReplanned
+ExperienceCurationProposed
+ExperienceCurationApproved
+```
+
+候選 event envelope：event_id、type/version、timestamp、tenant_id、task_id、trace_id、decision_id?、parent_decision_id?、retrieval_request_id?、caller_agent_id?、path_version?、policy_version?、status、reason_code?、authorized evidence refs?。區分 DENIED／MISS／STALE／INELIGIBLE／VALIDATION_FAILED；不儲存敏感原文、未授權候選或私有 chain-of-thought。**Phase 1 仍先完成既有 Telemetry Schema v1 的 wiring 與退出條件。**
+
+---
+
 # 26. Audit Trail
 
 需記錄：
@@ -1802,6 +1899,12 @@ SharedCapabilityUpdateAvailable
 - Update
 - Rollback
 - Revoke
+
+---
+
+### 26.1 Memory Retrieval / Path Reuse Audit（planned）
+
+未來應能追蹤 caller identity、effective scope、allow/deny/unknown、policy version、memory retrieval、path eligibility、fallback、當次 execution authorization 與獨立 outcome。應可區分「沒查到」「因權限拒絕」「記憶不相容」「選錯路徑」「執行失敗」，但不能因稽核目的暴露未授權 evidence ID、原始敏感 payload、token／憑證或 LLM 私有 chain-of-thought。Audit 寫入失敗不可使原本的 DENY 變成 ALLOW。
 
 ---
 
@@ -1932,6 +2035,14 @@ global
 允許未來發布至共享 Registry。
 
 Scope 本身不代表已經允許分享。
+
+---
+
+### Capability Scope and Memory Scope Are Separate
+
+上述 private / local / organization / global 定義的是 Capability 的使用／發布範圍，**不代表**可讀取或發布其 Execution Trace、Decision Memory、Embedding 或私有歷史。即使 Capability 將來可以 global 分享，相關 local memory 仍預設不共享。
+
+Memory Router 的有效讀取範圍須同時通過已驗證的 caller identity、tenant / branch ownership、resource ACL、資料分類、parent delegation、task-scoped grant、期限／撤銷及政策檢查；Branch-local by default，跨 Branch 需有明確授權。Root / Manager 亦不得僅憑層級無限制取得所有 branch 私有內容。依 docs/MULTI_AGENT_ORGANIZATION_DESIGN.md `4–10；**現階段為設計契約，不代表目前 default-tenant mock runtime 已做到跨租戶隔離**。
 
 ---
 
@@ -2450,6 +2561,14 @@ Agent B gains X
 
 ---
 
+### Memory / Retrieval Privacy Boundary
+
+Raw execution history、error log、Decision Rationale、Memory Bundle、Embedding、Vector Index、Cache 和其備份都可能包含敏感資料，須沿用來源分類、retention、revocation、redaction 和 access policy。索引化／摘要化不會自動讓資料變成公開；不得以 unrestricted global retrieval 當 fallback。Retrieved text 是 **untrusted data**，不得升格成 system/tool instructions，亦應防範 prompt injection 和 memory poisoning。
+
+能力分享仍須使用者選擇、清洗與本地驗證；私有 Memory／Trace 不應隱含打包輸出。Denied candidates 不進 Top-K、LLM context、snippet、可識別聚合資料或一般 telemetry。
+
+---
+
 # 52. Tenant Readiness
 
 Schema 從第一版保留：
@@ -2463,6 +2582,12 @@ sharing_policy
 ```
 
 研究階段使用 default tenant。
+
+---
+
+### Future Memory Delegation / Tenant Inputs
+
+除既有 `tenant_id / organization_id / owner_id / scope`，未來請求可帶 parent/root agent lineage、branch/resource owner、data_classification、delegated_grant_ref、grant expiry、requested_access（metadata 或 payload）及 policy version。這些是 **未來的 logical contract**；不能僅因 API payload 自稱 tenant/agent 身分便放行。可信 Policy / Data Gateway 應做 query-scope 和 resource-level enforcement、撤銷與快取失效檢查；所需 schema migration 須 backward-compatible，不增加現行 Phase 1 退出條件。
 
 ---
 
@@ -2492,6 +2617,22 @@ can_activate()
 
 ---
 
+### 53.1 Memory / Decision / Execution Policy（planned）
+
+候選 Policy Checks（不是已實作 API）：
+
+```text
+can_discover_memory_metadata(caller, resource, task)
+can_read_memory_payload(caller, resource, task)
+can_delegate_memory_access(parent, child, scope, expiry)
+can_reuse_execution_path(caller, path_version, context)
+can_execute(caller, capability_or_plan, current_context)
+```
+
+區分 **Retrieval Authorization**（是否可讀 metadata／payload）、**Plan Eligibility**（是否可信且相容）、**Execution Authorization**（當次工具／資源、風險與必要 human approval），以及 **Artifact Activation Governance**（新建或修改版本須 `8A Secure Evolution Gate）。Eligible 不等於 Authorized；高路由信心不能蓋過 DENY / UNKNOWN。未授權、撤銷、過期或不相容時要 fail closed，不得切換到更高權限的 Retriever 重試。
+
+---
+
 # 54. Notification 擴展
 
 Future Sharing Events 也使用 Notification Service。
@@ -2504,6 +2645,12 @@ Future Sharing Events 也使用 Notification Service。
 - Publication rejected
 - Shared capability revoked
 - Organization capability published
+
+---
+
+### Memory Governance Notifications（planned）
+
+Unauthorized retrieval attempts、撤銷 Path 被重用、可疑 memory poisoning、跨 tenant/branch 存取等可做治理告警候選；由 Policy Engine 決定是否通知及是否人工升級，普通的 retrieval miss 不應造成告警風暴。通知使用安全的 reason code / trace ref，不夾帶被拒絕的內容。
 
 ---
 
@@ -2536,6 +2683,22 @@ source_capability_id
 
 ---
 
+### 55.0.1 Memory / Decision Observability（planned）
+
+在既有 run/task/agent/capability/tenant/trace metadata 與 `routing_decisions / execution_observations` 上，後續可逐步增加：
+
+| Logical span | Correlation / observation |
+| --- | --- |
+| Decision | decision_id、parent decision、candidate set（僅授權）、selected target、model/policy version、routing confidence?、latency |
+| Memory Retrieval | retrieval_request_id、caller、authorized scope ref、policy/index snapshot version?、HIT / MISS / DENIED、returned authorized evidence refs?、latency/token/cost? |
+| Path Eligibility | path/version、validation state、precondition/version compatibility、revocation、ELIGIBLE / INELIGIBLE / UNKNOWN、reason code |
+| Execution / Outcome | pre-execution policy decision、approval_ref?、path reused?、validator version、observed outcome、retry/fallback |
+| Curation / Revocation | source trace、validation provenance、approved/rejected state、curation/index version、revocation lineage |
+
+這些欄位需保留 null/unavailable、分辨檢索錯誤／決策錯誤／權限拒絕／驗證失敗、完整成功與失敗母體；不可將敏感 payload、denied candidate、private chain-of-thought 放入一般遙測。**這是設計預留，不要求 Phase 1 現有 SQLite schema v1 已具備所有 spans；Phase 2/3 導入須 migration、契約／隔離測試。** `56 的集中研究指標整合留待第三輪。
+
+---
+
 ## 55.1 Failure-driven Self-Recovery Architecture（2026-10-19 設計增補）
 
 **狀態：Approved Design / Planned / Not Implemented。** 本節屬 v1.9 設計基準的增補，延續既有 Manager、Telemetry、Experience Memory 與 Secure Evolution Gate，不代表目前 Runtime 已具備自主診斷或修復功能。
@@ -2544,41 +2707,31 @@ source_capability_id
 
 系統在任務失敗且安全重試達上限後，不立即將整個任務視為不可恢復，而是建立結構化 Failure Episode，由 Failure Analysis Manager 選擇必要的診斷 Agent，定位失敗環節、提出修復候選並通過獨立驗證，最後安全恢復或升級給人類管理員。這形成第四條**研究性演化路徑 Reliability Evolution**，與 Capability / Decision / Performance Evolution 共享 Experience Memory 和 Telemetry。
 
-```text
-Task → Manager / Router → Agent / Skill / Tool Execution
-                                    ↓
-                             Result Validator
-                         ┌──────────┴──────────┐
-                       PASS                  FAIL
-                         ↓                     ↓
-                   Final Outcome       Failure Classifier
-                                               ↓
-                                         Retry Controller
-                              ┌────────────────┴────────────────┐
-                         safe & budgeted                exhausted / unsafe
-                              ↓                                ↓
-                        bounded retry              Failure Analysis Manager
-                                                            ↓
-                                        select Trace / Root Cause / Tool /
-                                        Skill / Environment diagnosis agents
-                                                            ↓
-                                             Root-cause evidence + Repair Plan
-                                                            ↓
-                                           Sandbox + Regression + Policy Gate
-                                                            ↓
-                                            Main/Audit Secure Evolution Gate
-                                           ┌────────────────┴───────────────┐
-                                      PASS / authorized             FAIL / UNKNOWN
-                                           ↓                              ↓
-                                   checkpoint resume              halt / human escalation
-                                           ↓                              ↓
-                                     Result Validator          Incident / Audit
-                                           └────────────┬─────────────────┘
-                                                        ↓
-                                       Raw History + Recovery Outcome
-                                                        ↓
-                                       Curated Experience Memory (only
-                                       after independent validation)
+```mermaid
+flowchart TD
+    T["Execution Outcome"] --> V{"Independent Validation"}
+    V -->|"Pass"| FIN["Final Outcome / Trace"]
+    V -->|"Fail"| C["Failure Classifier + Retry Controller"]
+    C --> B{"Safe, bounded retry?"}
+    B -->|"Yes"| RET["Retry + Validate"]
+    RET --> V
+    B -->|"No / exhausted"| F["Failure Analysis / Recovery Planning"]
+    F --> R{"Recovery type"}
+    R -->|"Approved existing path"| P["Version / Scope / Risk / Preconditions"]
+    P -->|"Pass"| G["Runtime Policy + Required Approval"]
+    G -->|"Authorized"| EX["Execute Approved Recovery"]
+    P -->|"Fail / Unknown"| H["Halt / Escalate"]
+    G -->|"Denied / Unknown"| H
+    R -->|"New / modified artifact"| N["Candidate + Sandbox / Regression"]
+    N --> A["Main/Audit Reviews + Policy / Human Gate"]
+    A -->|"Approved"| ACT["Versioned Activation"]
+    A -->|"Failed / Unknown"| H
+    ACT -. "Subsequent authorized use" .-> P
+    R -->|"Untrusted / no viable path"| H
+    EX --> X["Independent Recovery Validation"]
+    X --> O["Raw Failure / Recovery Outcome"]
+    H --> O
+    O --> MEM["Governed Experience Curation"]
 ```
 
 ### 分層責任與契約
@@ -2587,8 +2740,8 @@ Task → Manager / Router → Agent / Skill / Tool Execution
 - **Failure Analysis Manager**：依 error taxonomy、歷史經驗、預算與風險，選擇一個或多個專業診斷 Agent；不要求每次啟動全部 Agent。
 - **Diagnostic Agents**：Trace、Root Cause、Tool/API、Skill、Environment 等角色只提出可追溯證據與假說；不得因 LLM 自評而認定根因已證實。
 - **Repair Planner**：產生版本化 `RecoveryPlan`、候選變更、風險與 rollback/checkpoint；不得直接修改 production。
-- **Recovery Gate**：沿用既有 policy、sandbox、deterministic tests、Main/Audit independent review、human escalation；缺失證據、timeout、審查衝突或未知結果一律 fail closed。
-- **Experience Memory**：Raw failure/failed repair 全部保留；只有獨立驗證成功且經治理允許的修復流程，才可提升為可重用 Recovery Skill。
+- **Recovery Gate**：依 `8A.14 區分**既有已核准修復路徑**（每次做權限、環境／版本、前置條件、風險、必要人工核准及獨立結果驗證）與**新建／修改 Recovery Skill 或 Path**（完整 Sandbox、Regression、Main/Audit independent review、Policy／Human Governance）。失效、拒絕、UNKNOWN、timeout 或審查衝突均 fail closed。
+- **Experience Memory**：Raw failure/failed repair 全部保留；只有獨立驗證成功且經治理允許的修復流程，才可提升為可重用 Recovery Skill。成功歷史仍需在每次重用前核對 scope、版本、授權與 revocation，不能只因相似度高便直接執行。
 
 Phase 1 的 backend-neutral interface contract：`RetryPolicyInterface`、`FailureAnalysisInterface`、`RecoveryPlannerInterface`、`RecoveryGateInterface`、`RecoveryOutcomeRepository`。資料契約至少包括 `FailureContext`、`RetryDecision`、`RecoveryPlan`、`RecoveryOutcome`，與既有 `execution_traces`、`execution_failures`、`recovery_attempts`、`routing_decisions` 以 task/trace/failure ID 關聯。所有 token、latency、repair cost 與 validation result 都應記錄；不可取得的值保持 unavailable。
 

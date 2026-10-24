@@ -135,7 +135,7 @@ The Global/Local Decision split is logical and future-facing. Memory Router is *
 
 ## Capability First
 
-The long-term system asset is the Capability Library, not only conversation history.
+Long-term assets include the **Capability/Skill Registry, verified Execution Paths, curated Decision Experience and raw outcome evidence** — not just the Capability Library or conversation history.
 
 ## Validation Before Activation
 

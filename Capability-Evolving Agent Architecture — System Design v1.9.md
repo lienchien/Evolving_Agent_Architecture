@@ -6,53 +6,56 @@
 
 # 1. 專案定位
 
-Capability-Evolving Agent Architecture 的核心目標，是建立一種能隨實際使用經驗持續擴展自身能力集合的 Agent 架構。
+Capability-Evolving Agent Architecture（CEAA）的核心目標，是研究 **Agent 如何將執行經驗轉換成可重用、可驗證、可治理的能力與決策資產**，並隨使用經驗累積，在維持正確性與安全邊界下逐步降低不必要的重複推論。
 
-研究初期不綁定資安、DevOps、企業自動化或其他特定領域，而是先驗證：
+CEAA 的研究不預設資安、DevOps、企業自動化或任何特定應用領域；場景僅作為可控制、可量化的實驗工作負載，不能反向固化核心架構。
 
-> **Agent 是否能辨識自己的能力缺口，自主建立新能力，自主測試與驗證，產生可稽核報告，在管理員確認後正式啟用，並於後續任務重新使用？**
+### 兩條互補的主要研究路徑
 
-核心循環：
+1. **Capability Evolution（能力演化）**：Agent 能否辨識既有能力的缺口，產生候選 Capability / Skill，經獨立測試、安全驗證、治理與必要的人員核准後啟用，讓後續任務使用？
+2. **Experience-guided Decision（經驗輔助決策）**：Agent 能否先依任務特徵判斷是否值得檢索歷史經驗，藉由 **Decision Agent × Memory Router（`2.10 MADE）** 取得適用的執行證據，選擇經驗證路徑或輔助重新規劃，減少重複決策？
+
+這兩條路徑共同依賴 **Raw Execution Trace → Independent Outcome Validation → Governed Experience Curation**。Reliability Evolution（診斷與恢復）及 Performance / Skill Complexity Evolution（效能與成本改善）建立在此證據層上，均屬逐階段驗證的研究方向，不視為已完成的 runtime 功能。
+
+### 通用任務原則
 
 ```text
-Problem
+Task / Requirements
+  → Main Agent / Decision Layer
+      ├─ Validated & Compatible Experience → Reuse Execution Plan
+      ├─ Partial Experience → Experience-assisted Planning
+      └─ Missing / Insufficient Capability → Capability Gap → Evolution
+  → Policy / Permission Check
+  → Execution（當次輸入及當前狀態）
+  → Independent Outcome Validation
+  → Trace / Outcome → Governed Experience Curation
+```
+
+**已驗證計畫的重用不是對舊輸出的快取，也不是略過授權與執行驗證。** 新能力／新版本的建立與啟用須經既有 Secure Evolution Gate 與必要的人員核准；未命中記憶、信心不足、版本或前置條件不相容時，返回正常規劃／能力缺口流程。
+
+### 能力缺口的正式演化分支（保留既有治理）
+
+```text
+Problem / Capability Gap
   ↓
-Capability Gap
+Generate Candidate
   ↓
-Generate
-  ↓
-Validate
-  ↓
-Autonomous Test
+Independent Validation / Autonomous Tests
   ↓
 Test Report
   ↓
-Notify Administrator
+Secure Evolution Gate + Policy
   ↓
-Human Approval
+Notify Administrator / Human Approval（依既有治理規則）
   ↓
-Activate
+Activate Approved Capability
   ↓
-Reuse
+Future Reuse with Policy and Outcome Validation
 ```
 
-未來商品化後，再進一步擴展：
+遠期 Capability 分享／匯入仍是獨立、使用者明確 opt-in 的產品化方向：`31–54、`67–68 已保留其驗證與權限邊界；不構成初期研究 MVP 的實作範圍。
 
-```text
-Local Capability
-      ↓
-Optional Publish
-      ↓
-Shared Capability Registry
-      ↓
-Optional Discovery / Download
-      ↓
-Local Validation
-      ↓
-Administrator Approval
-      ↓
-Local Agent
-```
+**狀態註記：** 上述為 CEAA 整體研究設計。`2.9 Package-local Decision、`2.10 MADE、Validated Path Registry 與跨 Agent 組織仍為 **Design Defined / Not Implemented**；已完成能力請依 `58 及 `71 的階段／現況界線判讀。
 
 ---
 
@@ -815,49 +818,76 @@ Audit Review = PASS
 
 # 4. 高階系統架構
 
-```text
-                         User / Task
-                              │
-                              ▼
-                       Main Agent Service
-                              │
-                      Capability Search
-                              │
-              ┌───────────────┴───────────────┐
-              │                               │
-      Existing Capability             Capability Missing
-              │                               │
-              ▼                               ▼
-     Capability Executor              Gap Detection
-                                              │
-                                       Evolution Queue
-                                              │
-                                       Evolution Service
-                                              │
-                                      Capability Builder
-                                              │
-                                      Validation Service
-                                              │
-                                   Capability Testing Agent
-                                              │
-                                         Test Report
-                                              │
-                                         Policy Engine
-                                              │
-                                     Capability Registry
-                                              │
-                                      Pending Approval
-                                              │
-                                     Notification Service
-                                              │
-                                        Administrator
-                                              │
-                                      Approval Service
-                                              │
-                                        Active Capability
+本節描述 **CEAA 通用目標架構（logical target architecture）**；不表示圖中每個 Agent、Package、Router、Registry、Gateway 已具備 runtime。最小執行基礎與分階段導入限制仍以 `58–60、`71 及 DEV_PLAN / PROJECT_STATUS 為準。
+
+### 4.1 Task → Decision → Execution → Evidence（Mermaid）
+
+```mermaid
+flowchart TB
+    U["User / Task"] --> M["Main Agent"]
+    M --> D["Global Decision Agent"]
+
+    subgraph MADE["Memory-assisted Decision Engine"]
+        D <-->|"Evidence request / result"| MR["Memory Router"]
+        MR <--> MEM[("Experience Memory")]
+        MR <--> PATH[("Validated Path Registry")]
+        MR <--> CR[("Capability / Skill Registry")]
+    end
+
+    D --> STR{"Decision Strategy"}
+    STR -->|"Verified compatible path"| FAST["Validated Plan Candidate"]
+    STR -->|"Partial experience"| PLAN["Experience-assisted Planning"]
+    STR -->|"Novel / uncertain"| EXP["Reasoning on Demand"]
+    EXP --> GAP{"Suitable Capability Available?"}
+    GAP -->|"Yes"| PLAN
+    GAP -->|"No / insufficient"| EVO["Capability Gap / Evolution Pipeline"]
+
+    FAST --> LOCAL["Selected Agent / Package / Local Decision"]
+    PLAN --> LOCAL
+    LOCAL -. "Scoped experience lookup" .-> MR
+    LOCAL --> POL["Policy / Permission Gate"]
+    POL --> EXEC["Capability / Skill / Tool Execution"]
+    EXEC --> VAL["Independent Outcome Validation"]
+    VAL --> TRACE["Durable Trace / Observed Outcome"]
+    TRACE --> CUR["Governed Experience Curation"]
+    CUR -. "Verified experiences" .-> MEM
+    CUR -. "Approved reusable paths" .-> PATH
+    VAL --> OUT["Result / Failure / Recovery"]
+    OUT --> M
+
+    EVO --> GATE["Secure Evolution Gate + Independent Reviews"]
+    GATE --> APP["Human Approval as Required"]
+    APP --> CR
+
+    classDef decision fill:#285e9e,color:#ffffff,stroke:#285e9e
+    classDef memory fill:#176447,color:#ffffff,stroke:#176447
+    class D,LOCAL decision
+    class MR,MEM,PATH memory
 ```
 
-未來商品化擴充：
+**責任分離：** Global Manager 決定候選 Agent / Package 與跨包策略，Local Decision 決定受限的 Skill / Tool / Workflow；Memory Router 只提供符合 scope 的歷史證據，不接管決策／權限／驗證。首次任務可走 Reasoning / Gap 路線；成熟任務只在條件相容時走 fast path。圖中的 Capability Evolution 註冊／啟用為簡化表述，完整 Secure Evolution Gate、Testing、Report、Policy、Human Escalation、Activation 順序見 `8A、`13、`17–26；**新產物不得因完成 review 就直接啟用**。
+
+### 4.2 Capability Gap → Governed Evolution（Mermaid）
+
+```mermaid
+flowchart TD
+    GAP["Confirmed Capability Gap"] --> Q["Evolution Queue"]
+    Q --> P["Evolution Planner / Build Specification"]
+    P --> BUILDER["Isolated Builder / Candidate Artifact"]
+    BUILDER --> REV["Independent Main + Audit Reviews"]
+    REV --> CH{"Both PASS?"}
+    CH -->|"No / Unknown"| HALT["Fail Closed / Human Escalation"]
+    CH -->|"Yes"| TEST["Independent Runtime / Functional / Security Testing"]
+    TEST --> POLICY["Policy + Required Human Approval"]
+    POLICY --> ACT["Registry / Approved Activation"]
+    ACT --> REUSE["Future Governed Reuse"]
+    HALT --> FIX["Revision / Quarantine"]
+    FIX -. "New candidate requires full revalidation" .-> BUILDER
+```
+
+本圖保持原有 Capability Generation 的功能主線；**只有 Capability / Agent Artifact 的新建或更新進入完整 Evolution Gate，已核准且條件相容的執行計畫重用不等於重新生成 Artifact**。任何執行仍受其獨立 Policy Gate 與必要驗證限制。
+
+### 4.3 未來商品化擴充（維持原先預留）
 
 ```text
                   Local Capability Registry
@@ -874,28 +904,28 @@ Audit Review = PASS
               Shared Capability Registry
 ```
 
-此區目前只保留設計，不列入 MVP。
+此區目前只保留設計，不列入研究 MVP。分享預設關閉，匯入需明確同意及本地驗證；不得將 Experience Memory / raw enterprise data 當成可自動分享資產。
 
 ---
 
 # 5. Main Agent Service
 
-主要責任：
+Main Agent 是任務入口與結果責任主體，不是每次都直接搜尋完整 Capability 集合、獨自生成 Workflow 或自行重算所有子 Agent 的局部決策。現行 Phase 1 runtime 與規劃中的 Global Manager / Package-local Decision 須明確區分。
 
-- 理解任務
-- 搜尋 Capability
-- 呼叫 Capability Executor
-- 評估執行結果
-- 回報失敗
-- 產生 Failure Context
+### 主要責任
 
-Main Agent 不具有：
+- 理解任務目標、當前輸入、限制、風險與成功判準；建立可關聯的 task / trace identity。
+- 透過既有或未來的 Decision Layer，選擇合適的 Capability、Agent、Package、規劃／記憶檢索路徑；無可靠歷史時允許正常推論。
+- 在需要歷史證據時，透過 **Memory Router 的 scoped retrieval** 取得候選經驗；不得將記憶命中等同權限或正確性。
+- 協調現有 Capability Executor、Local Decision / Tool Execution（分階段導入），確保實際執行遵守 Policy / Permission Gate。
+- 評估經獨立驗證的 Outcome，回報成功、失敗、Gap 或 Recovery Context；將可稽核 Decision / Execution Evidence 寫入 Telemetry。
+- 對缺少或不足的 Capability 建立 Gap，交由受治理的 Evolution Pipeline，而非自行修改 active capability。
 
-- 直接修改 Capability
-- 直接啟用 Capability
-- 直接上傳 Capability
+### 邊界與權限
 
-的權限。
+Main Agent 不具有 **直接修改／啟用／發布 Capability**、跨 Scope 存取 Memory、跳過 Independent Validation、替 Human Administrator 核准新 Artifact 等權限。Global Decision 只負責候選範圍與路由策略；Local Decision 在父層授權範圍內處理細部執行，不提升權限。跨分支讀取與遞迴子 Agent 的有效授權，遵循 docs/MULTI_AGENT_ORGANIZATION_DESIGN.md 的既有治理不變量。
+
+**Status:** Phase 1 的 Main Agent / Capability Executor 是現有核心基礎；Global/Local Decision、Package Routing 與 MADE 是未來分階段整合，**尚未全部實作或驗證**。
 
 ---
 
@@ -3087,25 +3117,31 @@ Capability Subscription
 
 # 69. 專案演進路線
 
+CEAA 採 **先建立可追溯的能力／決策／執行證據，再以實驗決定是否擴充自主程度** 的演進方式。以下表示大致的組織與部署成熟方向，**不是所有技術都須線性完成才可研究下一步**，更不代表已部署完成。
+
 ```text
-Single Process
-     ↓
-Modular Monolith
-     ↓
-Background Workers
-     ↓
-Multi-Agent System
-     ↓
-Enterprise Deployment
-     ↓
-Multi-Tenant Platform
-     ↓
-Shared Capability Registry
-     ↓
-Capability Marketplace
-     ↓
-Collective Capability Network
+Single Process / Verifiable Core
+           ↓
+Modular Monolith + Durable Execution Telemetry
+           ↓
+Memory / Decision Interfaces + Controlled Capability Retrieval
+           ↓
+Memory-assisted Decision + Validated Path Reuse (research)
+           ↓
+Background Workers / Governed Multi-Agent Coordination
+           ↓
+Enterprise Governance + Multi-Tenant Boundaries
+           ↓
+Optional Shared Capability Registry
+           ↓
+Optional Marketplace / Collective Capability Network
 ```
+
+**橫向研究軸**（與部署階段分開）：Capability Evolution、Decision Evolution / Memory Routing、Skill / Cost Optimization、Failure-driven Reliability Evolution。所有優化都以 independently validated outcomes、權限與風險不變量、完整成本和回歸測試約束，不能因模型推斷或歷史成功率高就自動啟用新版本。
+
+- 目前優先仍是 `58 的 Phase 1 Telemetry Foundation；Phase 1.5 的 real provider / sandbox / auth / policy hardening 為後續前置條件。
+- `2.9–2.10 的 Package／MADE／Path Registry 在 Phase 2 的 interface / PoC 與 Phase 3 的 controlled evaluation 中逐步驗證，不提前宣告為目前 runtime。
+- 本節不變更原有 `61–68 的 Background、Sandbox、Dashboard、Local LLM、Sharing 等遠期功能優先順序與治理條件；實際里程碑以 DEV_PLAN.md 為準。
 
 ---
 
@@ -3242,27 +3278,50 @@ Allow automatic updates?
 
 # 73. 最終能力流
 
-本地學習：
+CEAA 的完整能力流由 **Task Decision / Experience Reuse** 與 **Capability Gap / Governed Evolution** 共同組成，而不只有新能力生成。
 
-```text
-Task
- ↓
-Gap
- ↓
-Evolution
- ↓
-Validation
- ↓
-Testing
- ↓
-Report
- ↓
-Approval
- ↓
-Local Capability
+### 73.1 通用任務與經驗閉環（Mermaid）
+
+```mermaid
+flowchart TB
+    TASK["Task / Requirements"] --> DEC["Decision Agent"]
+    DEC <-->|"Scoped Evidence"| MR["Memory Router"]
+    MR <--> MEM[("Experience / Validated Paths")]
+    DEC --> C{"Applicable Experience / Capability?"}
+    C -->|"Verified / compatible"| RE["Reuse Existing Plan"]
+    C -->|"Partial"| RP["Experience-assisted Replanning"]
+    C -->|"Gap confirmed"| GAP["Governed Capability Evolution"]
+    RE --> P["Policy / Permission Gate"]
+    RP --> P
+    P --> EX["Execute with Current Inputs"]
+    EX --> V["Independent Outcome Validation"]
+    V --> T["Trace + Observed Outcome"]
+    T --> CUR["Curate Verified Experience"]
+    CUR -. "Future reuse" .-> MEM
+    GAP --> GATE["Secure Evolution Gate + Approval"]
+    GATE --> REG["Approved Capability Registry"]
+    REG -. "Future eligible task" .-> DEC
 ```
 
-可選分享：
+不適用的歷史路徑、低信心或 stale evidence 應回到受控推論／重新規劃；只有確認缺少足夠 Capability，才觸發 Gap / Evolution。上圖的 Gap / Evolution 是高階摘要；完整候選產生、雙重審查、沙箱測試及核准流程以 `8A 為準。
+
+### 73.2 新能力建立與本地學習（保留）
+
+```text
+Task / Confirmed Gap
+  ↓
+Evolution Planner / Candidate Generation
+  ↓
+Independent Main / Audit Review + Validation / Testing
+  ↓
+Report + Policy + Human Approval（依既有治理規則）
+  ↓
+Approved Local Capability
+  ↓
+Future Reuse after Scope / Compatibility / Permission Check
+```
+
+### 73.3 可選分享（遠期、需 opt-in）
 
 ```text
 Local Capability
@@ -3276,7 +3335,7 @@ Package
 Publish
 ```
 
-可選取得：
+### 73.4 可選取得（遠期、需本地驗證）
 
 ```text
 Shared Registry
@@ -3296,43 +3355,41 @@ Approval
 Local Agent
 ```
 
+此處 **Memory / raw trace 不隨 Capability 分享自動輸出**；分享、取得及批准的權限規則仍依 `31–54。
+
 ---
 
 # 74. 最終願景
 
-Capability-Evolving Agent 不只是一個：
+Capability-Evolving Agent 不只是一個「能自己建立工具的 Agent」，也不只是把所有過往對話放進記憶庫的系統。
 
-> 能自己建立工具的 Agent。
+CEAA 的長期研究目標是：
 
-而是一個完整的能力生命週期系統：
+> **建立一種能把真實執行經驗轉換成可信任、可檢索、可治理、可重用的能力與決策資產，並在任務需求改變時安全重新探索的通用 Agent 架構。**
 
-```text
-Discover Gap
-→ Learn
-→ Build
-→ Test
-→ Explain
-→ Govern
-→ Activate
-→ Reuse
-```
-
-未來商品化後，再增加：
+### 互補的演化閉環
 
 ```text
-Share
-→ Discover
-→ Transfer
-→ Validate Locally
-→ Adopt
+Explore Unknown Task
+       ↓
+Plan / Execute / Observe / Validate
+       ↓
+Durable Execution Evidence
+       ↓
+├─ Capability Evolution → Build / Test / Govern / Activate
+├─ Decision Evolution   → Retrieve / Rank / Select / Replan
+├─ Efficiency Evolution → Optimize / Compress / Measure
+└─ Reliability Evolution→ Diagnose / Recover / Verify
+       ↓
+Governed Reuse of Validated Knowledge and Capabilities
+       ↓
+New Tasks / New Evidence / Regression Checks
 ```
 
-因此最終可以形成：
+**MADE（Decision Agent × Memory Router）** 的角色是讓正確的歷史經驗在適當的任務與權限範圍內協助決策，而非取代人類治理或將 Agent 固定在過去的路線。已知且條件相容的問題可減少重複規劃；未知、低信心、風險較高或環境已改變的問題應安全重新推論／升級處理。
 
-> **一個讓每個 Agent 都能獨立成長，同時又可以在使用者明確授權下交換經過驗證能力的 Capability Ecosystem。**
+未來商品化時可再延伸 **Share → Discover → Transfer → Validate Locally → Adopt**，且始終維持使用者 opt-in、local validation、least privilege 與可撤銷治理。產品化可能帶來多 Agent／多租戶的能力網絡，但不屬於目前研究 MVP 已驗證的成效。
 
-模型本身可以保持可替換。
+CEAA 的長期資產不只是一個 Capability Library，而是由 **Capability / Skill Registry、Validated Execution Paths、Decision Experience、Raw Execution Evidence 與 Governed Policies** 構成的版本化證據體系；底層 LLM、記憶後端和推論策略皆應保持可替換。
 
-Agent 的真正長期資產則變成：
-
-> **它累積、驗證並被允許使用的 Capability Library。**
+上述演化、節省成本、提高成功率與正確決策一致性均是 **待以基準實驗驗證的假說**，不因寫入設計文件就視為已證實。

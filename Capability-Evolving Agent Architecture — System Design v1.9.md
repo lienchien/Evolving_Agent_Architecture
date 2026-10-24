@@ -2760,122 +2760,124 @@ Retry、repair cycles、time/cost budget 與 recursive delegation 必須有明�
 
 ---
 
-# 56. 研究指標
+# 56. 研究指標（Cross-Experiment Metric Contract；2026-10-24 第三輪修訂）
 
-核心研究指標：
+本節是 `2.1–2.10、`55.1 與 `60 的 **共用研究指標字典**。所有指標皆屬待實驗驗證的候選 KPI；**Phase 1 的責任仍是將既有 operational history、routing decision、failure/retry 與 token-cost 指標可靠持久化，不能將本節全部指標當成 Phase 1 完成條件**。未實作／無資料的項目明確標記 unavailable，而非填入估算或將未觀察到當作零。
 
-- Task Success Rate
-- Capability Generation Success Rate
-- Validation Pass Rate
-- Testing Pass Rate
-- Approval Rate
-- Reuse Rate
-- Generalization Rate
-- Regression Rate
-- Repeated Failure Rate
-- Cost
-- Latency
+研究問題分成五個可區分的層次：**Capability Evolution**（能否建立並安全重用能力）、**Memory Retrieval**（能否找到有權取得且適用的證據）、**Decision Evolution**（能否正確選擇與必要時放棄重用）、**Execution / Reliability**（能否經獨立驗證真正完成任務）、**Efficiency / Amortization**（完整成本是否下降）。**Routing accuracy、memory hit rate、task success 與 governance pass 不得互相代替**。
 
-### 56.1 Token / Cost Efficiency Metrics
+### 56.1 共同量測單位、分母與 Outcome Oracle
 
-為驗證 Capability Reuse 是否能降低長期推理成本，每次 LLM interaction 與 task execution 應盡可能記錄：
+所有實驗先決定統計單位：`task_id`（最終任務）、`decision_id`（一次路由／決策）、`retrieval_request_id`（一次記憶查詢）、`execution_attempt_id`（一次執行／重試）、`failure_episode_id`（一次符合診斷資格的故障）、`artifact_or_path_version`（版本化演化單位）。同一 task 的多次 retry、LLM 呼叫或 tool steps 不可當成彼此獨立的成功任務樣本；跨組比較應按 task/family/seed 配對。
 
-```text
-task_id
-task_family
-capability_id
-capability_version
-capability_created
-capability_reused
-input_tokens
-output_tokens
-reasoning_tokens
-total_tokens
-llm_call_count
-latency
-task_success
-```
+**Outcome Oracle**：Task Success 只能由事先固定的 acceptance criteria、可重現測試或獨立驗證器確定；不能用模型自評、歷史 success flag、記憶命中或 Approval 記錄取代。評估器／測試資料在正式 holdout 前凍結，記錄 oracle/version、人工歧義處理與未知狀態。
 
-若 Provider 不提供 reasoning token，必須記錄為 unavailable，而不是推估。
+| Metric | 定義／分母（未註明者以 eligible observations 計） |
+| --- | --- |
+| **Verified Task Success Rate** | 經獨立 oracle 判為成功的任務數 ÷ 所有已提交且納入實驗的任務數；失敗、逾時、預算耗盡、政策拒絕各自報告，**不能從分母默默移除** |
+| **Capability Generation Success Rate** | 經完整驗證且取得所需核准的新候選數 ÷ 嘗試生成的候選數；另報告可用版本數、第一次通過率與修正次數 |
+| **Validation / Testing / Approval Rate** | 各階段通過數 ÷ 實際進入該階段數；另報告全部候選為分母的 end-to-end conversion，避免只看通過篩選的樣本 |
+| **Reuse Rate / Generalization Rate** | 符合適用性、政策與驗證條件的實際重用／泛化成功數 ÷ 定義清楚的 eligible task 數；另報告 attempted / rejected reuse，不把命中視為重用成功 |
+| **Regression Rate** | 新／優化版本在既有固定 regression suite 中新出現失敗的案例數 ÷ 可比較既有成功案例數；另以版本為單位報告受影響版本比例 |
+| **Repeated Failure Rate** | 同一 normalized failure family 在固定窗口內再次發生的 task/attempt 數 ÷ 同一母體中有機會發生該失敗的 task/attempt 數；須報告時間窗與暴露量 |
+| **Policy Violation / Unauthorized Action Rate** | 實際違規動作數 ÷ 可執行動作機會數；若為零，仍報告樣本規模、置信上限及拒絕事件，不宣稱證明「絕對安全」 |
+| **Latency** | Task end-to-end P50/P95/P99（如樣本足夠）、Decision / Retrieval / Execution / Validation 的分段時間；逾時與未成功需有明確的 censoring/timeout 規則 |
 
-Capability 建立階段需另外彙總：
+**Missing Data**：沒有 model confidence、reasoning tokens、provider monetary cost 或驗證結果時分別為 null / unavailable / unknown；不能以 0、PASS 或平均數插補。報告 metrics 的可觀測率、失敗事件 coverage 與不同實驗組的缺失率。
+
+### 56.2 Token、Total Cost 與 Reasoning Cost Amortization
+
+沿用 Phase 1 既有 task / interaction Telemetry，不刪除既有欄位。每次互動／任務應盡可能關聯：`task_id`、`trace_id`、`experiment_id`、`task_family`、`model/provider/version`、`capability/path/version`、`created/reused/revised`、`input_tokens`、`output_tokens`、`reasoning_tokens?`、`total_tokens`、`llm_call_count`、`retry_count`、`latency`、`task_success`。Provider 未提供 reasoning tokens 或可靠費用時記 unavailable，不推估為實測。
+
+依階段區分：
 
 ```text
-gap_detection_tokens
-generation_tokens
-validation_tokens
-testing_tokens
-revision_tokens
-report_tokens
-total_capability_creation_tokens
+First Encounter / Capability Creation:
+  gap detection + planning + code generation + validation
+  + testing + revision + audit / approval + artifact maintenance
+
+Experience-Assisted / Plan Reuse:
+  initial classification + authorized memory lookup + ranking
+  + local/global decision + compatibility checks + execution
+  + runtime policy / validation + retry / fallback + memory maintenance
+
+Total Cost (observed or explicitly estimated):
+  LLM usage + tool / API + compute + memory index/storage
+  + verification + retry/recovery + governance / human review
+  + amortized creation / training / curation / maintenance
 ```
 
-Capability 重用階段需彙總：
+以相同 task sequence、固定計價時間／單位、明確假設與成本可觀測性比較：
 
 ```text
-retrieval_tokens
-routing_tokens
-reuse_reasoning_tokens
-validation_tokens
-response_tokens
-total_capability_reuse_tokens
+Cost per Successful Task (CPST)
+  = Total Evaluation-Window Cost / Number of Independently Verified Successful Tasks
+
+Average Cost per Submitted Task
+  = Total Evaluation-Window Cost / Number of Submitted Tasks
+
+Token Saving Rate
+  = 1 - (Comparable CEAA Total Tokens / Comparable Baseline Total Tokens)
+
+Net Cumulative Saving(N)
+  = Cumulative Baseline Cost(N) - Cumulative CEAA Cost(N)
+
+Break-even Reuse Count
+  = first N with Net Cumulative Saving(N) > 0
+    (report "not reached" if not observed)
 ```
 
-主要衍生指標：
+`CPST` 只有在成功數 > 0 時可計算；成功數為 0 應報 undefined／no successes，並單獨列出總成本和失敗數。**成本與成功率必須一起呈現**，在無等價品質與安全條件下，單獨比較 Token Saving 不足以支持效率提升主張。前期建置／驗證的成本不可隨意排除；人力、硬體、儲存成本如不可觀測，需報告 cost coverage，將「實測 provider cost」與「模型化 total cost」分開。
 
-```text
-Average Tokens per Task
-Token Saving = Static Agent Tokens - CEAA Tokens
-Token Saving Rate = 1 - (CEAA Tokens / Static Agent Tokens)
-Break-even Reuse Count = first N where cumulative CEAA cost < cumulative static-agent cost
-```
+主要衍生量：Average Tokens per Task、LLM Calls、Reasoning Calls、Retrieval Calls、Hit/Miss Fallback Cost、Decision Overhead、Capability/Skill Revision Cost、Cold-start Overhead、Cumulative Tokens/Cost、Break-even Count。
 
-除了 Token，也同步記錄：
+### 56.3 Memory Routing 與 Retrieval Quality
 
-- LLM Call Count
-- Latency
-- Capability Execution Time
-- Capability Revision Cost
-- Failure / Retry Cost
-- Provider Monetary Cost（若 Provider 可取得可靠計價資訊）
+先在 holdout 任務上建立**具授權與相容性判準的 evidence relevance labels**；只對 caller 有權取得的 memory universe 評估檢索品質。禁止為了比較 recall 而在真實權限環境故意移除 ACL。
 
-研究結果不得只比較第一次 Capability Creation；必須比較一段任務序列的 cumulative cost 與 average cost。
+| Metric | 定義與判讀 |
+| --- | --- |
+| **Precision@K / Recall@K / MRR** | 對授權候選集合的相關經驗與排名評估；K、標註規則、index snapshot 與 memory corpus 必須固定；無相關項時另報 no-relevant-query cohort |
+| **Memory Applicability Precision** | 回傳並宣告可用的 memory/path 中，經任務條件、版本、權限與前置條件核驗確實可用的比例 |
+| **Memory Miss / Denial / Stale Rejection** | 分別報告合法無命中、因權限拒絕、被判定版本過時／撤銷；不得將 DENIED 當成一般 MISS 或有價值的低召回 |
+| **False Mature-route Rate** | Stage 1 判為 mature 候選，但 Stage 2／oracle 判定無有效相容路徑的比例；分母為 Stage 1 mature predictions |
+| **False Reuse Rate** | 嘗試 fast path 的次數中，實際不符合既定可重用條件的比例；還須分開報已阻止的錯誤候選與真正執行的不安全重用 |
+| **Retrieval Overhead** | 每次合法檢索的 token／compute／latency／store/index 維護成本，含 hit/miss、cache warm/cold 和 fallback |
 
-### 56.2 Reuse Similarity Levels
+### 56.4 Decision Accuracy、Correct Decision Consistency 與 Calibration
 
-為避免只證明「完全相同問題的快取效果」，重用實驗至少區分：
+決策穩定性只對**條件等價**的多次 task（版本、權限、環境與有效候選集合在 oracle 容許範圍內一致）比較；條件不同時應正確更換執行路線，而非追求相同輸出。
 
-#### Exact Repetition
+- **Decision Accuracy / Path Selection Accuracy**：最後選擇是否屬 oracle-validated acceptable action / plan set；若多條不同路線皆可正確完成，不應只因未選唯一參考路線判錯。
+- **Correct Decision Consistency（CDC）**：在相同條件的重複試驗中，持續選到 **可驗證正確且符合政策** 的路徑的比例／群組一致程度；同時報告 repeated accuracy、same-action agreement、wrong-but-stable rate。**單純全部選同一路線不等於穩定正確。**
+- **Execution Path Entropy**：路線分布多樣性的描述指標，只有結合 correctness 和任務條件時才可判讀；entropy 下降本身不是進步。
+- **Calibration**：若 Decision Model 提供具有概率語意的 calibrated score，觀察 ECE / Brier Score、coverage-risk tradeoff、Stage 1 / Stage 2 confidence 分開校正；若分數不是機率或不存在，不硬算校正誤差。
+- **Fallback / Escalation Quality**：對不相容、低信心、缺失記憶、重大風險等 negative controls，是否正確拒絕 fast path 並採 safe replan / escalation；另計 fallback success、latency 和 cost。
 
-幾乎相同的任務，只改變極少量輸入。
+**Decision Maturity** 使用 `2.10 的 `D-Explore / D-Assisted / D-Mature`；不得與 `2.8 的 Skill L1（Lightweight）/ L2（Standard）/ L3（Advanced）混用。Stage 1 只是優先檢索候選，Stage 2 必須驗證具體 path 的適用性；兩者錯誤率應分開量測。
 
-#### Near-Similar
+### 56.5 Skill / Package / Reliability Evolution
 
-同一 task family、核心程序相同，但資料或問題內容不同。
+| Research axis | Primary metrics | 不可省略的對照 |
+| --- | --- | --- |
+| Skill Tiering / Complexity Compression | Correct Tier Selection、Capability Retention、Regression、Skill CPST ratio、Maintenance Cost、Cross-context Generalization | 不把更低成本等同「能力等級變低」；需比較原始複雜 Skill 的適用範圍與優化後範圍 |
+| Hierarchical Packages | Global/Local Route Accuracy、Package/Skill/Path Selection、Cross-package Coordination Error、Route Overhead、CPST、P95 Latency | 控制 package/skill count、routing depth、candidate set、flat vs hierarchical；完整計入 hierarchy overhead |
+| Failure-driven Recovery | Eligible Failure Episodes、Recovery Success Rate、Correct Root Cause Rate、MTTR/P95 Recovery Time、Repeated Failure Rate、Unsafe Repair/Regression/Human Escalation | Recovery Success 分母固定為符合資格的 failure episodes；任務成功仍以所有提交 tasks 為分母，不能排除無法修復者 |
+| Governance | Unauthorized Action Rate、Correct Denial Rate、False Reuse Blocked、Validation / Approval Workload、Policy Violation、Human Review Time | 安全邊界是 hard constraint，不用少做安全檢查來換取更高效率 |
 
-#### Generalized
+**Recovery Success Rate** = 已通過獨立驗證且恢復至預定可接受狀態的 eligible failure episodes ÷ 所有符合恢復資格並納入實驗的 failure episodes。**MTTR** 從事件首次有效偵測到驗證完成恢復；逾時／未恢復者須以明確 censoring 和 time-to-event / capped-time 規則列出，不能只平均成功恢復者。
 
-需要相同核心能力，但場景、輸入結構或上下文有明顯改變。
+### 56.6 Reuse Similarity、分層與研究誠信
 
-研究需分別觀察：
+研究重用至少分成三層：
 
-- 是否成功找到既有 Capability
-- 是否能直接 reuse
-- 是否需要 adaptation / revision
-- token 是否仍低於 solve-from-scratch baseline
-- success rate 是否維持
-- 是否因過度重用造成 regression
+- **Exact Repetition**：核心任務、環境與步驟近乎相同，少量輸入變動；不可只靠此組聲稱泛化。
+- **Near-Similar**：同一 task family 與程序，但資料內容或部分條件變動，需要重新檢查版本／前置條件。
+- **Generalized**：核心能力仍可適用，但環境、schema、工具配置或 Context 有明顯改變；應增加 unknown / drift / negative controls，評估是否適當重新規劃而非強制重用。
 
-未來 Sharing 研究可以增加：
+正式實驗依 difficulty、risk、task family、new/known task、memory history size、package/skill scale、cold/warm index、provider/tool/policy version、time window、tenant/scope 分層。採時間先後的 experience snapshots、train/dev/holdout 隔離、固定 task/seed/oracle、記錄模型／工具／成本版本，避免將 holdout 的結果回灌到同一輪決策。比較成功率與成本需報樣本數、置信區間、反覆試驗／配對差異；低樣本研究應標示 exploratory 而非穩健結論。
 
-- Capability Transfer Success Rate
-- Cross-Environment Generalization
-- External Capability Reuse Rate
-- Import Rejection Rate
-- Shared Capability Regression Rate
-- Time-to-Capability-Adoption
-
-但目前不屬於 Phase 1。
+**Future Sharing（非 Phase 1）** 可另評估 Capability Transfer Success、Cross-environment Generalization、External Reuse、Import Rejection、Shared Capability Regression 與 Time-to-Adoption，但不可混入本階段主要研究結果。
 
 ---
 
@@ -2976,165 +2978,176 @@ Reuse
 
 ---
 
-# 60. Phase 3 — Research Evaluation
+# 60. Phase 3 — Research Evaluation（Unified Protocol；2026-10-24 第三輪修訂）
 
-新增：
+**Status: Research Plan / Not Implemented / Not Evaluated.** 本節整合 `2.1–2.10 的 Capability / Decision / Memory / Skill / Package Evolution 與 `55.1 的 Reliability Evolution。它是 Phase 3 的**研究協議與候選實驗清單**，並不是單一不可拆分的大型實驗，也不把全部項目列成 Phase 1／1.5／2 的退出條件。Phoenix、DeepEval、MLflow 為候選量測工具而非平台硬依賴；工具替換不應改變 Outcome Oracle 或資料契約。所有成功／成本／安全指標以 **`56 共同定義**為準。
 
-- Phoenix
-- DeepEval
-- MLflow
+### 60.1 統一研究問題與實驗分層
 
-Phase 3 在 Phase 1 已建立的量測與持久化基礎上，正式執行
-**Token Efficiency / Cost Amortization Experiment**，並與既有正確率、Reuse、
-Generalization、Regression 等指標一起分析。
+**主問題**：CEAA 能否將昂貴的探索與經驗累積轉換為經驗證的可重用決策／執行資產，在 **Verified Task Success 與治理不退化** 的條件下，降低長期 **Cost per Successful Task** 並提升正確決策一致性？
 
-至少比較：
+拆分成相互可歸因的研究問題：
 
-```text
-Baseline A: Strong Model + Static Capabilities
-Baseline B: Medium Model + Static Capabilities
-Experimental C: Medium Model + Evolving Capabilities
-Optional D: Strong Model + Evolving Capabilities
+| Track | Independent variable | Primary outcome | Supporting sections |
+| --- | --- | --- | --- |
+| **E1 Capability / Cost** | Static vs evolved capabilities、首次生成 vs 重用、模型強度 | Verified Task Success、Cumulative Cost、Break-even | `2.1–2.5、`56.1–2 |
+| **E2 Memory × Decision（MADE）** | Global/naive retrieval vs scoped router、Stage 1/2 confidence、memory/path reuse | Retrieval applicability、CDC、False Reuse、CPST | `2.7、`2.10、`56.3–4 |
+| **E3 Skill Optimization** | Difficulty-aware tiering、frequency/quality optimization、complexity compression | Quality retention、Tier selection、Regression、CPST | `2.8、`56.5 |
+| **E4 Hierarchical Package Routing** | Flat vs hierarchical/global/local、local experience、rationale、path cache | Package/Skill/Path Accuracy、P95 Latency、CPST | `2.6、`2.9、`56.5 |
+| **E5 Reliability / Recovery** | Fixed retry vs selective diagnosis、governed repair / reuse | Recovery Success、MTTR、Unsafe Repair、CPST | `55.1、`56.5 |
+| **E6 External Retrieval Baseline** | Independent tool retrieval vs HYSET vs CEAA routing | Recall@K、COMP@K、Tool-set Exact Match / End-to-end Success | `60.7 |
+
+E1–E5 使用共用事件、metric dictionary、資料切分與 governance，但各有**獨立的 baseline family**；例如 E1 的 Baseline A 和 E5 的 B1 不應被解讀成同一對照組。E6 先看 tool-set selection、再看 end-to-end，不能把只有 tool retrieval 的演算法直接當成完整 Agent 的相同任務能力。
+
+### 60.2 實驗共用流程（Mermaid）
+
+```mermaid
+flowchart TB
+    DATA["Task Families / Seeded Cases"] --> SPLIT["Chronological Train / Dev / Holdout Split"]
+    SPLIT --> ORACLE["Frozen Outcome Oracle + Safety Policy"]
+    ORACLE --> SNAP["Fixed Tool / Model / Memory Snapshots"]
+    SNAP --> TRACK{"Research Track"}
+    TRACK --> E1["E1 Capability / Cost"]
+    TRACK --> E2["E2 Memory × Decision"]
+    TRACK --> E3["E3 Skill Optimization"]
+    TRACK --> E4["E4 Package / Hierarchy"]
+    TRACK --> E5["E5 Reliability / Recovery"]
+    TRACK --> E6["E6 Tool Retrieval Baseline"]
+    E1 --> RUN["Paired Task Runs + Durable Trace"]
+    E2 --> RUN
+    E3 --> RUN
+    E4 --> RUN
+    E5 --> RUN
+    E6 --> RUN
+    RUN --> VAL["Independent Outcome + Policy Validation"]
+    VAL --> MET["`56 Common Metrics / Confidence Intervals"]
+    MET --> REPORT["Stratified Results + Attribution + Limitations"]
 ```
 
-針對每個 task family 準備一系列任務：
+**必要控制**：對各組固定同一批 task/seed、可用的候選 Skill/Tool、模型/provider/version、environment、oracle、policy/permissions、timeout、retry limits、cost budget 及初始 memory snapshot。因模型 sampling 有隨機性，應採 repeated trials／paired task IDs 並記錄 seed（若 provider 支援）；無法重現的 provider 行為須標記限制。為評估長期演化，另安排**受控逐次揭露的 online-history protocol**，每回合只能使用當下之前已驗證、經允許的經驗；holdout 結果不能洩漏給後續同一測試窗的模型。
 
-```text
-Q1  → First encounter / possible capability creation
-Q2  → Exact or near-similar reuse
-Q3  → Near-similar reuse
-...
-Qn  → Generalized reuse
-```
+**Safety invariant**：所有可執行的對照組均遵守相同 authentication、memory ACL、runtime policy、sandbox、必要 approval、independent validation 與 resource constraints。移除 permission gate / validator / human gate 的「消融」**只允許隔離的 synthetic / offline counterfactual analysis**，不可讓不安全變體取得真實工具、機密或正式環境權限。
 
-每一題都記錄：
+### 60.3 E1 — Capability Evolution × Cost Amortization
 
-```text
-task success
-capability created / reused / revised
-input tokens
-output tokens
-reasoning tokens if available
-total tokens
-LLM call count
-latency
-retry count
-provider cost if available
-```
+延續原有基準，不刪除模型強度維度，但為避免模型能力差異混淆，先做 **相同模型下 Static vs Evolving 的因果主比較**，再另報模型強度交互作用：
 
-主要比較：
+| Group | Configuration |
+| --- | --- |
+| **E1-A** | Strong Model + Static Capabilities |
+| **E1-B** | Medium Model + Static Capabilities |
+| **E1-C** | Medium Model + Evolving Capabilities |
+| **E1-D（optional）** | Strong Model + Evolving Capabilities |
 
-1. 第一次新能力建立成本是否高於 baseline。
-2. 第二次之後的 reuse token 是否下降。
-3. 平均 token/task 是否隨 reuse 次數增加而下降。
-4. cumulative CEAA cost 何時低於 static baseline。
-5. Exact / Near-Similar / Generalized 三種任務中的節省程度。
-6. Token 節省是否以成功率下降為代價。
-7. Capability revision / maintenance 是否侵蝕長期成本優勢。
-8. 不同模型強度下，Capability Evolution 是否能降低對大型模型重複推理的依賴。
+主要配對：E1-B vs E1-C；補充 E1-A vs E1-D（若 D 有執行），以及跨模型強度的效率／品質差異。針對每個 task family 依序執行首次遇到 Q1（建立成本）、Exact / Near-Similar Q2..Qn（重用），再以獨立的 Generalized holdout 評估適用性，而非只把完全相同輸入重播當作泛化。
 
-### HYSET — Set-Level Tool Retrieval Baseline（後續實驗）
+保存 task success、capability created/reused/revised、各階段 tokens/cost、LLM calls、retrieval/decision/validation overhead、retry、revisions、latency、maintenance / human governance cost。比較 First Encounter Premium、Mean / Total Cost、CPST、Cumulative Saving、Break-even Reuse Count、成功率及 Regression；**沒有觀測到 break-even 就回報 not reached**。不能僅因平均 token/task 下降而宣稱成功。
 
-參考論文：Hong, Xinyi, Pinjun Dong, Xinyang Yu, and Binyan Jiang (2026), *Tools Are Not Islands: Set-Level Tool Retrieval for LLM Agents via Query-Conditioned Hyperedge Prediction*, arXiv:2607.25718。
+### 60.4 E2 — Memory Router × Decision Agent（MADE）
+
+目標是分別識別 **Memory Router**、**Decision Agent** 和 **Validated Plan Reuse** 的增量貢獻。與 `2.10.7 B0–B4 一一對應，但使用 E2 前綴避免與其他實驗 baseline 同名：
+
+| Group | Configuration | Target effect |
+| --- | --- | --- |
+| **E2-B0** | Direct LLM，無 Experience Memory | Solve-from-scratch baseline |
+| **E2-B1** | Direct LLM + authorized global/naive Top-K Retrieval | 普通 RAG 的增益 |
+| **E2-B2** | Decision Agent + authorized simple retrieval | 決策層自身的增益 |
+| **E2-B3** | E2-B2 + Task-aware Memory Router、scope / metadata / version / provenance、Stage 1/2 判斷 | Memory Routing 的增量 |
+| **E2-B4** | E2-B3 + Validated Execution Path fast-path reuse | 成熟計畫重用的額外增量 |
+
+**關鍵可比性**：E2-B1 / B2 的 authorized global/naive 意味著在**同一已授權的檢索範圍內**不採 task-aware routing；不能為了建立「無 ACL」baseline 而讓其他租戶資料可見。所有組使用相同 corpus snapshot、相同可用工具、相同模型與預算、安全政策和結果驗證器。B3、B4 增加的 routing/index/curation 成本需完整計入 CPST。
+
+**分開測兩階段決策**：Stage 1（是否值得檢索成熟路徑）對照 Stage 2（實際 path eligibility + evidence adequacy），再測最終 route / execution 的 oracle success。負面測試包含 stale path、tool/schema drift、permission denied、insufficient evidence、multiple equivalent valid paths、ambiguous task、cold-start/no memory、out-of-distribution tasks。**最優策略有時是放棄重用並重新規劃**。
+
+主要指標：authorized Precision@K / Recall@K / MRR、Memory Applicability Precision、False Mature-route Rate、False Reuse（blocked vs executed）、Decision Accuracy、**Correct Decision Consistency（與 wrong-but-stable 分開）**、Calibration（若有概率分數）、Verified Task Success、CPST、P50/P95 latency、Fallback Cost、Policy Violations。
+
+### 60.5 E3 — Difficulty-Aware Skill Routing × Performance / Compression
+
+保留既有三個實驗，但用 E3 命名及 `56 的共用指標：
+
+- **E3-A Difficulty-aware Routing**：A1 Always-Skill-L3；A2 Always-Skill-L1 with safe escalation；A3 Rule-based Tier Routing；A4 Learned Difficulty/Cost-aware Routing。固定 task difficulty / risk 和 Skill Family，量測 Tier-selection correctness、Success、Escalation/Retry、Latency、CPST。**Skill-L3（Advanced）與 D-Mature（成熟決策）是不同軸**。
+- **E3-B Usage-driven Optimization**：B1 No Optimization；B2 Periodic Optimization；B3 Frequency-only Prioritization；B4 Frequency × Expected Savings × Confidence / Failure-impact。凍結獨立 holdout，比較維護／訓練成本、回歸風險、版本品質、長期累計節省、break-even；不能只因高頻使用就推斷優化方案有效。
+- **E3-C Skill Complexity Compression**：C1 Original advanced Skill；C2 Periodic Optimization；C3 Experience-driven Optimization；C4 Native lightweight/standard Skill（如能力可比較）。分別報 Capability Retention、原任務域內 Success、域外 Generalization、Quality、Regression、Cost Compression Ratio、LLM/Tool Calls、Maintenance Cost。
+
+Skill Compression 的研究只假設在受限制的 task domain 中用較低成本執行達成**等價效果**，不預設全面複製高階 Skill 的泛化能力；更新 Skill / Path version 必須通過既有 Secure Evolution Gate 與治理批准，不能在正式場景直接自動覆寫 active 版本。
+
+### 60.6 E4 — Hierarchical Skill Packages × Decision Rationale × Path Reuse
+
+保留 `2.9 原研究問題，但將階層路由、raw history、validated path 和 rationale 分開歸因：
+
+| Group | Configuration |
+| --- | --- |
+| **E4-A** | Flat Agent / Global Skill Space，每次重新規劃 |
+| **E4-B** | Global Package Router → Local Decision；無 Experience |
+| **E4-C** | E4-B + Raw Execution Path History；無 curated fast path / rationale |
+| **E4-D** | E4-C + Validated Execution Path Registry / fast-path |
+| **E4-E** | E4-D + Structured Decision Rationale + expected-vs-observed feedback + experience-aware policy |
+
+**研究假說 H-P1–P4 延續**：hierarchical vs flat 在候選集合增大時可否降低 CPST / latency（扣除 overhead）；validated path 對 Exact/Near Similar 是否有額外價值；Rationale 是否增進 error attribution / correct selection；local experience 是否改善路由但仍有 cold-start、cross-package、drift 的失效區間。
+
+對照不同 package/skill pool size、routing depth、跨包 workflow、candidate availability、版本漂移、rationale length 和 history size，量測 Global/Local/Package/Skill/Path selection accuracy、Coordination Error、Fast-path Eligibility / Hit / Fallback、P95 Latency、Total Cost、CPST、Verified Success、Unsafe Reuse。E4 與 E2 共享統一指標與資料，不將 package-routing 改良錯算為 Memory Router 的獨立效果；若要交互作用，另設 **E2×E4 two-factor comparison**（router on/off × hierarchy on/off，固定其它條件）。
+
+**Rationale 規格**：只保存結構化、可稽核的 selection criteria / evidence refs / expected outcome，不保存或索取模型私有 chain-of-thought；具 provenance 才可用作可驗證的決策證據。
+
+### 60.7 E6 — External Baseline: HYSET Set-Level Tool Retrieval（deferred）
+
+參考：Hong, Xinyi, Pinjun Dong, Xinyang Yu, and Binyan Jiang (2026), *Tools Are Not Islands: Set-Level Tool Retrieval for LLM Agents via Query-Conditioned Hyperedge Prediction*, arXiv:2607.25718。
 - Paper: https://arxiv.org/abs/2607.25718
 - Code: https://github.com/stormwther18/HYSET
 
-HYSET 將 Tool Set 作為整體評分單位，納入工具間的共同使用關係及集合大小相關的相容性；此方法定位為 CEAA Tool Selection 的外部研究 baseline，不等同於 CEAA 的 Experience-aware Decision Model。
+工具檢索比較（相同 task/tool inventory、model、version、compute/retrieval budget、policy）：
 
-後續實驗在相同任務、工具庫、執行環境與預算限制下比較：
+1. E6-T1 LLM-only Tool Selection。
+2. E6-T2 Independent Top-K Retrieval。
+3. E6-T3 HYSET Set-Level Tool Retrieval。
+4. E6-T4 CEAA Experience-aware Decision / Retrieval。
+5. E6-T5 Ablations：無 Experience / Cost-aware Ranking / Hierarchical Routing；限制在合法候選範圍。
 
-1. LLM-only Tool Selection：由 LLM 直接選擇工具。
-2. Independent Top-K Retrieval：逐一排序工具並取 Top-K。
-3. HYSET Set-Level Retrieval：依原論文與公開實作重現。
-4. CEAA Experience-aware Decision Model：使用歷史執行結果選擇 Agent / Skill / Tool。
-5. Ablation：CEAA 移除 Experience、移除 Cost-aware Ranking，以及移除階層式 Routing。
+先報 **Tool Selection-only** 的 Recall@K、COMP@K、Tool Set Exact Match，再報 **End-to-End** Success、CPST、Latency、Retries；HYSET 的工具集合評分並不等同 CEAA 全域決策或自動能力演化，不可直接以一個 tool-retrieval 指標宣稱完整 Agent 勝出。Index/training/retrieval/maintenance cost、memory history count 與 held-out tool combinations 須明列。**本組為可選的外部方法比較，不是 CEAA 設計必要相依。**
 
-評估指標：Recall@K、COMP@K、Tool Set Exact Match、End-to-End Task Success、LLM Calls、Total Tokens、Latency、Retry Count、Cost per Successful Task；額外量測不同 Experience / Reuse Count 下的學習曲線與 Break-even Point。
+### 60.8 E5 — Failure-driven Self-Recovery × Reliability Evolution
 
-公平比較要求：固定資料切分、模型與工具版本；區分訓練與測試任務，避免 Experience Leakage；將訓練、索引建立與維護成本納入長期成本分析。HYSET 與 CEAA 解決的問題範圍不同，需另外報告 Tool-Selection-only 與 End-to-End 兩組實驗結果。
+保留 H-R1–H-R4：Recovery 的 end-to-end success、選擇式診斷的成本、恢復經驗演化的重工減少，以及治理／人員審查對 unsafe repair 的影響。其 **eligible failure episode denominator**、MTTR 起訖、CPST、安全原則依 `56.5；第 55.1 節與 `8A.14 的治理界線不變。
 
-### Adaptive Skill Tiering & Performance Evolution — Additional Experiments
+| Group | Configuration |
+| --- | --- |
+| **E5-B0** | No Retry / No Diagnostic Agent |
+| **E5-B1** | Fixed Bounded Retry |
+| **E5-B2** | Retry + Rule-based Fallback |
+| **E5-B3** | Retry + Single Diagnostic Agent |
+| **E5-B4** | Retry + Selective Multi-Agent Diagnosis |
+| **E5-B5** | E5-B4 + Experience Memory + Governed Validated Recovery Skill / Plan Reuse |
 
-**Experiment A — Difficulty-Aware Skill Routing**：在相同 task families 與任務難度分層下，比較 (A1) Always-L3、(A2) Always-L1 with escalation、(A3) Rule-based Tier Routing、(A4) Learned Difficulty/Cost-aware Routing；記錄 task success、tier-selection accuracy、escalation/retry rate、latency、total cost、Cost per Successful Task，並依風險與難度分組。
+使用可重現故障注入：provider timeout/429、network interruption、tool schema mismatch、bad route、skill semantic failure、stale cache、permission denial、partial side effect、dependency failure、ambiguous completion，以及**不可自動恢復的 negative controls**。固定 failure seeds、retry/repair cap、budget、oracle、policy、tool/model/sandbox versions；診斷提出的 root cause 須由可檢查 evidence / independent oracle 判斷，不能把 LLM 自述當作事實。
 
-**Experiment B — Usage-Driven Skill Optimization**：比較 (B1) No Optimization、(B2) Periodic Optimization、(B3) Frequency-only Prioritization、(B4) Frequency × Expected Saving × Confidence / Failure-impact Prioritization。追蹤 skill version、usage/reuse count、regression failures、quality、latency、maintenance/training cost、cumulative saving 與 break-even count；包含高階 Skill 專用化為低成本 Skill 的案例。
+比較 Verified End-to-End Task Success、Recovery Success（eligible episodes）、Correct Root Cause Rate、MTTR/P95 recovery time、Repeated Failure、Unsafe/False Repair、Unauthorized Action、Human Escalation、Total Cost/CPST。重複事件的執行經驗只能在之後的 time-step 經核准後重用，並測試 cross-environment holdout、rollback、checkpoint、idempotency 與 drift。
 
-**Experiment C — Skill Complexity Compression（研究假設）**：驗證原本需要 L3 複雜推理與多工具協作的 Skill，是否能透過重複執行、經驗累積及版本迭代，在明確限定的相同任務範圍內，逐漸達到 L2 甚至 L1 的執行成本，同時維持成功率、輸出品質與可靠性。
+**消融安全規則**：可以從 routing logic 中關閉 memory / selective diagnostics / budget optimization 來評估價值；不可以讓 regression gate、permission gate、sandbox、mandatory approval 在有真實權限的執行環境中被關閉。研究其成本或貢獻時，使用 sandboxed synthetic adversarial cases、blocked-event counts 或 offline counterfactual，並**單獨標示不具可執行權限**。
 
-實驗分組：C1 原始 L3 Skill；C2 固定週期優化版本；C3 Experience-driven Skill Optimization 版本；C4 原生 L1/L2 Skill（如適用）。分開記錄 Capability Level 與 Execution Cost Tier，避免將成本下降誤判為能力下降，或將專用化能力誤認為完整泛化能力。
+### 60.9 Cross-track Ablations、品質門檻與統計設計
 
-評估指標：Skill Compression Ratio（原始與優化版本的 Cost per Successful Task 比值）、Capability Retention Rate、成功率、延遲、LLM/Tool Calls、重試率、優化與維護成本、累積淨節省、Break-even Reuse Count。採用固定的領域內測試與領域外回歸測試，繪製迭代次數對成本與品質的曲線，並檢查安全與相容性退化。成本下降及能力保留均屬待驗證假設，不預設必然成功。
+**共同消融（可安全執行）**：Memory Retrieval on/off、ranking strategy、Decision Model type、Stage 1 routing strategy、Stage 2 evidence compatibility、Rationale availability、hierarchy on/off、history size、path fast-path on/off、fallback selection、Skill tier strategy、recovery specialist count、cost budget。同時區分「沒有該功能」和「該功能不適用」，固定其它組件及 evidence snapshot。
 
-**新增實驗目的**：評估 CEAA 能否在核心架構、模組介面及治理邊界保持穩定時，透過 Decision Evolution 與 Skill Complexity Compression，持續降低整體 Cost per Successful Task，而不犧牲已驗證的任務能力與安全性。
+**禁止作為正式 runtime 消融**：繞過 ACL/permission checks、取消必要 Human Approval、將不可執行／未驗證的 path 強行啟用、關閉真正防護需要的 sandbox / independent output validation；只可離線或受控虛構資料模擬，避免得到「不安全組比較快」但實際無法部署的虛假結論。
 
-**共同控制**：固定測試集、模型、工具版本與資源限制；按時間切分 Experience，避免測試資料洩漏；報告統計不確定性及不同難度／風險子群；所有優化版本必須通過既有 Secure Evolution Gate、獨立審核與人員核准，不得將實驗自動套用至生產。
+統計與報告規則：
 
-Phase 3 應產生至少以下圖表或結果：
+1. **Pre-register** 主要假設、成功 oracle、Primary Metric、Safety Gate、task-family/seed sampling、最大預算、停止與排除規則、比較組別；探索性指標另標 exploratory。
+2. 先建立 task/family/time holdout 分層，並凍結模型、tool、environment、memory index/policy snapshots；成熟經驗漸進累積的實驗要按照時間順序重播，不讓測試答案進入歷史檢索。
+3. 同 task/seed 進行多輪配對測試；報告 n、成功率／成本的 95% CI、bootstrap 或適合的 paired test、Effect Size、outliers、failures/unknowns、P50/P95、zero-success edge cases。
+4. 對 Retrieval / Routing／Execution / Recovery / Governance 分別報 sub-metric，最後以 **verified end-to-end outcome + CPST + safety non-inferiority** 統一判斷；成功率差距與安全門檻須事先設定容許範圍，未經實測不可直接填入數值。
+5. Phase 3 產出不僅是平均數，還需報按 task similarity（Exact/Near/Generalized）、novelty、history size、skill/package scale、risk、difficulty、permission scope、drift、provider version 的分層結果與失敗案例分析；不以低 entropy／高 cache-hit／高 reuse-rate 自動代表成功。
+6. 除 per-task 成效，再報持續累積的 **Cumulative Tokens/Total Cost vs Task Count**、**CPST vs Reuse Count**、**Correct Decision Consistency vs Experience Size**、**Retrieval Applicability vs Drift**、**P95 Latency vs Package Scale**、**Recovery Success / Unsafe Repair vs Episode Count**、**Net Saving + Break-even by Task Family**，並保留可重現的實驗 manifest、trace、oracle 與 versions。
 
-```text
-Cumulative Tokens vs. Number of Tasks
-Average Tokens per Task vs. Reuse Count
-Task Success Rate vs. Reuse Similarity
-Latency vs. Reuse Count
-Capability Creation Cost vs. Lifetime Reuse Saving
-Break-even Reuse Count by Task Family
-```
+### 60.10 Phase Boundary / Execution Order
 
-此實驗的目標不是預設 CEAA 一定更省 Token，而是實證：
+- **Phase 1**：先完成 `58 已列出的 Telemetry/runtime persistence 與 API／aggregate/denominator、缺失值處理及現有 baseline；**不要求 Memory Router、Package Router、Recovery Agent 或本節完整實驗**。
+- **Phase 1.5**：real provider usage、sandbox、authentication/authorization、Policy/Audit、trusted execution、trace identity，完成後才評估連到真實工具的 advanced routing / recovery。
+- **Phase 2**：受控 PoC — Capability Retrieval、Rule-based scoped memory lookup、單一 validated-path eligibility / fast-path、Static Package Manifest、有限診斷／回退；以 synthetic / isolated tasks 做契約與安全 negative tests。
+- **Phase 3 優先順序**：**E1（基礎成功與成本）→ E2（MADE 檢索／決策歸因）→ E3/E4（Skill 與分層治理的獨立增益）→ E5（Recovery）**，E6 外部工具檢索作可選 comparison。順序可依證據、硬體及研究資源調整，避免一次重寫所有元件。
+- **Beyond Phase 3**：大規模並行組織、24/7 edge/cloud demand、Marketplaces、跨 tenant 生產部署等另屬 Future Vision／獨立研究；合成 scaling simulation 不得冒稱真實 runtime benchmark。
 
-> **Capability accumulation 是否能將一次高成本學習，轉換成後續較低成本的可重用執行經驗。**
-
----
-
-### Hierarchical Skill Packages × Decision Rationale × Validated Path Reuse — New Research Experiment
-
-**研究目的**：驗證 Skill 增長時，分層 Package Routing + Package-local Experience 是否可以透過避免重複多層推論，降低端到端 latency、tokens 與 **Cost per Successful Task**；並驗證第一次規劃保存的**結構化 Decision Rationale**是否比只有 execution path 的紀錄多提供可量化的決策改進。與既有 Decision Evolution、Skill Tiering / Complexity Compression、Failure-driven Recovery 實驗整合，**不取代**其 baseline。
-
-**研究假說**：H-P1 分層路由在大 Skill Pool 中勝過 flat route（扣除額外 lookup / local decision 開銷）；H-P2 validated plan reuse 對 exact / near-similar 任務比每次重新規劃有效；H-P3 rationale + expected/observed comparison 改善 routing error diagnosis 和未來 selection accuracy；H-P4 local experience 的益處隨使用次數增長，但有冷啟動與 drift 的失效邊界。
-
-**統一實驗組**（同樣的 task family、相同模型與版本、工具、風險政策、資源配額及成功 oracle）：
-
-- A：Flat Agent → 全量 Skill routing，每次重新規劃。
-- B：Global Package Router → Local Decision，但不存取 Experience。
-- C：B + Raw Execution Path History（僅 path evidence，不含 rationale 或已驗證快取）。
-- D：C + Validated Execution Path Registry / fast path。
-- E：D + structured Decision Rationale + predicted-vs-observed feedback + experience-aware policies（完整 CEAA candidate）。
-
-**控制與消融**：另外移除 local memory、rationale、path validator、fast path、version/permission matching、lightweight router、fallback；固定 retry/policy 以避免安全差異干擾比較。分層檢查 package selection error、local selection error、跨 package coordination error、unavailable skill、distribution shift、new environment、false-positive match、cache staleness。候選方案與決策理由不得包含隱藏推理；所有評估以 externally validated outcome 為準。
-
-**工作負載**：Exact / Near-similar / Generalized，1→N 相同 task-family 序列、不同 package 數量與 skill 數量（含跨包任務）；新型與 high-risk 任務獨立分析。train/dev/holdout 按 task family 和時間切分，避免 Experience Leakage。每次執行留下 trace、rationale summary、decision model/version、candidate IDs、predicted outcome、actual outcome、cache hit/miss、lookups、validation 與全部成本。
-
-**主要指標**：end-to-end Task Success、validated plan reuse correctness、package/skill/path selection accuracy、error propagation、routing tokens、global/local routing latency、p50/p95 total latency、fast-path hit rate、hit/miss fallback cost、TTFT（如有）、total tokens、Cost per Successful Task、rationale recording overhead、regression/unsafe reuse rate、cold-start / break-even reuse count、樣本數與置信區間。分析決策記錄長度與資訊價值，禁止僅因 candidate count 減少就宣稱加速。對照最短可行流程與 no-package baseline。
-
-**Phase 1 限制**：只準備可追溯資料契約與可測試的 Telemetry foundation，不要求這些實驗在 Phase 1 完成。Phase 2 PoC 驗證 replay / fast-path contract，Phase 3 正式測試成效。
-
-
-### Failure-driven Self-Recovery / Reliability Evolution — Experiment Design（新增）
-
-**研究目的與假說**
-
-- **H-R1（Recovery）**：在相同故障分布與成本限制下，達 retry 上限後啟動根因診斷及受控修復，能否比 fixed retry / fallback 提高 end-to-end task success 與 recovery success？
-- **H-R2（Efficiency）**：選擇性啟動單一／多個專業診斷 Agent，能否在維持成功率與安全性的前提下，降低 Cost per Successful Task、平均恢復時間與不必要的診斷開銷？
-- **H-R3（Learning）**：經驗證的修復紀錄沉澱為 Recovery Skill 後，能否隨同類故障重現次數增加，降低 repeated failure rate、分析 Token 與恢復成本？
-- **H-R4（Governance）**：獨立安全審核與回歸測試，能否減少錯誤修復與新增缺陷，而不使恢復成本或人工作業負擔超出可接受門檻？
-
-**實驗機制（Phase 2 單 Agent PoC；Phase 3 完整比較）**
-
-1. 建立具可重現種子的 fault-injection benchmark：provider timeout / 429、network interruption、tool schema mismatch、bad tool selection、skill semantic error、stale cache、permission denial、partial side effect、dependency failure、ambiguous completion；另設不可自動修復的 negative controls。
-2. 每組使用相同任務、模型版本、工具權限、硬體、failure seeds、時間/成本上限與 success oracle；依 fault category、severity、task family 分層，train/dev/test 與 holdout 分離，避免 Experience Leakage。
-3. Baselines：**B0** no retry；**B1** fixed bounded retry；**B2** retry + rule-based fallback；**B3** retry + single diagnosis Agent；**B4** retry + selective multi-Agent diagnosis；**B5 CEAA** adaptive diagnosis + Experience Memory + validated Recovery Skills + governance。
-4. 每次執行完整記錄：trace / original failure / retry lineage / diagnosis agents / proposed root cause / candidate repair / gate decision / checkpoint / final outcome / token / latency / cost / human intervention。對未能恢復的任務亦保留資料。
-5. 消融：移除 Experience Memory、specialist routing、root-cause evidence、regression gate、checkpointing、cost-aware budget、Recovery Skill reuse；並比較不同 retry cap、repair-cycle cap、故障難度與 L1/L3 Skill 等級。
-6. 縱向實驗：對相同 fault family 反覆注入新樣本，觀察 Recovery Skill 從昂貴診斷流程轉成低成本重用後，是否維持能力、安全性與跨環境泛化。
-
-**主要指標與判準**
-
-- End-to-End Task Success、Recovery Success Rate（以符合恢復資格的 failure episode 為分母）、Correct Root Cause Rate（由外部 oracle / evidence 判定）、Repeated Failure Rate、MTTR / P95 recovery latency。
-- Cost per Successful Task = 所有執行、重試、診斷、修復、驗證與治理成本 / 成功任務數；另報告 Recovery Cost、Token、Tool Calls、human review time、break-even reuse count。
-- Unsafe Repair Rate、Regression Rate、False Repair Rate、Unauthorized Action Rate、Human Escalation Rate；安全問題不可因平均成功率提高而被忽略。
-- 對成功率與成本提供重複試驗、置信區間及依 failure family 分層結果；不可只以單次 demo 或單一成功案例宣稱 Self-Recovery 有效。
-
-**實驗預期驗證的研究貢獻**：驗證「失敗→診斷→受控修復→可重用恢復經驗」是否能形成可量化、可治理的 Reliability Evolution 閉環，並檢查 Recovery Skill Complexity Compression 是否可在保持修復能力的情況下降低後續成本。這是**待驗證假說**，非既有實驗結果。
+**研究結論須可被否證**：若增加 Memory Router / Hierarchy 帶來的檢索、授權、維護與 fallback 成本高於避免的重複推論，或提高 False Reuse / Unsafe Repair，即應在適用子群中拒絕／降級此設計。設計文件不能預先宣稱 CEAA 必然在 Token、速度、穩定性或成功率上勝過基準。
 
 ---
 

@@ -135,7 +135,7 @@ Global／Local Decision 是後續架構中不同層級的決策責任；Memory R
 
 ## Capability First
 
-長期真正累積的系統資產是 Capability Library，而不只是對話紀錄。
+長期累積的資產包括 **Capability/Skill Registry、Validated Execution Paths、Curated Decision Experience 與 Raw Outcome Evidence**，而不只是 Capability Library 或對話紀錄。
 
 ## Validation Before Activation
 

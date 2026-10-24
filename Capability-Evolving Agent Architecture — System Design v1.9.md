@@ -2881,100 +2881,76 @@ Break-even Reuse Count
 
 ---
 
-# 57. 本機條件
+# 57. 本機條件、Runtime 與技術選型（第四輪修訂）
 
-目前硬體：
+本節區分**使用者回報的設備**、**dev 已整合的程式依賴／Adapter**與**未來候選**；不能將電腦安裝了某項服務，視為 CEAA Runtime 已串接成功。
 
-- Intel Core i5-14600K
-- DDR4 80 GB
-- AMD RX 6650 XT
+**研究設備背景（並非本次實機檢測）**：主要電腦依使用者較近期提供的資料為 Intel Core i5-14700K、RAM 80 GB、AMD RX 6650 XT；原文件的 i5-14600K 可能是過時記載，實際 benchmark 前應在機器上重新確認 CPU/RAM。另有 RTX 4090（24GB VRAM）研究主機，**與主機為不同環境**，不可將硬體規格合併、假設兩者一直在線，或把設備可用性當作性能實測結論。
 
-已安裝：
+| 分類 | 技術／Adapter | 現況與邊界 |
+| --- | --- | --- |
+| **Implemented in dev** | Python、FastAPI、Pydantic、LangGraph、pytest；MockLLMProvider、SQLite Registry / Telemetry Repository、InMemoryEvolutionQueue、SubprocessSandbox、Console Notification | 現有 Source 與 requirements 可確認；SubprocessSandbox **不是**正式 Docker 安全沙箱 |
+| **Phase 1.5 Planned** | LiteLLM、NVIDIA NIM / OpenRouter 等真實 Provider、PostgreSQL、Docker Sandbox、CodeBuilderRuntime、Auth/Policy | 尚未接入正式 Runtime，不宣稱 provider usage、資料隔離或 sandbox enforcement 已驗證 |
+| **Replaceable candidate** | Pi 1.x／OpenCode Builder、CPU-first Decision Model（含 Laya 候選） | 未選定／未整合；核心邏輯不依賴單一 Framework |
+| **Phase 2–3 Planned** | Embedding、pgvector、Memory Router、Decision Agent、Skill Packages、Validated Path Registry、Phoenix / DeepEval / MLflow | Research PoC／評估候選，不代表已實作 |
+| **Future / Optional** | Redis/RQ、gVisor/Firecracker/Kata、Dashboard、Ollama/llama.cpp/vLLM | 依測試、安全需求、硬體與成本決定是否導入 |
 
-- LangGraph
-- PostgreSQL
-- FastAPI
-- Git
-- Docker
-
-採用：
-
-**Cloud-First Reasoning**
+**推論策略**：目前以 Cloud-first reasoning 為方向；小型 Decision Model 可於 Phase 2/3 採 CPU-first 實驗，不需要等到 Phase 7 的完整 Local Reasoning LLM。無 NVIDIA GPU 不妨礙合適模型的 CPU-only inference，但其成功率、Token/s、P95 latency 與成本必須實測。不同機器、模型、版本與量化設定都應記入實驗 manifest。所有產品均為可替換 Adapter／Provider，不構成平台硬相依。
 
 ---
 
-# 58. Phase 1 — Core MVP
+# 58. Phase 1 — Core MVP + Execution Experience Foundation
 
-新增：
+**Current Status: In Progress / Core Baseline Verified / Telemetry Runtime Wiring Outstanding。** 此狀態依 dev 程式與 PROJECT_STATUS.md / DEV_PLAN.md（最近實作證據日期：2026-10-18）核對；**本輪僅修改設計文件，未重新執行 pytest、API 或真實 LLM benchmark**。
 
-- LiteLLM
-- pytest
-- NVIDIA NIM
-- OpenRouter
+### 58.1 已存在的實作與歷史驗證
 
-確認：
+- Mock Task → Capability Search / Gap → Evolution Agent → Validation / Testing → Test Report → Pending Approval → Active / Reuse 的核心流程；MainAgent 使用 LangGraph。
+- SQLite Capability / TestReport / Approval / Audit 與 API、併發防重複、revision/transaction、重啟持久化；實際使用 MockLLMProvider、SubprocessSandbox 和 Console Notification。
+- Task / LLM interaction Token-Cost Metrics Foundation，包括 unavailable token 不估算、task summary / research API、已有基準可計算 saving / break-even 的契約。
+- **Telemetry database/repository foundation**：`TelemetryRepository` 介面、ExecutionTrace / RoutingDecision / ExecutionObservation / ExecutionFailure / RecoveryAttempt Domain、SQLite Schema v1、migration、WAL、索引、contract / read-back tests。**有資料表不等於 MainAgent / runtime 已自動寫入完整 Telemetry。**
+- PROJECT_STATUS.md / DEV_PLAN.md 最近記載合併後 **35 passed, 1 warning（2026-10-18）**，另有 Uvicorn／HTTP／重啟與併發測試證據；本節不宣稱當前 commit 又跑過相同測試。
 
-- Pydantic
+### 58.2 尚未完成的 Phase 1 退出條件
 
-完成：
+- [ ] 將 Task / Routing / Execution / Failure / Retry / Fallback 真正接上 durable telemetry runtime writing，保留成功與失敗事件。
+- [ ] Task / Trace / Decision 的 candidate-set、selected target、parent decision、node type、failure taxonomy 與 final outcome correlation。
+- [ ] Retry / fallback linkage、可分析 raw exception metadata、成功母體分母、failure rate / recurrence 聚合。
+- [ ] Operational-history query / summary API、重啟讀回、與既有 LLM Token/Cost Metrics ID 一致的 contract 與 integration tests。
+- [ ] 依 DEV_PLAN / PROJECT_STATUS 正式 checklist 驗收；不能只依原本的 28-test Core Baseline 標示 Phase 1 complete。
 
-```text
-Capability Schema
-Main Agent
-Gap Detector
-Evolution Agent
-Validation Service
-Testing Agent
-Test Report
-Capability Registry
-Notification Interface
-Approval API
-Token / Cost Measurement Foundation
-Execution Experience & Evolution Telemetry Foundation
-```
-
-Phase 1 的 Token / Cost Measurement Foundation 包含：
-
-- 為每個 task 建立不可重複的 `task_id`；
-- 持久化每次 LLM interaction 的 phase、provider/model、token usage、可靠的 provider cost、
-  latency、success 與 error；
-- 持久化 task 是否建立／重用 Capability、最終 outcome、LLM call count、總延遲與
-  capability execution time；
-- 提供 task、interaction 與 summary API，並支援以明確的 static baseline 計算
-  average tokens、saving rate 與 break-even reuse count；
-- Provider 未回報的 token（尤其 reasoning token）必須保存為 unavailable，不得推估。
-
-此量測基礎已合併至 `dev`。Phase 1 建立可驗證的量測管線，不宣稱 Mock LLM 已提供真實 token 證據，也不取代
-Phase 3 的跨模型、跨相似度與長任務序列正式實驗。
-
-Phase 1 同時必須建立 **Execution Experience & Evolution Telemetry Foundation**。這不是 Adaptive Agent Organization 本身，而是未來 Experience Memory、system diagnosis、Capability / Agent / Organization Evolution 所依賴的歷史證據層。最低應保存：
-
-- task / trace identity；
-- routing decision 與 parent decision；
-- candidate set、selected target、node type 與 routing depth；
-- execution success / failure、raw exception 與 normalized failure category；
-- retry / fallback / recovery outcome；
-- latency、token、cost 與 final outcome correlation；
-- restart-persistent evidence，並與既有 token / cost metrics 使用一致 identity。
-
-因此目前狀態為 **Phase 1 In Progress / Core Baseline Verified**。既有 28-test baseline 不再代表整個 Phase 1 Complete；Telemetry Foundation 完成並驗證後才進入 Phase 1.5。
+Phase 1 **不要求** MemoryRouterInterface runtime、Local/Global Decision、Package Router、Path Registry、Full CodeBuilderRuntime、真實 Provider 或 Autonomous Recovery Agents。現行 Mock、安全政策、subprocess、呼叫端 reviewer 的基礎僅供受控開發，**不是 production-ready auth / isolation / governance**。
 
 ---
 
-# 59. Phase 2 — Capability Retrieval
+# 58A. Phase 1.5 — Real Infrastructure + Controlled Code Evolution
 
-新增：
+**Planned / Not Implemented。** 完成 Phase 1 Telemetry 退出條件後，才依 DEV_PLAN.md Phase 1.5 A–I 漸進執行：
 
-- pgvector
-- Embedding Provider
+| 工作主軸 | 計畫內容與安全邊界 |
+| --- | --- |
+| Runtime & Providers | Secret-safe configuration、LiteLLM Adapter、Real Usage / Provider Fallback；保留 Mock Baseline |
+| Repository & Isolation | PostgreSQL + migration/transaction、Docker Sandbox、CPU/RAM/FS/Network quota、Ephemeral Git/Worktree |
+| Builder | BuildSpecification、CodeBuilderRuntime、Candidate Artifact / BuildResult，Pi 1.x 與 OpenCode 為候選，應公平比較後決定 |
+| Secure Evolution | 獨立 Main / Audit First-pass Reviewer、Regression / Semantic Security Evidence、Policy / Human Approval、Fail Closed |
+| Authorization & Resilience | Authn/Authz、Tenant/Scope、Trusted Reviewer、Lease/TTL/Crash Recovery、Audit/Telemetry correlation |
+| Future AgentArtifact foundation | Skill Builder 穩定後才能引入受控 AgentArtifact；不等於遞迴 Agent Organization 已完成 |
 
-完成：
+不可因 Builder 自測成功直接 Activate。Reviewer 必須獨立於 Builder、彼此隔離，UNKNOWN/FAIL/timeout 應遵守 `8A 治理。**Phase 1.5 仍不是 MADE 或 Path Reuse 正式實驗完成階段。**
 
-```text
-Capability Search
-Similarity Retrieval
-Reuse
-```
+---
+
+# 59. Phase 2 — Capability Retrieval + Experience-assisted Routing
+
+**Status: Planned / Not Implemented。** 先在安全受控的、與任務領域無關的 PoC 驗證能力檢索與記憶輔助決策，而非提早固定某個應用場景。
+
+1. **Capability Retrieval**：Embedding / pgvector 可替換 Adapter、keyword/metadata/semantic search、version/schema compatibility、有效 Capability 查找；缺少有效能力才進 Gap。
+2. **Memory Router（`2.10）**：Scope-first ACL、來源檢索、Ranking、Version / Freshness、Provenance、Failure Evidence；合法 miss、denied、stale 與 unsafe match 必須分離。初期可使用單一 Modular Monolith，不需微服務或每包獨立 DB。
+3. **Decision Model（`2.7–2.10）**：先以規則／bounded candidates 比較低成本決策與 LLM fallback；Stage 1「適合檢索」不等於 Stage 2「執行路徑可重用」。
+4. **Validated Path / Static Package（`2.9）**：由經獨立驗證的執行 trace 建立有限路徑與 Manifest，檢查版本、schema、preconditions、scope、policy、revocation；只重用 Plan 不重用舊 Output / Secret。
+5. **Bounded Recovery PoC（`55.1）**：在隔離故障注入環境驗證受控診斷／回退；不將 Recovery 的情境概念寫死於通用 Memory／Decision 模組。
+
+**Phase 2 不包含**正式大規模多租戶、Automatic Package Split/Merge、Full Recursive Agent Organization 或完整模型訓練。權限隔離與 negative controls 先通過，效果由 `60 Phase 3 實證，不以命中率或 Demo 推斷效益。
 
 ---
 
@@ -3151,84 +3127,46 @@ Skill Compression 的研究只假設在受限制的 task domain 中用較低成�
 
 ---
 
-# 61. Phase 4 — Background Evolution
+# 61. Phase 4 — Background Evolution（Future / Not Implemented）
 
-新增：
+將同步的 Evolution／Testing／Notification 改成有界、可復原、可稽核的 Worker / Queue 模式，保留同步 Main Agent 提交、Trace ID、Human Approval 與 Capability Activation 邊界。
 
-- Redis
-- RQ
-
-讓：
-
-- Evolution
-- Testing
-- Notification
-
-進入 background worker。
+Redis / RQ 為候選 Adapter，非硬依賴；可用其他支援 durability、idempotency、lease、dead-letter、bounded retry 與 permission scope 的 Queue 系統。**現有 InMemoryEvolutionQueue 不代表已實作背景工作處理。**
 
 ---
 
-# 62. Phase 5 — Stronger Sandbox
+# 62. Phase 5 — Stronger Sandbox（Conditional / Future）
 
-需要時再加入：
-
-- gVisor
-- Firecracker
-- Kata Containers
+Phase 1.5 先驗證 Docker Sandbox 的 CPU / RAM / Filesystem / Network / Secret / Timeout 控制。需要更高隔離度時，再視威脅模型、成本與相容性選擇 gVisor、Firecracker 或 Kata Containers 等替代 Backend；**不要求全部部署或按此順序遷移**。更強的 Sandbox 不取代 Independent Security Validation、Policy 與 Human Gate。
 
 ---
 
-# 63. Phase 6 — Admin Dashboard
+# 63. Phase 6 — Admin / Research Dashboard（Future）
 
-未來加入：
-
-- Streamlit
-- 或正式 Web UI
-
-管理：
-
-- Capability
-- Reports
-- Approval
-- Notifications
+候選使用 Streamlit 或可替換 UI，管理 Capability / Skill / Path Version、Report、Approval / Revocation、Notification、Decision / Memory Audit、Trace、Failure / Recovery、Cost / Latency / Decision Stability 等**已有實際觀測的資訊**。Dashboard 讀取必須遵守 Scope / Tenant / Branch Policy；未實作功能不得標為 Active，也不能提供 unrestricted Force Activate。
 
 ---
 
-# 64. Phase 7 — Local LLM
+# 64. Phase 7 — Local LLM（Future Full Reasoning）
 
-未來硬體適合時加入：
+應區分：
 
-- Ollama
-- llama.cpp
-- vLLM
+- **Phase 2/3 的 Local Lightweight Decision Model**：`DecisionModelInterface` 可選 CPU-first 規則／小模型／Laya Adapter，驗證 bounded routing、calibration 與低信心升級；不必等到本階段才進行。
+- **Phase 7 的 Full Local Reasoning LLM**：可選 Ollama、llama.cpp、vLLM 等後端，需依模型相容性、CPU/GPU 配置、量化、latency、品質及總成本實測。
 
----
-
-# 65. Phase 8 — Enterprise Validation
-
-驗證：
-
-- File processing
-- Data workflows
-- IT automation
-- DevOps
-- Enterprise procedures
+80 GB RAM 或 RTX 4090 只代表候選硬體，不代表所有模型都能有效率地完成推論；本地推論不能繞過 Memory Scope、Tool Policy 或 Secure Evolution Gate。
 
 ---
 
-# 66. Phase 9 — Cybersecurity Extension
+# 65. Phase 8 — Enterprise Validation（Future / Domain-neutral）
 
-加入：
+File Processing、Data Workflow、IT Automation、DevOps 與 Enterprise Procedures 為**可交換的驗證 Task Families**，不代表核心架構必須固定為任一業務情境。應先驗證 Auth/Policy、跨 Branch / Tenant 隔離、版本相容、審核、Trace、成本與可靠性，再進入企業工作流；未達安全條件不得直接連接生產環境。
 
-- MITRE ATT&CK
-- Wazuh
-- Sysmon
-- Velociraptor
-- Atomic Red Team
-- Zeek
-- Suricata
-- CALDERA
-- Cyber Range
+---
+
+# 66. Phase 9 — Cybersecurity Extension（Future / Optional）
+
+MITRE ATT&CK、Wazuh、Sysmon、Velociraptor、Atomic Red Team、Zeek、Suricata、CALDERA、Cyber Range 皆是後期**領域特化實驗候選**，不是 CEAA Memory Router、Decision Agent 或 Capability Core 的 hard dependency。若進行此領域研究，需獨立的受控目標、授權及安全評估，不修改通用 telemetry／decision 資料契約。
 
 ---
 
@@ -3281,139 +3219,107 @@ Capability Subscription
 
 ---
 
-# 69. 專案演進路線
+# 69. 專案演進路線（Status-aware Roadmap）
 
-CEAA 採 **先建立可追溯的能力／決策／執行證據，再以實驗決定是否擴充自主程度** 的演進方式。以下表示大致的組織與部署成熟方向，**不是所有技術都須線性完成才可研究下一步**，更不代表已部署完成。
+階段名稱與實際完成度分開管理；Phase 1/1.5 的詳細驗收以 DEV_PLAN.md / PROJECT_STATUS.md 為準，v1.9 表示設計基準、**不是所有元件已實作**。
 
-```text
-Single Process / Verifiable Core
-           ↓
-Modular Monolith + Durable Execution Telemetry
-           ↓
-Memory / Decision Interfaces + Controlled Capability Retrieval
-           ↓
-Memory-assisted Decision + Validated Path Reuse (research)
-           ↓
-Background Workers / Governed Multi-Agent Coordination
-           ↓
-Enterprise Governance + Multi-Tenant Boundaries
-           ↓
-Optional Shared Capability Registry
-           ↓
-Optional Marketplace / Collective Capability Network
+| Stage | 目標 | 目前狀態 |
+| --- | --- | --- |
+| **Phase 1** | Mock Capability Core + Durable Execution Telemetry + Token/Cost Metrics | **In Progress**：Core Baseline Verified；Telemetry Repository/schema v1 有，Runtime Wiring 未完成 |
+| **Phase 1.5** | Real Provider、Postgres、Docker、Builder、Secure Review、Auth/Policy | **Planned / Not Implemented** |
+| **Phase 2** | Retrieval、Memory Router × Decision Agent、Static Package / Path PoC | **Planned / Not Implemented** |
+| **Phase 3** | `60 E1–E6 Success、Decision Stability、CPST、Safety Evaluation | **Research Plan / Not Evaluated** |
+| **Phase 4–7** | Background、Stronger Isolation、Dashboard、Full Local LLM | **Future / Optional** |
+| **Phase 8–9** | Domain-neutral Enterprise / Optional Security Research | **Future Research** |
+| **Phase 10–11** | Shared Capability Registry / Marketplace / Collective Network | **Future Reserved / Opt-in** |
+
+```mermaid
+flowchart LR
+    P1["Phase 1: Core Verified\nTelemetry incomplete"] --> P15["Phase 1.5: Provider / Governance"]
+    P15 --> P2["Phase 2: Retrieval + MADE PoC"]
+    P2 --> P3["Phase 3: Research Evaluation"]
+    P3 -. "Only if evidence supports" .-> FUT["Phase 4–11: Future Extensions"]
+    classDef current fill:#285e9e,color:#ffffff,stroke:#285e9e
+    class P1 current
 ```
 
-**橫向研究軸**（與部署階段分開）：Capability Evolution、Decision Evolution / Memory Routing、Skill / Cost Optimization、Failure-driven Reliability Evolution。所有優化都以 independently validated outcomes、權限與風險不變量、完整成本和回歸測試約束，不能因模型推斷或歷史成功率高就自動啟用新版本。
+**水平研究軸**：Capability、Decision / Memory、Skill / Efficiency、Reliability Evolution，不綁定業務領域。CPU-first 小型 Decision Model 是 Phase 2/3 PoC 選項，**不依賴 Phase 7 的 Full Local LLM**。部署層可由 Single Process 演進為 Modular Monolith、Workers、多 Agent 與多租戶，但每一步都應以效益、安全／治理與實際資源需求決定，而非強制順序。
 
-- 目前優先仍是 `58 的 Phase 1 Telemetry Foundation；Phase 1.5 的 real provider / sandbox / auth / policy hardening 為後續前置條件。
-- `2.9–2.10 的 Package／MADE／Path Registry 在 Phase 2 的 interface / PoC 與 Phase 3 的 controlled evaluation 中逐步驗證，不提前宣告為目前 runtime。
-- 本節不變更原有 `61–68 的 Background、Sandbox、Dashboard、Local LLM、Sharing 等遠期功能優先順序與治理條件；實際里程碑以 DEV_PLAN.md 為準。
+**資訊來源區分**：目前 dev 原始碼與實際測試提供「已完成／已驗證」事實；PROJECT_STATUS.md 提供最後一次已記錄的驗證進度；DEV_PLAN.md 定義近期待辦與階段退出條件；System Design 定義目標架構與研究契約。發現時序差異應標示，而不能以較新設計文稿推導 Runtime 完成。
 
 ---
 
-# 70. 建議專案結構
+# 70. 專案結構：Observed Source 與 Planned Logical Modules
+
+### 70.1 2026-10-24 從 dev 確認的代表性檔案結構
 
 ```text
 src/
+├── main.py / config.py
 ├── agents/
-│   ├── main/
-│   ├── evolution/
-│   └── testing/
-│
-├── services/
-│   ├── capability/
-│   ├── gap_detection/
-│   ├── evolution/
-│   ├── validation/
-│   ├── testing/
-│   ├── policy/
-│   ├── approval/
-│   └── notification/
-│
+│   ├── main_agent.py
+│   └── evolution_agent.py
 ├── domain/
-│   ├── capability/
-│   ├── task/
-│   ├── experiment/
-│   ├── report/
-│   ├── approval/
-│   └── events/
-│
+│   ├── capability.py / gap.py / approval.py / report.py
+│   └── events.py / errors.py / research.py / telemetry.py
 ├── interfaces/
-│   ├── llm/
-│   ├── storage/
-│   ├── sandbox/
-│   ├── queue/
-│   ├── notification/
-│   ├── registry/
-│   └── observability/
-│
+│   ├── llm.py / queue.py / sandbox.py
+│   └── repository.py / telemetry_repository.py / notification.py
 ├── infrastructure/
-│   ├── postgres/
-│   ├── git/
-│   ├── docker/
-│   ├── litellm/
-│   └── pgvector/
-│
-├── future/
-│   ├── capability_import/
-│   ├── capability_export/
-│   ├── shared_registry/
-│   ├── capability_sync/
-│   └── marketplace/
-│
-├── api/
-├── schemas/
-└── config/
+│   ├── mock_llm.py / memory_queue.py / subprocess_sandbox.py
+│   ├── sqlite_repository.py / sqlite_telemetry_repository.py
+│   └── console_notification.py
+├── services/
+│   ├── capability_service.py / evolution_service.py / execution_service.py
+│   ├── gap_detection_service.py / validation_service.py / testing_service.py
+│   ├── approval_service.py / audit_service.py / policy_service.py
+│   └── notification_service.py / report_store.py / research_metrics_service.py
+└── api/routes/
+    ├── tasks.py / capabilities.py / evolution.py
+    └── approvals.py / audit.py / research.py
+
+tests/
+├── test_api.py / test_full_loop.py / test_concurrency.py
+├── test_research_metrics.py / test_telemetry_repository.py
+└── test_capability_*.py / support.py
 ```
 
-`future/` 中的內容在目前階段只保留：
+本節列出的是**真正存在的路徑摘要**，不是整個檔案樹的逐檔清單；相關介面未必在現有 Runtime 使用，也不代表 Production Readiness。
 
-- Interface
-- Schema
-- ADR
-- Placeholder
+### 70.2 建議邏輯模組邊界（Planned / Not Physical Directories）
 
-不實作完整 Business Logic。
+```text
+Task / Main Agent                         [existing core]
+  ├─ DecisionModelInterface / Global / Local Decision    [planned]
+  ├─ MemoryRouterInterface / Scoped Evidence Retrieval   [planned]
+  ├─ Capability / Skill Execution                       [existing / extend]
+  ├─ CodeBuilderRuntime + Secure Evolution Gate          [Phase 1.5 planned]
+  ├─ TelemetryRepository / SQLite v1 Foundation         [implemented]
+  │    ├─ Runtime Event Wiring / Aggregation             [Phase 1 incomplete]
+  │    └─ DecisionExperience / Path Repository           [Phase 2 planned]
+  └─ Policy / Audit / Approval Governance               [basic core; hardening planned]
+```
+
+後續可先在現有 `domain/`、`interfaces/`、`services/`、`infrastructure/` 中逐步加入新模組，再依規模分包；**不要求每個 Skill Package 獨立 DB、額外微服務或預先建立空的 `future/` 目錄**。遵守 Task/Trace/Decision Lineage、Capability Versioning、Memory Scope 和既有 Secure Evolution Gate。
 
 ---
 
-# 71. 現階段的重要邊界
+# 71. 現階段的重要邊界／驗收證據
 
-目前需要真的做：
+| Status | 對外可宣稱內容 | 尚不可宣稱 |
+| --- | --- | --- |
+| **Implemented & Historically Verified** | Mock Task→Gap→Generate→Test→Approval→Reuse；SQLite 核心儲存、Token/Cost 基礎 | 真實 LLM 自主泛化、Production-grade Governance |
+| **Foundation Only** | Telemetry Domain、Repository、SQLite Schema v1 與 Contract Tests | Runtime 自動寫入全部 routing/exception/retry／完整 Summary API |
+| **Phase 1 Outstanding** | Telemetry Runtime Wiring、Task/Trace Correlation、Failure Aggregation、Restart/Regression Tests | 未完成前不得標 Phase 1 Complete |
+| **Phase 1.5 Planned** | Provider、Postgres、Docker、Code Builder、Main/Audit、Auth/Policy、Human Escalation | 任何元件已正式整合／通過真實安全驗證 |
+| **Phase 2–3 Research** | MADE、Package Router、Validated Paths、Recovery、E1–E6 Baseline／Ablation | 尚無實測足以證實 Decision Stability 或降低 CPST |
+| **Future / Opt-in** | Workers、Local Full LLM、Enterprise / Security、Sharing / Marketplace | 不是目前 MVP 的完成內容 |
 
-```text
-Gap
- ↓
-Generate
- ↓
-Validate
- ↓
-Test
- ↓
-Report
- ↓
-Notify
- ↓
-Approve
- ↓
-Activate
- ↓
-Reuse
-```
+**目前下一個真正工程里程碑**：按 DEV_PLAN.md 既定退出條件完成成功／失敗 routing trace、選擇證據、fallback / failure lineage、success denominator、Query / Summary、Token-Cost Correlation 與重啟讀回。Phase 1.5 的真實工具與安全硬化是其後工作；Phase 2/3 才做 Memory/Decision 效能實驗。
 
-目前只需要預留：
+最新可查證的歷史測試紀錄是 **2026-10-18：35 passed, 1 warning**；本次僅檢查 Github dev 原始碼與文件，未重新執行測試或 benchmark。現有 Mock、SQLite、Subprocess 的成功測試**不證明**多 Tenant 隔離、自動修復、24/7 管理或可安全接入企業 production 系統。
 
-```text
-Export
-Import
-Publish
-Discover
-Sync
-Marketplace
-Collective Network
-```
-
-這兩部分必須明確分開。
+`2.9–2.10、`8A、`53、`55.1 的治理限制維持：資料檢索、路徑選擇、執行授權與新 Artifact 啟用是不同決策；高信心與記憶命中不代表可跳過 Policy、Independent Validation 或必要的 Human Approval。
 
 ---
 

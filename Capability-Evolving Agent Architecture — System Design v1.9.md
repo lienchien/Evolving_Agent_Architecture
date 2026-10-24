@@ -3257,7 +3257,7 @@ flowchart LR
 
 - **Versioned Goal Contract**：Goal、Expected Outcomes、independently testable Acceptance Criteria、scope / base commit / branch、工具與資料授權、time/token/cost/retry limits、timeout、stop / escalation policy。人類先核准目標與權限上限，子任務無權自行擴大 Delegation 或修改 Protected Tests / Policy。
 - **Autonomous Development**：規劃中的 Decision Agent / Memory Router 根據已授權經驗選擇子任務與路徑；Development Agent 在隔離分支／Sandbox 自主實作、跑測試、有限修復、Checkpoint/Resume，最後提交 commit-bound Candidate PR 與證據。
-- **Multi-Audit**：以 **`8A 必要的獨立 Main + Audit Gate 為下限**；未來 `AuditCoordinator` 可依風險增加 Functional / Security / Architecture / Regression Auditor。Auditor 的責任與證據來源分離，不採多數決覆蓋單一必要 FAIL / ERROR / UNKNOWN / timeout；Coordinator 不可取消 Mandatory Gate。
+- **Multi-Audit**：以 **第 8A 節必要的獨立 Main + Audit Gate 為下限**；未來 `AuditCoordinator` 可依風險增加 Functional / Security / Architecture / Regression Auditor。Auditor 的責任與證據來源分離，不採多數決覆蓋單一必要 FAIL / ERROR / UNKNOWN / timeout；Coordinator 不可取消 Mandatory Gate。
 - **Final Result Report**：未來的 `AutonomousDevelopmentVerificationReport` 應記錄 Goal/Task/Trace、PR/Commit SHA、Expected vs Actual、獨立 Reviewer findings、CI/Protected Tests / Security Evidence、Regression/Residual Risk、Token/Cost/Latency、Human Escalation 與 `VERIFIED_CANDIDATE / BLOCKED / ESCALATE / INCOMPLETE`。報告需確保審查對象與被交付版本一致，且**Report PASS 不授予自動 Merge、Artifact Activation 或 Production Deployment 權限**。
 - **Research Hypothesis**：在 Verified Success 與 Safety 不退化條件下，提升每單位 Human Oversight Time 的可信交付量；對照既有 Main+Audit 與 future specialized/risk-adaptive Multi-Audit 的 Escaped Defect、False Negative、Review Backlog、Human Oversight Minutes per Verified Goal、Verification Cost per Accepted PR、Time-to-Validated-Deliverable。跳過強制審查的實驗只能在 offline/synthetic 環境進行。
 

@@ -1,312 +1,133 @@
-# Capability-Evolving Agent Architecture
+# Capability-Evolving Agent Architecture (CEAA)
 
 **Language:** English | [繁體中文](README.zh-TW.md)
 
 ![Status](https://img.shields.io/badge/status-experimental-orange)
 ![Phase](https://img.shields.io/badge/phase-1--in%20progress-blue)
-![Validation](https://img.shields.io/badge/automated%20tests-28%20passed-green)
+![Recorded tests](https://img.shields.io/badge/recorded%20tests-35%20passed-green)
 
 > [!WARNING]
-> This experimental research prototype has passed automated core, API, concurrency, and standalone Uvicorn/HTTP validation. Authentication, data-access controls, enforced execution restrictions, and production hardening remain pending; it is not production-ready.
+> **Research prototype; not production-ready.** The currently implemented runtime uses a mock LLM, SQLite, a Python subprocess executor and console notifications. Real-provider support, hardened sandboxing, production authorization, independent Main/Audit secure review, Memory Router and Decision Agent runtime are **not yet integrated**. The 35-test result is historical evidence from **2026-10-18**, not tests rerun during this README update.
 
-A research-oriented Agent architecture that explores whether an AI agent can **identify missing capabilities, generate new executable capabilities, validate and test them, produce auditable reports, request human approval, activate approved capabilities, and reuse them in future tasks**.
+CEAA explores how agents can turn real execution history into **versioned, validated, reusable and governed capabilities and decisions**. Its core design is domain-neutral: specific workloads are experiments, not hardwired application architecture.
 
-The long-term goal is to study whether Agent performance can scale through **capability accumulation**, rather than depending only on stronger foundation models.
+The current [System Design v1.9](Capability-Evolving%20Agent%20Architecture%20%E2%80%94%20System%20Design%20v1.9.md) describes two complementary research mechanisms:
+
+1. **Capability Evolution:** discover a genuine capability gap, create and validate a candidate, secure the required approvals, activate an approved version, and reuse it.
+2. **Experience-guided Decision Evolution:** use a **Decision Agent × Memory Router** to retrieve scoped historical evidence and choose among validated-plan reuse, experience-assisted planning, novel reasoning or capability evolution.
+
+Skill Complexity Optimization, Reliability Evolution, hierarchical Package routing and long-term Cost Amortization extend these mechanisms. **None of their benefits are presumed proven.**
 
 ---
 
 ## Project Status
 
-> **Current Stage (2026-09-30): Phase 1 In Progress — Core Baseline Verified; Execution Experience & Evolution Telemetry Required**
+**Documentation aligned to v1.9 on 2026-10-24. Current development phase: Phase 1 — In Progress / Core Baseline Verified / Execution Telemetry Runtime Wiring Outstanding.**
 
-The repository currently contains a verified Phase 1 Core Baseline: architecture skeleton, core domain models, services, interfaces, Agent orchestration, API routes, persistence, concurrency controls, and token/cost measurement. **Phase 1 is not yet complete** because Execution Experience & Evolution Telemetry is now a required Phase 1 capability.
+| Area | Verified status |
+| --- | --- |
+| Task → Capability Gap → Mock Generation → Validation / Testing → Approval → Active → Reuse | Core implemented; controlled tests recorded |
+| FastAPI, SQLite capability/report/approval/audit, concurrency and restart persistence | Implemented; historical validation |
+| Token / Cost Research foundation and research endpoints | Implemented; missing real provider usage remains unavailable |
+| ExecutionTrace / RoutingDecision / Failure / Recovery domain, TelemetryRepository and SQLite schema v1 | **Foundation implemented**, contract tests recorded |
+| Automatic runtime telemetry writes, success/failure correlation, retry/fallback aggregation and summary API | **Phase 1 required; outstanding** |
+| Real providers, Docker Sandbox, PostgreSQL adapter, CodeBuilderRuntime, independent Main/Audit Gate, auth/policy hardening | **Phase 1.5 planned; not implemented** |
+| MemoryRouterInterface, DecisionModelInterface, Static Skill Packages, Validated Path Registry | **Phase 2 PoC planned; not implemented** |
+| Reliable automated recovery, recursive multi-Agent organization, shared capability marketplace | Future / optional research |
 
-The latest full test run passed **28 tests**, with one existing Starlette/AnyIO deprecation warning. In addition to the verified HTTP and persistence flows, Phase 1 now records task-level cost observations and individual LLM interactions for the token-efficiency/cost-amortization research hypothesis. Missing provider token usage remains explicitly unavailable rather than estimated.
+**Last recorded full suite: 35 passed, 1 warning (2026-10-18)** in [PROJECT_STATUS.md](PROJECT_STATUS.md) and [DEV_PLAN.md](DEV_PLAN.md); no new test execution is claimed by this documentation change.
 
-See [project status](PROJECT_STATUS.md), [development log](DEVELOPMENT_LOG.md) and [API concurrency behavior](docs/API_CONCURRENCY.md). Architecture diagrams below describe the broader design: the current synchronous implementation handles each request's own gap directly; the queue is reserved for future background workers. Reports, approvals and audit records now share SQLite storage.
+**Immediate next milestone:** complete Phase 1 runtime writes and queries for structured routing, successful/failed execution, retries/fallbacks, final outcomes and links to existing token/cost data. See [Execution Telemetry Database](docs/TELEMETRY_DATABASE.md).
 
-The [token/cost research contract](docs/TOKEN_COST_RESEARCH.md) and its implementation are now integrated on `dev`. The verified baseline is **28 passed, 1 warning**, including the `/api/research/*` measurement endpoints.
-
-Current status:
-
-```text
-Design                       ✓
-Architecture skeleton        ✓
-Main Agent                   ✓
-Evolution Agent              ✓
-Capability lifecycle         ✓
-Validation abstraction       ✓
-Testing skeleton             ✓
-Test report structure        ✓
-Human approval flow          ✓
-Notification abstraction     ✓
-Audit skeleton               ✓
-FastAPI routes               ✓
-Unit / lifecycle tests       ✓
-End-to-end test definition   ✓
-
-pytest execution             28 passed
-FastAPI TestClient tests     Passed
-Mock core loop               Passed
-Standalone Uvicorn / HTTP    Passed
-Token/cost metric foundation Passed
-Real provider usage data     Pending
-Real LLM integration         Pending
-PostgreSQL runtime adapter   Pending
-Docker sandbox               Pending
-Semantic retrieval           Pending
-Execution/evolution telemetry    Required Next
-Observability                Partial / Expanding
-Background workers           Pending
-Capability sharing           Future Reserved
-Marketplace                  Future Reserved
-```
-
-The next engineering/research milestone is:
-
-> **Build the Execution Experience & Evolution Telemetry Foundation, then connect real-provider usage and controlled baselines.**
-
-This is now a current requirement because the long-term research direction includes hierarchical and adaptive Agent organization. The project must begin collecting structured success and failure evidence before those layers exist.
-
-The complete mock flow and standalone server path have passed. Phase 1 now also preserves the measurement data needed to compare capability creation against later reuse:
+**Actually implemented mock flow** (distinct from the full v1.9 design):
 
 ```text
-Task
-→ Capability Search
-→ Capability Gap
-→ Generate
-→ Validate
-→ Autonomous Test
-→ Test Report
-→ Notify Administrator
-→ Human Approval
-→ Activate
-→ Reuse
-→ Persist LLM interactions and task cost metrics
-→ Compare cumulative CEAA usage with an explicit baseline
+Task → Search Active Capability
+  ├─ Match → Execute Existing Capability
+  └─ Miss → Capability Gap → Mock Generate → Validate / Test
+          → Test Report → Pending Approval → Human Approval
+          → Activate for Future Reuse
 ```
-
-See [token/cost research instrumentation](docs/TOKEN_COST_RESEARCH.md) for metric semantics,
-API endpoints and the boundary between Phase 1 measurement foundations and Phase 3 experiments.
 
 ---
 
 # 1. Research Motivation
 
-Most current Agent systems improve mainly through:
+CEAA examines whether Agent capabilities and **correct decision-making** can improve by reusing independently validated outcomes instead of repeatedly planning from scratch. Stronger foundation models, context windows and human-authored tools are useful, but they need not be the only source of improvement.
 
-- stronger language models
-- manually added tools
-- workflow redesign
-- prompt engineering
-- memory
-- RAG
-- model fine-tuning
-
-This project explores an additional scaling dimension:
-
-## Capability Scaling
-
-The main research hypothesis is:
-
-> **An Agent may improve over time by accumulating validated reusable capabilities, even if the underlying model remains unchanged.**
-
-The architecture separates two different growth mechanisms:
-
-### Model Scaling
-
-Improves the Agent's ability to reason about new or unknown problems.
-
-### Capability Scaling
-
-Improves the Agent's ability to reuse previously learned and validated solutions.
-
-A long-term experiment may compare:
-
-| Group | Model | Capability Evolution |
-|---|---|---|
-| A | Strong | No |
-| B | Medium | No |
-| C | Medium | Yes |
-| D | Strong | Yes |
-
-A key research question is whether:
-
-> **Medium Model + Capability Evolution**
-
-can approach or outperform:
-
-> **Strong Model + Static Capabilities**
-
-on repeated or long-horizon tasks.
+The research aims to test whether **Capability Accumulation**, **task-aware Memory Routing**, **Decision Stability**, **validated plan reuse**, **Skill Optimization** and **governed recovery** can improve end-to-end verified success and **Cost per Successful Task**. These are **hypotheses**, tested against frozen outcome oracles, equal resource/safety constraints, Exact/Near-Similar/Generalized workloads and suitable baselines — not marketing claims of measured superiority.
 
 ---
 
 # 2. Core Concept
 
-The architecture treats a **Capability** as a first-class system object.
+CEAA treats a **Capability** as a first-class executable, versioned, inspectable, testable, auditable and revocable asset. A Capability is not simply a prompt or memory snippet.
 
-A Capability is not just a prompt or memory entry. It is intended to be:
+The architecture maintains distinct evidence layers:
 
-- executable
-- inspectable
-- testable
-- versioned
-- auditable
-- reusable
-- rollback-able
-- portable
+- **Capability / Skill Registry:** what the system can execute, with interfaces, versions, eligibility and permission metadata.
+- **Raw Operational History:** what was actually routed, executed, retried, rejected and observed, including failures.
+- **Curated Decision Experience / Validated Execution Paths:** independently validated plan candidates with explicit provenance, versions, applicability, expiration and governance state.
 
-A Capability may eventually represent:
+**Memory Router supplies evidence; Decision Agent makes decisions; Policy Engine enforces permissions; validators determine outcomes.** Neither retrieving similar memory nor selecting a familiar plan is permission to execute a tool or activate a new artifact. Reuse means applying a **verified plan to current inputs**, not serving stale historical outputs.
 
-- Python code
-- API workflow
-- tool sequence
-- data-processing pipeline
-- Agent workflow
-- containerized service
-- domain-specific procedure
-- enterprise automation
-- security detection or response logic
+> **Reason Once, Validate, Reuse When Applicable, Replan When Necessary.**
 
-The core loop is:
+### Current evidence requirement
+
+The repository has a Telemetry Repository and SQLite schema, but Main Agent/runtime automated telemetry writing is not yet complete. Phase 1 must establish:
 
 ```text
-Problem
-  ↓
-Capability Gap
-  ↓
-Generate Candidate Capability
-  ↓
-Validate
-  ↓
-Autonomous Testing
-  ↓
-Test Report
-  ↓
-Human Review
-  ↓
-Approve / Reject / Revise
-  ↓
-Activate
-  ↓
-Reuse
+Task / Trace → Routing Decision / Candidate Set / Selected Target
+ → Execution Attempt → Success / Failure / Retry / Fallback
+ → Independent Outcome / Cost → Durable Raw History
+    ├─ Validated Episode → Curated Experience (future)
+    └─ Population Analysis → Evolution Signals (future)
 ```
 
----
-
-## Current Telemetry Requirement
-
-The platform should start collecting complete routing and execution history **now**, even though recursive Manager / Sub-Agent organization is a later-stage feature.
-
-This history is valuable before root-cause resolution. A large population of repeated exceptions can reveal systemic defects through frequency, clustering, temporal patterns, routing paths, environment correlation, retry outcomes, and failure-rate analysis. Raw failures should therefore not be discarded merely because they are repetitive or not yet curated into reusable experiences.
-
-Minimum evidence path:
-
-~~~text
-Task / Trace
-→ Routing Decision
-→ Candidate Set
-→ Selected Agent / Capability / Skill / Tool
-→ Execution
-→ Failure / Retry / Fallback
-→ Final Outcome
-→ Token / Latency / Cost
-~~~
-
-The schema should support recursive decisions through fields such as parent decision, routing depth, node type, selected target, candidate count, normalized failure category, and recovery outcome.
-
-The evidence layer has two future consumers:
-
-~~~text
-Raw Operational History
-├─→ Episode Resolution → Curated Experience Memory
-└─→ Population Analysis → Systemic Pattern → Evolution Signal
-~~~
-
-The purpose is both to support self-diagnosis/evolution and to create a longitudinal dataset for future experiments comparing:
-
-~~~text
-Flat Routing
-→ Capability / Skill Routing
-→ Sub-Agent Routing
-→ Manager Hierarchy
-→ Adaptive Agent Organization
-~~~
-
-The project is **not** implementing autonomous organization restructuring at this stage. It is implementing the historical evidence foundation required for future Experience Memory, repeated-failure diagnosis, Evolution Signals, and organization experiments.
-
-A key principle is:
-
-> **Success shows what can be reused; failures and repeated exceptions reveal what may need to change.**
-
-See [DEV_PLAN.md](DEV_PLAN.md), [PROJECT_STATUS.md](PROJECT_STATUS.md), and [Future Productization Vision](docs/AGENT_PLATFORM_FUTURE_VISION.md).
+See [Telemetry Database](docs/TELEMETRY_DATABASE.md) and [Development Plan](DEV_PLAN.md).
 
 ---
 
 # 3. High-Level Architecture
 
-```text
-                         User / Task
-                              │
-                              ▼
-                       Main Agent Service
-                              │
-                      Capability Search
-                              │
-              ┌───────────────┴───────────────┐
-              │                               │
-      Existing Capability             Capability Missing
-              │                               │
-              ▼                               ▼
-     Capability Executor              Gap Detection
-                                              │
-                                       Evolution Queue
-                                              │
-                                       Evolution Agent
-                                              │
-                                      Capability Builder
-                                              │
-                                      Validation Service
-                                              │
-                                   Capability Testing Agent
-                                              │
-                                         Test Report
-                                              │
-                                         Policy Engine
-                                              │
-                                     Capability Registry
-                                              │
-                                      Pending Approval
-                                              │
-                                     Notification Service
-                                              │
-                                        Administrator
-                                              │
-                                      Approval Service
-                                              │
-                                        Active Capability
+**Target v1.9 logical architecture — not the implemented Phase 1 runtime:**
+
+```mermaid
+flowchart TB
+    T["Task / Request"] --> MAIN["Main Agent"]
+    MAIN --> DEC["Decision Agent"]
+    DEC <-->|"Authorized evidence"| MR["Memory Router"]
+    MR <--> EX[("Experience Memory")]
+    MR <--> PR[("Validated Path Registry")]
+    MR <--> CR[("Capability / Skill Registry")]
+    DEC --> S{"Decision Strategy"}
+    S -->|"Verified / compatible"| RE["Reusable Execution Plan"]
+    S -->|"Partial history"| PL["Experience-assisted Planning"]
+    S -->|"Novel / gap"| GA["Reasoning / Capability Gap"]
+    RE --> LD["Agent / Package / Local Decision"]
+    PL --> LD
+    GA --> G{"Capability missing?"}
+    G -->|"No"| LD
+    G -->|"Yes"| B["Candidate / Code Builder"]
+    B --> SG["Testing + Secure Evolution Gate"]
+    SG --> HA["Human Approval as Required"]
+    HA --> CR
+    LD --> PO["Runtime Policy / Permissions"]
+    PO --> RUN["Execute Current Input"]
+    RUN --> VA["Independent Outcome Validation"]
+    VA --> TR["Trace / Observed Outcome"]
+    TR --> CU["Governed Experience Curation"]
+    CU -. "Verified evidence" .-> EX
+    CU -. "Approved paths" .-> PR
+
+    classDef focus fill:#176447,color:#ffffff,stroke:#176447
+    class DEC,MR focus
 ```
 
-The architecture follows a key boundary rule:
+The Global/Local Decision split is logical and future-facing. Memory Router is **not** an autonomous dispatcher or a bypass around scope controls. Reusing a previously approved compatible plan need not trigger an entire new-artifact review each time, but still requires current authorization and independent outcome validation. Newly generated or changed artifacts require the applicable Secure Evolution Gate and approval.
 
-> **Agent logic should not directly depend on infrastructure implementations.**
-
-Preferred dependency direction:
-
-```text
-Agent
-→ Service
-→ Interface
-→ Infrastructure Adapter
-```
-
-Instead of:
-
-```text
-Agent
-→ Database / Docker / Vendor API
-```
+**Dependency boundary:** Agent → Service → Interface → Infrastructure Adapter. No core dependency on one LLM, vector index, data store or Builder provider.
 
 ---
 
@@ -503,442 +324,108 @@ Future notification providers may include:
 
 # 8. Current Repository Structure
 
+Representative paths observed on `dev` on 2026-10-24:
+
 ```text
-Evolving_Agent_Architecture/
-├── README.md
-├── README.zh-TW.md
-├── Capability-Evolving Agent Architecture — System Design v1.8.md
-├── Capability-Evolving Agent Architecture — System Design v1.7.md
-├── Capability_Evolving_Agent_Tech_Stack_v1.md
-├── DEV_PLAN.md
-├── PROJECT_STATUS.md
-├── DEVELOPMENT_LOG.md
-├── requirements.txt
-├── env.example
-├── pytest.ini
-│
-├── src/
-│   ├── main.py
-│   ├── config.py
-│   │
-│   ├── agents/
-│   │   ├── main_agent.py
-│   │   └── evolution_agent.py
-│   │
-│   ├── domain/
-│   │   ├── capability.py
-│   │   ├── gap.py
-│   │   ├── report.py
-│   │   ├── approval.py
-│   │   └── events.py
-│   │
-│   ├── interfaces/
-│   │   ├── llm.py
-│   │   ├── queue.py
-│   │   ├── sandbox.py
-│   │   ├── notification.py
-│   │   └── repository.py
-│   │
-│   ├── infrastructure/
-│   │   ├── mock_llm.py
-│   │   ├── memory_queue.py
-│   │   ├── sqlite_repository.py
-│   │   ├── subprocess_sandbox.py
-│   │   └── console_notification.py
-│   │
-│   ├── services/
-│   │   ├── capability_service.py
-│   │   ├── gap_detection_service.py
-│   │   ├── evolution_service.py
-│   │   ├── validation_service.py
-│   │   ├── testing_service.py
-│   │   ├── policy_service.py
-│   │   ├── approval_service.py
-│   │   ├── notification_service.py
-│   │   ├── execution_service.py
-│   │   ├── report_store.py
-│   │   └── audit_service.py
-│   │
-│   └── api/
-│       └── routes/
-│           ├── tasks.py
-│           ├── capabilities.py
-│           ├── evolution.py
-│           ├── approvals.py
-│           └── audit.py
-│
-└── tests/
-    ├── test_capability_schema.py
-    ├── test_capability_service.py
-    └── test_full_loop.py
+src/
+├── main.py / config.py
+├── agents/main_agent.py / agents/evolution_agent.py
+├── domain/
+│   ├── capability.py / gap.py / approval.py / report.py
+│   └── research.py / telemetry.py / events.py / errors.py
+├── interfaces/
+│   ├── llm.py / queue.py / sandbox.py / notification.py
+│   └── repository.py / telemetry_repository.py
+├── infrastructure/
+│   ├── mock_llm.py / memory_queue.py / subprocess_sandbox.py
+│   ├── sqlite_repository.py / sqlite_telemetry_repository.py
+│   └── console_notification.py
+├── services/
+│   ├── capability_service.py / gap_detection_service.py
+│   ├── evolution_service.py / execution_service.py
+│   ├── testing_service.py / validation_service.py
+│   ├── approval_service.py / audit_service.py / policy_service.py
+│   └── notification_service.py / report_store.py / research_metrics_service.py
+└── api/routes/
+    ├── tasks.py / capabilities.py / evolution.py
+    └── approvals.py / audit.py / research.py
+
+tests/
+├── test_api.py / test_full_loop.py / test_concurrency.py
+├── test_research_metrics.py / test_telemetry_repository.py
+└── test_capability_*.py / support.py
 ```
+
+The planned Decision and Memory components are **logical interfaces, not currently existing directories or implemented services**. See System Design v1.9 §70.
 
 ---
 
 # 9. Current Phase 1 Implementation
 
-The current implementation intentionally uses lightweight local adapters to validate architecture before introducing external infrastructure.
+| Adapter boundary | Implemented adapter |
+| --- | --- |
+| LLM | `MockLLMProvider` — deterministic templates, no live reasoning provider |
+| Capability persistence | SQLite |
+| Execution evidence | SQLite `TelemetryRepository` **foundation only** |
+| Queue | `InMemoryEvolutionQueue` — not a durable background worker |
+| Sandbox | Python subprocess — **not secure container isolation** |
+| Notifications | Console |
+| API / orchestration | FastAPI / LangGraph |
 
-Current adapters:
-
-| Interface | Phase 1 Implementation |
-|---|---|
-| LLM Provider | `MockLLMProvider` |
-| Queue | `InMemoryEvolutionQueue` |
-| Capability Repository | SQLite |
-| Sandbox | Python subprocess |
-| Notification | Console |
-
-These are temporary implementations.
-
-The intended long-term transition is:
-
-```text
-MockLLMProvider
-→ LiteLLMProvider
-→ NVIDIA NIM / OpenRouter / Local Provider
-```
-
-```text
-SQLite
-→ PostgreSQL
-```
-
-```text
-SubprocessSandbox
-→ DockerSandbox
-→ stronger isolation if required
-```
-
-```text
-InMemoryQueue
-→ Redis / RQ
-```
+Do not infer production authentication, multi-tenant data isolation, full Code Evolution Runtime or actual Memory-assisted Decision execution from this baseline.
 
 ---
 
-# 10. Current Technology Stack
+# 10. Technology Stack
 
-Current code dependencies include:
+**Implemented dependencies:** Python, FastAPI, Pydantic, LangGraph, pytest, httpx and SQLite.
 
-- Python
-- FastAPI
-- Pydantic
-- LangGraph
-- pytest
-- httpx
-- SQLite
+**Phase 1.5 candidates:** LiteLLM, NVIDIA NIM/OpenRouter or equivalent real LLM provider; PostgreSQL; Docker sandbox; replaceable CodeBuilderRuntime (Pi 1.x vs OpenCode under evaluation); auth, policy enforcement and independent Main/Audit reviews.
 
-Planned technologies include:
+**Phase 2–3:** Embedding/pgvector or other retrieval backend, `MemoryRouterInterface`, `DecisionModelInterface`, static Package/Path Registry, optional Phoenix/DeepEval/MLflow. CPU-first lightweight decision inference may be evaluated here; a full local reasoning LLM is **not a prerequisite**.
 
-### LLM Layer
-
-- LiteLLM
-- NVIDIA NIM
-- OpenRouter
-- future local OpenAI-compatible provider
-
-### Persistence
-
-- PostgreSQL
-- pgvector
-
-### Validation
-
-- Docker
-- future gVisor / Firecracker / Kata Containers if required
-
-### Evaluation and Observability
-
-- Arize Phoenix or equivalent
-- DeepEval
-- MLflow
-
-### Background Processing
-
-- Redis
-- RQ
-
-### UI
-
-- Streamlit for research-stage dashboard
-- formal admin UI for productization
+**Future/optional:** Redis/RQ, gVisor/Firecracker/Kata, Streamlit/admin dashboard, Ollama/llama.cpp/vLLM. No vendor, local inference framework, or hardware architecture is a CEAA core hard dependency.
 
 ---
 
 # 11. Phase 1 Runtime Validation
 
-Automated tests have been executed successfully: 28 passed, 1 existing dependency warning. This includes controlled races, 24 concurrent requests across two apps, independent Python processes, and token/cost metric persistence plus amortization calculations. It is not a production load benchmark or evidence that the current Mock provider saves real tokens.
+The last recorded integrated test result is **35 passed, 1 warning on 2026-10-18** (including Telemetry Repository contracts). Controlled concurrency, HTTP/Uvicorn and restart evidence are documented in [PROJECT_STATUS.md](PROJECT_STATUS.md). These results do **not** establish a production-ready system, real token savings, or implemented MADE; tests were **not rerun** during this README revision.
 
-Validation commands (in an environment with requirements installed):
+For a configured local environment:
 
 ```bash
 pip install -r requirements.txt
-pytest
-```
-
-Start API:
-
-```bash
+pytest -q
 uvicorn src.main:app --reload
 ```
 
-Then inspect:
+With the server running, inspect the API at `http://localhost:8000/docs`.
 
-```text
-http://localhost:8000/docs
-```
-
-The automated suite covers the flow below. Repeat it against a standalone server and record the evidence before marking Phase 1 complete:
-
-1. an unknown task creates a Capability Gap
-2. the Evolution Agent creates a candidate Capability
-3. validation executes successfully
-4. autonomous testing produces a report
-5. the Capability enters `pending_approval`
-6. administrator approval activates it
-7. a repeated task reuses the same Capability
-8. no duplicate Capability is generated
-9. audit records exist for review requests and approval decisions
+Phase 1 is complete only when runtime success/failure/routing/retry/fallback telemetry is persisted and correlated with tasks and token/cost metrics, query/summary APIs and restart tests are verified against the [formal exit criteria](DEV_PLAN.md).
 
 ---
 
-# 12. Roadmap
+# 12. Roadmap — status-aware
 
-## Phase 1 — Core MVP + Execution Experience Foundation
+| Phase | Objective | Status |
+| --- | --- | --- |
+| **1 — Core + Telemetry** | Mock capability lifecycle, token-cost foundation and durable execution/routing/failure history | **In progress**: core verified, runtime telemetry incomplete |
+| **1.5 — Real Infrastructure + Governed Builder** | Real provider, PostgreSQL, Docker, CodeBuilderRuntime, independent Main/Audit, auth/policy and human oversight | **Planned / not implemented** |
+| **2 — Retrieval + MADE PoC** | Scoped Capability/Memory Retrieval, decision routing, static Skill Packages, validated-path reuse, bounded recovery | **Planned / not implemented** |
+| **3 — Evaluation** | E1 Capability/Cost, E2 Memory×Decision, E3 Skill Optimization, E4 Package Hierarchy, E5 Recovery, optional E6 HYSET tool-retrieval baseline | **Research design / not evaluated** |
+| **4–7** | Background workers, stronger sandbox, dashboard and full local reasoning LLM | **Future / optional** |
+| **8–9** | Domain-neutral enterprise and optional security research | **Future** |
+| **10–11** | Opt-in capability sharing, shared registry and marketplace | **Future reserved** |
 
-**Current stage — In Progress (Core Baseline Verified)**
+**Phase 1.5:** Pi 1.x and OpenCode are unselected Builder candidates. Future code-generated Skills/AgentArtifacts require independent reviewers, sandbox, security evidence, fail-closed governance and required approval; no mock-only test proves these are currently deployed.
 
-- architecture skeleton
-- Main Agent
-- Evolution Agent
-- lifecycle models
-- validation abstraction
-- testing abstraction
-- approval
-- notification
-- audit
-- API
-- tests written
+**Phase 2:** Memory Router and Decision Agent are *general-purpose* coordination infrastructure, not an incident-management/ERP-specific solution. Memory ACL, plan applicability and runtime execution authorization are separate gates.
 
-Core baseline already verified:
-
-- standalone Uvicorn / HTTP validation and retained runtime evidence
-- capability lifecycle / approval / reuse / persistence / concurrency
-- token / cost measurement foundation
-
-Still required before Phase 1 can be marked complete:
-
-- durable success / failure / retry / fallback execution observations
-- task / trace / routing correlation
-- candidate-set and selected-target persistence
-- normalized failure taxonomy plus raw exception metadata
-- retry / fallback linkage and recovery outcome
-- failure-rate denominator and repeated-exception aggregation
-- restart-persistent telemetry
-- automated telemetry tests and linkage to existing token/cost metrics
+**Phase 3:** [v1.9 §56–60](Capability-Evolving%20Agent%20Architecture%20%E2%80%94%20System%20Design%20v1.9.md) standardizes independent success oracles, retrieval applicability, correct decision consistency vs wrong-but-stable behavior, false reuse, policy safety, latency and **Cost per Successful Task** (including retrieval, validation, retry and maintenance overhead). A higher hit rate or lower token count alone is not proof of improvement.
 
 ---
-
-## Phase 1.5 — Real Infrastructure + Controlled Code Evolution
-
-**Starts only after the updated Phase 1 telemetry exit criteria are complete.**
-
-Planned:
-
-- runtime configuration and environment profiles
-- LiteLLM adapter, NVIDIA NIM, OpenRouter, provider fallback / health checks
-- PostgreSQL repository and migrations
-- Docker sandbox with filesystem / network / resource controls
-- Skill-oriented CodeBuilderRuntime and ephemeral Builder Agent
-- isolated candidate Git/worktree execution
-- versioned BuildSpecification / BuildResult / Candidate Artifact
-- independent Main-Agent functional / architecture review
-- independent Audit-Agent adversarial security review
-- frontier-model semantic verification for higher-risk reviews
-- deterministic security evidence and adversarial test generation
-- fail-closed Secure Evolution Gate
-- Validation Incident and mandatory Human Administrator escalation
-- authentication, authorization, policy enforcement, quotas, lease / crash recovery
-- AgentArtifact / Sub-Agent construction foundation after the Skill pipeline is stable
-- formal Skill auto-generation experiments across simple / medium / complex tasks
-- controlled Sub-Agent auto-generation experiments
-- reviewer ablation: Builder self-review vs Main-only vs Audit-only vs Main+Audit
-- known-defect security benchmark and adversarial validation
-- reviewer model-configuration comparison, including cross-model / cross-provider review
-- Human Escalation effectiveness and review-burden measurement
-- detection / false-positive / false-negative / agreement / escalation / cost / latency metrics
-
-Goal:
-
-> Move from a verified mock prototype to a real-infrastructure research platform that can autonomously construct Skills and controlled Sub-Agents, independently verify them, escalate uncertain or failed reviews to humans, and quantitatively evaluate whether the Main/Audit cross-validation architecture improves safety and correctness.
-
-Full recursive multi-Agent organization remains a later stage.
-
----
-
-## Phase 2 — Capability Retrieval and Reuse Intelligence
-
-Planned:
-
-- pgvector
-- Embedding Provider
-- semantic capability search
-- compatibility filtering
-- ranking
-- duplicate prevention
-- reuse metrics
-
-Target flow:
-
-```text
-Task
- ↓
-Embedding
- ↓
-Capability Search
- ↓
-Compatibility Filter
- ↓
-Reuse or Gap
-```
-
----
-
-## Phase 3 — Research Evaluation and Observability
-
-Planned:
-
-- Agent tracing
-- experiment tracking
-- token / cost / latency metrics
-- capability generation success rate
-- capability reuse rate
-- generalization rate
-- regression rate
-- repeated failure rate
-
-Potential tools:
-
-- Phoenix
-- DeepEval
-- MLflow
-
----
-
-## Phase 4 — Background Evolution
-
-Planned:
-
-```text
-Main Agent
-   ↓
-Capability Gap
-   ↓
-Queue
-   ↓
-Evolution Worker
-   ↓
-Validation / Testing
-```
-
-Possible stack:
-
-- Redis
-- RQ
-
-This allows capability evolution to continue without blocking normal Agent execution.
-
----
-
-## Phase 5 — Stronger Isolation
-
-Potential future sandbox options:
-
-- gVisor
-- Firecracker
-- Kata Containers
-- VM-based validation
-
-These will only be introduced when the risk profile requires stronger isolation.
-
----
-
-## Phase 6 — Admin / Research Dashboard
-
-Planned views:
-
-- Capability Registry
-- lifecycle state
-- test reports
-- pending approvals
-- audit trail
-- notifications
-- reuse metrics
-- cost / latency metrics
-
----
-
-## Phase 7 — Local LLM Support
-
-Future providers may include:
-
-- Ollama
-- llama.cpp
-- vLLM
-- LM Studio
-- private OpenAI-compatible inference servers
-
-The architecture intends to keep local and cloud models interchangeable through provider abstractions.
-
----
-
-## Phase 8 — Enterprise Domain Validation
-
-Potential controlled domains:
-
-- file processing
-- data transformation
-- IT automation
-- DevOps troubleshooting
-- workflow automation
-- enterprise procedures
-
-Purpose:
-
-> Verify that Capability Evolution generalizes across domains rather than working only for one task type.
-
----
-
-## Phase 9 — Cybersecurity Extension
-
-Cybersecurity is planned as a later high-difficulty validation domain rather than the initial MVP.
-
-Possible components:
-
-- MITRE ATT&CK
-- Atomic Red Team
-- Wazuh
-- Sysmon
-- Velociraptor
-- Zeek
-- Suricata
-- CALDERA
-- Cyber Range
-
-The same lifecycle should remain:
-
-```text
-Generate
-→ Validate
-→ Test
-→ Report
-→ Human Approval
-→ Activate
-```
-
----
-
+ 
 # 13. Future Reserved — Capability Sharing
 
 Capability sharing is intentionally **not part of the current MVP**.
@@ -1064,159 +551,68 @@ This may enable:
 
 # 16. Security and Governance Principles
 
-The project is designed to preserve several governance boundaries from the beginning:
+Generated artifacts are untrusted until independently validated and governed. A **new or modified Skill/Workflow/Agent/Path version** must pass its Secure Evolution Gate, including independent Main/Audit reviews where applicable and required human authorization. **Reusing an already-approved, compatible plan** avoids unnecessary new-artifact review, but never bypasses current runtime permission checks, risk controls or outcome validation.
 
-- generated capabilities are not automatically trusted
-- new capabilities require validation
-- new capabilities require human approval before activation
-- external capabilities require local re-validation
-- sharing is opt-in
-- capability origin and lineage should be recorded
-- capabilities must support revocation
-- capability execution should move toward sandbox isolation
-- important lifecycle actions should be auditable
+Memory Retrieval is scope-aware: tenant, branch, owner, resource classification, delegation and metadata/payload permissions are separate; denial or missing evidence cannot escalate an Agent's authority. Children may not exceed parental effective privileges. Raw execution traces, retrieved text, embeddings and generated rationale cannot become higher-priority instructions or silently accompany capability sharing.
 
-Future enterprise and cybersecurity deployments may additionally require:
-
-- digital signatures
-- artifact integrity validation
-- secret scanning
-- tenant isolation
-- stronger sandboxing
-- role-based approval
-- organization policy engines
+**These are target design invariants.** Today's mock/subprocess code does not enforce all production-grade security requirements; real policy, sandbox and trusted reviewer enforcement are Phase 1.5+ work.
 
 ---
 
 # 17. Documentation
 
-The repository uses separate documents for different project-management purposes.
-
 | Document | Purpose |
-|---|---|
-| `README.md` | English project overview and entry point |
-| `README.zh-TW.md` | Traditional Chinese project overview and entry point |
-| `Capability-Evolving Agent Architecture — System Design v1.8.md` | Current long-term system architecture; Code Evolution Runtime and Secure Evolution Gate |
-| `Capability-Evolving Agent Architecture — System Design v1.7.md` | Historical design snapshot retained for architecture evolution traceability |
-| `Capability-Evolving Agent Architecture — System Design v1.6.md` | Historical design snapshot retained for architecture evolution traceability |
-| `Capability_Evolving_Agent_Tech_Stack_v1.md` | Technology stack and phased adoption plan |
-| `DEV_PLAN.md` | Current implementation plan and replacement paths |
-| `PROJECT_STATUS.md` | Current development stage, completion state, and milestones |
-| `DEVELOPMENT_LOG.md` | Detailed development history, decisions, changes, and validation results |
+| --- | --- |
+| [System Design v1.9](Capability-Evolving%20Agent%20Architecture%20%E2%80%94%20System%20Design%20v1.9.md) | **Current architecture baseline** — MADE, governance, experimental metrics and phase boundaries |
+| [DEV_PLAN.md](DEV_PLAN.md) | Implementation roadmap and official Phase 1/1.5 exit criteria |
+| [PROJECT_STATUS.md](PROJECT_STATUS.md) | Actual recorded implementation status and tests |
+| [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md) | Historical engineering decisions and validation |
+| [Telemetry Database](docs/TELEMETRY_DATABASE.md) | Implemented SQLite repository vs planned runtime integration |
+| [Token/Cost Research](docs/TOKEN_COST_RESEARCH.md) | Measurement contract and caveats |
+| [Multi-Agent Organization Design](docs/MULTI_AGENT_ORGANIZATION_DESIGN.md) | Future permission monotonicity and branch governance |
+| [Future Platform Vision](docs/AGENT_PLATFORM_FUTURE_VISION.md) | Long-term conditional productization |
+| System Design v1.8 / v1.7 | Historical snapshots, **not** the current design baseline |
 
-The intended documentation rule is:
-
-- Architecture decisions belong in the System Design
-- Technology decisions belong in the Tech Stack
-- Near-term work belongs in DEV_PLAN
-- Current progress belongs in PROJECT_STATUS
-- Actual historical development work belongs in DEVELOPMENT_LOG
+Source of truth: `dev` source and tests for implementation; PROJECT_STATUS for recorded evidence; DEV_PLAN for near-term work; v1.9 for proposed architecture. A diagram or design version is not proof of runtime support.
 
 ---
 
 # 18. Development Philosophy
 
-The project intentionally avoids introducing all production infrastructure at once.
+> **Implement simple, interface for complex — preserve evidence and governance.**
 
-The development sequence is:
+Build a verified local core, finish durable telemetry and real-security infrastructure, then evaluate general-purpose Memory-assisted Decision and path reuse. Add hierarchy, persistent services and new autonomy only when independent experiments demonstrate value.
 
 ```text
-Architecture Skeleton
-        ↓
-Verified Local MVP
-        ↓
-Real Infrastructure
-        ↓
-Semantic Capability Reuse
-        ↓
-Research Evaluation
-        ↓
-Background Evolution
-        ↓
-Enterprise Validation
-        ↓
-High-Risk Domain Validation
-        ↓
-Capability Sharing / Productization
+Verified Core → Runtime Telemetry → Real Provider / Secure Evolution
+ → Capability + Memory / Decision PoC → Independent Evaluation
+ → Evidence-justified Scale / Optional Productization
 ```
 
-The guiding principle is:
-
-> **Implement simple, interface for complex.**
-
-The objective is to keep the architecture evolvable without forcing premature infrastructure complexity.
+The result may show a mechanism is useful only for certain task types or not worth its overhead; such findings are valid research outcomes.
 
 ---
 
 # 19. Long-Term Vision
 
-The long-term vision is not simply an Agent that can write tools.
-
-It is an Agent system with a governed capability-learning lifecycle:
+CEAA aims to create a governed, domain-neutral Agent architecture in which **capability evolution, decision evolution, efficiency optimization and reliability evolution** are driven by verifiable operational experience.
 
 ```text
-Discover Gap
-→ Learn
-→ Build
-→ Test
-→ Explain
-→ Govern
-→ Activate
-→ Reuse
+Task → Decision / Authorized Retrieval / Exploration
+ → Policy-constrained Execution → Independent Validation
+ → Raw Experience → Governed Curation
+    ├─ Capability: Build / Test / Approve / Activate
+    ├─ Decision: Route / Reuse / Replan
+    ├─ Efficiency: Optimize / Compress / Evaluate
+    └─ Reliability: Diagnose / Recover / Verify
+ → Versioned Evidence and Approved Assets for Future Tasks
 ```
 
-Future productization may extend this into:
-
-```text
-Share
-→ Discover
-→ Transfer
-→ Validate Locally
-→ Adopt
-```
-
-The conceptual separation is:
-
-### Foundation Model
-
-Handles novel reasoning.
-
-### Capability Library
-
-Stores what the Agent has already learned how to do.
-
-### Evolution Engine
-
-Identifies what the Agent cannot yet do and attempts to create new capabilities.
-
-### Code Evolution Runtime (Design v1.8, not yet implemented)
-
-Once a capability or future Agent gap is confirmed, a replaceable Builder Runtime is intended to construct a versioned candidate inside an isolated workspace. Generation itself does not establish trust.
-
-Every generated Skill / Workflow / future Sub-Agent is intended to pass independent Main-Agent and Audit-Agent review plus deterministic runtime/security evidence. Only `Main=PASS AND Audit=PASS` may continue automatically; any failure, error, unknown result, timeout, or disagreement must block the pipeline and notify a human administrator.
-
----
-
-### Testing Layer
-
-Challenges generated capabilities and produces evidence.
-
-### Governance Layer
-
-Keeps humans in control of activation and sharing.
-
-The research goal is to determine whether this architecture can enable an Agent to improve continuously through **validated capability accumulation**, without requiring continuous model retraining.
-
----
+The long-term assets include a **Capability/Skill Registry, Decision Experience, Validated Execution Paths, Raw Traces and Governance Policies**, not just a collection of tools or old conversations. Future optional sharing requires user opt-in and local validation, and never implicitly exports private memory.
 
 ## Current Immediate Priority
 
-The project is currently focused on one thing:
-
-> **Complete Phase 1 by implementing Execution Experience & Evolution Telemetry and begin accumulating longitudinal operational history. Real-provider integration follows in Phase 1.5.**
-
-See [DEV_PLAN.md](DEV_PLAN.md) for the remaining Phase 1 work before real infrastructure integration.
-
+**Complete Phase 1 Execution Experience & Evolution Telemetry runtime writing, correlation, aggregation and restart tests before Phase 1.5 integration.** See [DEV_PLAN.md](DEV_PLAN.md).
 
 ---
 

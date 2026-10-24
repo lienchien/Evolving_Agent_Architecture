@@ -3089,23 +3089,7 @@ Skill Compression 的研究只假設在受限制的 task domain 中用較低成�
 
 **Rationale 規格**：只保存結構化、可稽核的 selection criteria / evidence refs / expected outcome，不保存或索取模型私有 chain-of-thought；具 provenance 才可用作可驗證的決策證據。
 
-### 60.7 E6 — External Baseline: HYSET Set-Level Tool Retrieval（deferred）
-
-參考：Hong, Xinyi, Pinjun Dong, Xinyang Yu, and Binyan Jiang (2026), *Tools Are Not Islands: Set-Level Tool Retrieval for LLM Agents via Query-Conditioned Hyperedge Prediction*, arXiv:2607.25718。
-- Paper: https://arxiv.org/abs/2607.25718
-- Code: https://github.com/stormwther18/HYSET
-
-工具檢索比較（相同 task/tool inventory、model、version、compute/retrieval budget、policy）：
-
-1. E6-T1 LLM-only Tool Selection。
-2. E6-T2 Independent Top-K Retrieval。
-3. E6-T3 HYSET Set-Level Tool Retrieval。
-4. E6-T4 CEAA Experience-aware Decision / Retrieval。
-5. E6-T5 Ablations：無 Experience / Cost-aware Ranking / Hierarchical Routing；限制在合法候選範圍。
-
-先報 **Tool Selection-only** 的 Recall@K、COMP@K、Tool Set Exact Match，再報 **End-to-End** Success、CPST、Latency、Retries；HYSET 的工具集合評分並不等同 CEAA 全域決策或自動能力演化，不可直接以一個 tool-retrieval 指標宣稱完整 Agent 勝出。Index/training/retrieval/maintenance cost、memory history count 與 held-out tool combinations 須明列。**本組為可選的外部方法比較，不是 CEAA 設計必要相依。**
-
-### 60.8 E5 — Failure-driven Self-Recovery × Reliability Evolution
+### 60.7 E5 — Failure-driven Self-Recovery × Reliability Evolution
 
 保留 H-R1–H-R4：Recovery 的 end-to-end success、選擇式診斷的成本、恢復經驗演化的重工減少，以及治理／人員審查對 unsafe repair 的影響。其 **eligible failure episode denominator**、MTTR 起訖、CPST、安全原則依 `56.5；第 55.1 節與 `8A.14 的治理界線不變。
 
@@ -3123,6 +3107,22 @@ Skill Compression 的研究只假設在受限制的 task domain 中用較低成�
 比較 Verified End-to-End Task Success、Recovery Success（eligible episodes）、Correct Root Cause Rate、MTTR/P95 recovery time、Repeated Failure、Unsafe/False Repair、Unauthorized Action、Human Escalation、Total Cost/CPST。重複事件的執行經驗只能在之後的 time-step 經核准後重用，並測試 cross-environment holdout、rollback、checkpoint、idempotency 與 drift。
 
 **消融安全規則**：可以從 routing logic 中關閉 memory / selective diagnostics / budget optimization 來評估價值；不可以讓 regression gate、permission gate、sandbox、mandatory approval 在有真實權限的執行環境中被關閉。研究其成本或貢獻時，使用 sandboxed synthetic adversarial cases、blocked-event counts 或 offline counterfactual，並**單獨標示不具可執行權限**。
+
+### 60.8 E6 — External Baseline: HYSET Set-Level Tool Retrieval（deferred）
+
+參考：Hong, Xinyi, Pinjun Dong, Xinyang Yu, and Binyan Jiang (2026), *Tools Are Not Islands: Set-Level Tool Retrieval for LLM Agents via Query-Conditioned Hyperedge Prediction*, arXiv:2607.25718。
+- Paper: https://arxiv.org/abs/2607.25718
+- Code: https://github.com/stormwther18/HYSET
+
+工具檢索比較（相同 task/tool inventory、model、version、compute/retrieval budget、policy）：
+
+1. E6-T1 LLM-only Tool Selection。
+2. E6-T2 Independent Top-K Retrieval。
+3. E6-T3 HYSET Set-Level Tool Retrieval。
+4. E6-T4 CEAA Experience-aware Decision / Retrieval。
+5. E6-T5 Ablations：無 Experience / Cost-aware Ranking / Hierarchical Routing；限制在合法候選範圍。
+
+先報 **Tool Selection-only** 的 Recall@K、COMP@K、Tool Set Exact Match，再報 **End-to-End** Success、CPST、Latency、Retries；HYSET 的工具集合評分並不等同 CEAA 全域決策或自動能力演化，不可直接以一個 tool-retrieval 指標宣稱完整 Agent 勝出。Index/training/retrieval/maintenance cost、memory history count 與 held-out tool combinations 須明列。**本組為可選的外部方法比較，不是 CEAA 設計必要相依。**
 
 ### 60.9 Cross-track Ablations、品質門檻與統計設計
 

@@ -4888,6 +4888,97 @@ This is intended to become one of the platform's primary future research and pro
 
 ---
 
+## 14.2 Future Research — Goal-driven Autonomous Development, Multi-Audit and Human Oversight Scalability（2026-10-24）
+
+**Status: Future Direction / Conceptual Design / Not Implemented / Not Evaluated.** 本方向延伸現有 `14 的組織決策、`5.4 的受治理能力生成、System Design v1.9 `8A 的 Main/Audit Cross-Validation。研究目標是：**Human Architect 事先定義開發任務目標、Expected Outcomes、Acceptance Criteria、權限與資源上限；CEAA 在非人類工作時間自主分工、實作、測試、有限修復與獨立驗證，並產出可追溯的 Candidate PR 和結果報告。**
+
+關鍵不是允許 Agent 無限制 24/7 生成程式碼，而是在**固定的人類監督量能、可信安全邊界與可驗證成果**下，提高有效交付量。此方向尚不擴張現行 Phase 1 / 1.5 的工程退出條件。
+
+### 14.2.1 Goal Contract and Bounded Authority
+
+`DevelopmentGoalContract`（未來候選邏輯契約）應由 Human Architect/Owner 先批准並凍結必要條件：
+
+- **Goal/Outcomes**：明確 Requirement、Expected Outcomes、可由獨立測試/Oracle 評估的 Acceptance Criteria、Definition of Done。
+- **Identity/Scope**：goal/task/trace ID、repo/base commit、允許分支與修改路徑、Owner/Branch/Tenant、Policy version。
+- **Budget/Permissions**：工具、資料分類、Sandbox、模型/Provider、token/cost/time/retry 限額、Deadline/Expiry；Development Agent 不持有生產憑證。
+- **Protected Constraints**：Developer 無權更改受保護的 Acceptance/Regression Tests、Mandatory CI、Security Policy、審計與授權控制。
+- **Escalation**：Scope 擴張、Critical Finding、未知結果、Reviewer disagreement、Timeout、預算耗盡、不可逆操作或無法安全回復皆停止與人工升級。
+- **Deliverables**：已核對 commit SHA 的 Candidate PR、驗證證據、Unified Report。**未明確核准的 Merge / Activation / Production Deploy 不會因 Goal Contract 已批准就自動獲准。**
+
+Task 子分解不可突破既有權限單調性 `P_child ⊆ P_parent ⊆ P_root`。Memory/Execution Tool 的授權檢查與 Candidate Artifact Activation 是不同治理行為；可自主完成低風險已授權工作，但仍不能繞過 `8A` 對新/修改 Artifact 的 Secure Evolution Gate 與必要人類核准。
+
+### 14.2.2 Future Autonomous Development and Audit Loop
+
+```mermaid
+flowchart TB
+    H["Human: Approve Goal Contract"] --> Q["Durable Queue / Checkpoint"]
+    Q --> P["Manager / Decision Planning"]
+    P <--> MEM[("Scoped Development Experience")]
+    P --> DEV["Development Agent / Isolated Branch"]
+    DEV --> PR["Candidate PR + Commit-bound Evidence"]
+    PR --> AC["Audit Coordinator"]
+    AC --> F["Functional Auditor"]
+    AC --> S["Security Auditor"]
+    AC --> A["Architecture Auditor"]
+    AC --> R["Regression Auditor / Protected CI"]
+    F --> EV["Independent Evidence Aggregation"]
+    S --> EV
+    A --> EV
+    R --> EV
+    EV --> G{"Mandatory Gate + Acceptance Criteria"}
+    G -->|"All mandatory PASS"| REP["Versioned Verification Report"]
+    G -->|"Bounded repair allowed"| FIX["Repair + Full Applicable Revalidation"]
+    FIX --> DEV
+    G -->|"FAIL / UNKNOWN / Conflict / Critical"| BLOCK["Stop + Human Escalation"]
+    REP --> C["Verified Candidate Deliverable"]
+    C --> HM["Separate Human / Policy Merge Decision"]
+    BLOCK --> IR["Incident / Blocker Report"]
+    IR -. "Audited evidence" .-> MEM
+    C -. "Governed outcomes" .-> MEM
+```
+
+Near-continuous operation requires checkpoint/resume, durable queue, idempotent execution, recoverable leases, bounded retries, sandbox isolation, resource quotas, traceability and CI reproducibility. Hardware capacity and local models can help, but power, thermals, network reliability, provider faults and review backlog limit **verified output**; 24h execution must not be confused with 24h productive development.
+
+### 14.2.3 Specialized Multi-Audit, Not Majority Voting
+
+現行 CEAA 的 **Main functional/architecture Review + independent Audit security Review** 是必要的最低治理基線。長期可加入 `AuditCoordinator`，在強制基線**之上**依 Goal risk/context 選擇額外審查維度：
+
+| Reviewer | Primary validation responsibility |
+| --- | --- |
+| Functional Audit | Expected-vs-observed outcomes、獨立 Acceptance tests |
+| Security Audit | Permissions、Secrets、Injection、Dependencies、Sandbox、Network / Data boundaries |
+| Architecture Audit | API/Schema/Contracts、Backward Compatibility、Cross-component impact |
+| Regression Audit | Protected CI/Regression、Restart/Upgrade/Rollback |
+
+審查可結合 deterministic tooling、靜態分析、專業 Reviewer LLM；不是每個簡單 PR 都固定啟動所有模型。Coordinator 只可安排**更多或更針對性的驗證**，不得移除 `8A` 必要 Main/Audit Gate。Reviewers 的 first pass 要與 Builder 及彼此隔離，不能共用開發者的自我評價；**多數決不可覆蓋必要的 FAIL/ERROR/UNKNOWN、timeout 或 disagreement**。不應把「多個模型都說 PASS」當成證據獨立性的替代品。
+
+候選 Revision 後要重新執行適用 Gate；Protected Tests、可信簽章與 CI 要與被審查的 PR 分離，防止 Developer 偷換測試、修改 Policy 或以新的未驗證 Commit 套用舊 Report。
+
+### 14.2.4 Unified Development Verification Report
+
+`AutonomousDevelopmentVerificationReport` 為候選 Versioned Artifact（**尚非現有 schema**），至少包含：
+
+- **Identity**：Goal Contract ID/version、Task/Trace、PR URL、base/candidate commit SHA、Diff scope、Artifact version。
+- **Expected vs Actual**：每項 Acceptance Criterion、獨立 Oracle、PASS/FAIL/UNKNOWN、CI/Test run IDs、缺漏與重現條件。
+- **Independent Reviews**：Reviewer 身分/角色、Model/Provider/Policy/Prompt version、Review context independence、Findings、Severity、Evidence refs、Disagreement。
+- **Security/Regression Evidence**：受保護測試、Sandbox、Dependency/Secret/Permission changes、Known Limitations、Rollback feasibility。
+- **Resources**：時間、Token/Cost、Retries、fallback、人工參與／待決事項。
+- **Final Verdict**：`VERIFIED_CANDIDATE / BLOCKED / ESCALATE / INCOMPLETE`；必須清楚區分**驗證通過的候選 PR**與**已核准 Merge/Activate/Deploy**。
+
+報告需綁定實際受測 Commit SHA 和測試版本，保留 Raw Failure/UNKNOWN evidence（遵守 ACL/Retention）；只有經獨立驗證且通過治理的路徑，才能逐步變成可重用的開發經驗。
+
+### 14.2.5 Research Baselines, Metrics and Adoption Conditions
+
+**Baselines**：Single-Auditor baseline（僅 isolated/offline/synthetic，不能關掉真實任務的強制 Gate）、Mandatory Main+Audit、Specialized Multi-Audit、Risk-adaptive Multi-Audit。需要控制相同候選 PR/已知缺陷、模型與預算、獨立 Outcome Oracle、Acceptance/Regression 套件、風險分類與人工審查時間。比對額外 Reviewer 的效益時，也計入審查成本與誤報，而非預設越多越好。
+
+**主要指標**：Verified Goal Completion Rate、Detection/False Negative、Escaped Defect、Regression、Review Disagreement、Human Escalation、Human Oversight Minutes per Verified Goal、Review Queue Backlog、P95 Verified Delivery Latency、Verification Cost per Accepted PR、Cost per Successful Task、Unattended Checkpoint/Recovery Reliability。
+
+**核心假說**：在不降低 Verified Success 與 Safety 的前提下，Goal Contract + Multi-Audit + Result Report 是否能提高**每單位人類監督時間的可信交付量**？CEAA 用自身專案開發紀錄做訓練/歷史資料時，正式效果評估仍需獨立 holdout、固定測試與外部判準，不能自評成效或宣稱已經指數成長。
+
+**Adoption Sequence（跨階段未來研究，非新強制 Phase）**：Phase 1 Durable Telemetry → Phase 1.5 Governed Builder + Auth/Sandbox/Main-Audit → Phase 2/3 Memory/Decision PoC → Future Durable Workers / Checkpoint → Goal-level Autonomous Development PoC → Specialized Multi-Audit / Evidence Reporting → 僅在實測支持後擴大 unattended operating window。**現有 Phase 1、Phase 1.5、Phase 2 與 Phase 3 的退出條件維持不變。**
+
+---
+
 ## 15. Research-to-Platform Development Path
 
 ### Stage 1 — Research Validation

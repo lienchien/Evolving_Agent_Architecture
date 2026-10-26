@@ -2,6 +2,43 @@
 
 本檔案收錄與 Capability-Evolving Agent Architecture（CEAA）直接相關、值得追蹤的論文及技術文章。此處為研究筆記與待驗證假設，不代表已納入正式系統設計。
 
+## 收錄篩選規則 — 研究增量價值檢查（2026-10-26 起適用）
+
+本文件**不是一般科技新聞收藏**，收錄應同時具備 CEAA 直接關聯、可查證來源，以及**相對既有設計／研究筆記的增量價值**。原文與 CEAA 的相似度高，不代表研究新穎性高；不得只因文章提到 Agent、Skill、Memory 或 Governance 就標示為 High Priority。此次規則先用於新候選，不回溯改寫原有筆記或正式 v1.9。
+
+### 收錄前四項檢查
+
+1. **直接關聯性**：明確指出對應的 CEAA 模組／研究問題（例如 §2.8 Skill Tiering、§2.9 Package Routing、§2.10 MADE、§8A Secure Evolution Gate、§56–60 Metrics / Ablation）。只有一般科技產業背景者列入每日摘要，不直接收錄。
+2. **來源與證據**：確認原始 URL、作者／機構、原文日期、技術方法、可核對的實測／程式碼／資料，區分「可查事實」、「原作者主張」、「CEAA 推論」；原文不可取得時標明限制，不把宣傳或郵件轉述當成驗證。
+3. **既有設計重疊與知識庫去重**：先比對 System Design v1.9、DEV_PLAN，以及本檔案已收錄的研究；列出**已涵蓋的相同概念／對應章節**，再寫出**真正新增**的假設、演算法、資料契約、測試情境、外部量化證據或可重現實作。相同文章／重複轉載／不同說法的既有主張，不重複建立條目。
+4. **具體研究或工程增量**：候選至少須提供下列其中一項：**新的可否證假設、新的可比較方法／Baseline／Ablation、可重現的外部測試結果、填補既有實作缺口的具體方法／驗證清單**。對只有口號、概念重述、無方法或不可查證效益的內容，**不提交 GitHub**。
+
+### 分類與處理決策
+
+| 分類 | 判定標準 | 預設處理 |
+| --- | --- | --- |
+| **A — 新研究假設／方法（Novel Research）** | v1.9 尚未涵蓋的明確問題、方法或經核實的新研究證據，且能設計對照實驗 | **優先收錄**；標示可能對應的現有／新實驗，不自行修改正式架構 |
+| **B — 研究方法／Baseline 增量（Experimental Value）** | 觀念可能已存在，但提供**新的可比較實作、量化結果、可重現 benchmark、評估方法或消融設計** | **優先收錄**；分清原始結果與 CEAA 尚待驗證的推論 |
+| **C — 工程實作驗證參考（Engineering Validation）** | CEAA 已有架構概念，但補充**具體且尚未收錄的安全測試、契約細節、錯誤案例或實作驗證路徑** | 僅在確實填補實作／驗證缺口且高可操作性時**選擇性收錄**，通常標為 Medium；否則僅在郵件摘要中簡述 |
+| **D — 既有概念重述／重複／宣傳（No Increment）** | 只重複 v1.9 或已收錄內容，沒有新方法、證據、測試或可操作細節 | **不收錄、不重複提交**；需要時在每日摘要標記「CEAA 已涵蓋」 |
+
+**優先級與新穎性分開評估：** 記錄 `CEAA_relevance`（High/Medium/Low）、`design_novelty`（High/Medium/Low/None）、`incremental_value`（Research / Experiment / Implementation / None）、`overlap_refs`（v1.9 章節、研究筆記條目）、`admission_decision`（Include / Context-only / Duplicate / Reject）與理由。**High relevance + Low novelty 並不自動等於 High Research Priority**；若是 C 類，原則上以工程驗證參考而非新架構貢獻呈現。
+
+### 新收錄條目必填欄位
+
+保留原有欄位（收錄／發表日期、標題、作者、URL、核心貢獻、CEAA 關聯、可借鑑方法、Baseline/Experiment/Ablation、證據限制及優先級），額外明確列出：
+
+- **與 CEAA 現有設計的重疊**：對應 v1.9 章節及已收錄文章；說明哪些並不新。
+- **相對 CEAA 的實際增量**：哪些方法／數據／驗證案例是真正新增，是否值得單獨驗證。
+- **收錄類型與處理理由**：A/B/C/D、研究優先級；若有新驗證價值但沒有新架構，標記為「工程實作驗證參考」。
+- **研究落地判準**：具體可驗證的 Baseline、Ablation、Oracle、測量指標和資源／風險限制。
+
+**例：** 2026-10-25〈Agent Skill 不是提示詞收藏〉與 v1.9 的 Skill Contract、Decision / Permission Routing、Secure Evolution Gate 高度重疊；較有增量的是 `inspect / propose / execute` 的權限分離、`blocked` 回報和 negative regression cases，應歸為 **C — 工程實作驗證參考／架構新穎性低**，**不應因高度相關而視為 CEAA 新架構發現**。這個示例是對後續篩選的標準，不追溯宣稱先前收錄為新研究。
+
+**收錄權限邊界不變：** 只增量更新本研究筆記；不得因文章入選而自動修改正式 System Design、開發計畫或 Runtime。當日沒有 A/B 或符合嚴格條件的 C 類候選，就**不提交新條目**，並在每日摘要「值得閱讀」說明沒有新研究增量。
+
+---
+
 ## 2026-10-15 — Langfuse vs. LangSmith：AI Observability 如何選擇與整合
 
 - **原始文章**：[Langfuse vs. LangSmith：AI Observability 如何選擇與整合](https://ithelp.ithome.com.tw/articles/10421215)

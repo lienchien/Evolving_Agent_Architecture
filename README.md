@@ -20,6 +20,16 @@ Skill Complexity Optimization, Reliability Evolution, hierarchical Package routi
 
 ---
 
+## Core North Star — Context-Aware Adaptive Decision Architecture (design goal, 2026-10-26)
+
+**CEAA aims to provide a domain-neutral adaptive decision core, not one universal trading strategy or a domain-specific autonomous agent.** Given a task and changing environment, the future system should use currently available evidence to compare feasible actions (including defer, abstain and human escalation), assess applicability, uncertainty, risk, opportunity cost and resource limits, then choose a **context-relative best feasible action** under explicit policy and safety constraints. Subsequent outcomes should trigger independently validated learning or replanning when assumptions drift.
+
+Capability Evolution and Experience-guided Decision Evolution are **mechanisms supporting this larger goal**, not a claim that any application will always receive the objectively optimal answer. A common decision/evidence/governance contract should be reusable across domains, while domain-specific Skills, data, tools, objectives and safety boundaries remain replaceable. Investment research, software development, enterprise operations and resource scheduling are candidate **evaluation contexts**, not baked-in assumptions.
+
+**Status:** conceptual design only; the current Phase 1 runtime does not implement autonomous context-regime detection, adaptive strategy switching or cross-domain optimization. Phase 1 telemetry is the dependency; controlled Phase 2 PoCs and Phase 3 cross-domain/out-of-sample comparisons are proposed. See [System Design v1.9](Capability-Evolving%20Agent%20Architecture%20%E2%80%94%20System%20Design%20v1.9.md) and [DEV_PLAN.md](DEV_PLAN.md).
+
+---
+
 ## Project Status
 
 **Documentation aligned to v1.9 on 2026-10-24. Current development phase: Phase 1 — In Progress / Core Baseline Verified / Execution Telemetry Runtime Wiring Outstanding.**

@@ -14,6 +14,22 @@ contract 與 SQLite schema v1 已建立；Agent/runtime 自動寫入及 summary 
 本輪實際過程見 [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md)，完成度見
 [PROJECT_STATUS.md](PROJECT_STATUS.md)。
 
+## 核心設計補充：Cross-domain Context-Aware Adaptive Decision（2026-10-26；Design Only）
+
+**研究總目標：** CEAA 不固化於任何單一應用；面對任務、環境與限制變動，動態評估候選 Skill／Package／Plan／策略（包括不執行及升級人工），比較效用、風險、機會成本與資源使用，選擇在當下資訊下相對適當的可行方案，再由獨立驗證結果與決策歷史驅動受控調整。此為設計與待驗證假說，不是當前已驗證的正期望值或獲利能力。
+
+**階段整合；不擴大現有 Phase 1 退出條件：**
+
+- **Phase 1（既有 Telemetry 工作）：** 保留 task/trace、候選與路由結果、policy、執行結果、版本與錯誤連結。未來的 context snapshot/reference、目標／約束、替代候選與 optional expected-vs-observed 可先定義可擴充契約；**不要求立即增加完整市場／領域資料接入、Regime Detector 或 Decision Optimizer**。
+- **Phase 1.5（安全治理）：** 現有身分、權限、隔離、Audit 和 Human Approval 管理延伸至環境資料與決策執行；跨領域資料不得越權混用。
+- **Phase 2（受控 PoC）：** 設計 domain-neutral `ContextSnapshot`、`DecisionObjective`、`CandidateAction`、`RiskAssessment`、`DecisionEvidence` 與可替換 Domain Adapter；優先以 deterministic/rule-based baseline 檢驗上下文條件、候選適用性、abstain/fallback 與策略路由。概念漂移偵測與環境分類為研究候選，非必須先搭建完整金融預測引擎。
+- **Phase 3（跨場景評估）：** 至少兩個異質領域，含穩定／變動／資料缺失／Out-of-Distribution 情境；比較固定 Workflow、單一策略、無 Context、Context-aware Router、含歷史回饋等消融。量測 verified task utility/success、risk violations、opportunity cost proxy、recovery/adaptation latency、decision stability、calibration、false reuse、CPS（含檢索／審核／路由成本）、跨領域遷移工時；正式實驗事先定義 oracle、風險預算、共同資訊邊界與停損條件，避免未來資訊洩漏。
+- **長期（視實驗結果）：** 將跨場景適應延伸至自適應 Agent 組織及更大規模系統；高風險領域保留專屬政策與人類控制，不宣稱所有場景都能自動最佳化。
+
+**實驗判準：** 相對最佳是「在給定資訊／可行候選／目標／治理限制下的決策品質」，不是事後挑出最高報酬路徑；改善幅度需相對明確 baseline，且在完整成本與風險約束下成立。
+
+---
+
 ## 已完成的工作
 
 1. 建立可注入的 `create_app()`，container 在 lifespan 接收請求前初始化。

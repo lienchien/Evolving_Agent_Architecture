@@ -30,6 +30,43 @@ contract 與 SQLite schema v1 已建立；Agent/runtime 自動寫入及 summary 
 
 ---
 
+## 開發方向基準（Direction Baseline / Scope Guard，2026-10-26）
+
+> **決策：固定核心研究問題、系統邊界與階段順序；不凍結技術選型、實驗假說或必要的安全修正。**
+>
+> 核心目標：建立**跨領域、環境感知、風險受控的自適應決策架構**，在當前資訊、權限、資源及不確定性條件下比較可行候選（含 abstain／human escalation），尋找相對較佳的決策，並以獨立結果驗證和持久化經驗驅動調整。**不宣稱全域最優、正報酬或任務成功保證。**
+
+### 固定的架構原則（Design Invariants）
+
+1. **Domain-neutral Core**：Task/Objective、Context、Decision、Capability、Risk/Policy、Outcome/Evidence 的共用契約不內建任何金融、新聞、DevOps 或企業業務規則；領域差異放在可替換的 Adapter / Skill Package / Validator。
+2. **Decision before execution**：保留候選方案、選擇依據（可稽核的結構摘要，非模型隱藏推理）、適用條件、風險／機會成本、限制及版本。無合格候選時允許放棄、延期、Fallback 或交由人工。
+3. **Governed capability evolution**：新能力與新版本必須通過獨立測試、Policy / Secure Evolution Gate 與必要人工核准；任何 Decision/Memory 重用不得繞過授權與當次結果驗證。
+4. **Raw evidence first**：成功、失敗、路由、Retry/Fallback、成本、實際結果都持久記錄；Raw History 與 Curated/Validated Experience 分離，支持失效分析與可重現實驗。
+5. **Measurable relative improvement**：相對最佳解只在明確任務目標、可得資訊、候選與約束下成立；新機制須與固定 Workflow／無 Memory／純規則／LLM baseline 做公平對照，衡量品質、尾端風險、成本與適應能力。
+6. **Interface-first and replaceable infrastructure**：維持 Agent → Service → Interface → Infrastructure Adapter，不綁特定模型、資料庫、框架、Builder 或硬體。
+
+### 固定的交付順序與階段門檻
+
+| 順序 | 當前或目標工作 | 進入下一階段前的證據 |
+| --- | --- | --- |
+| **Phase 1 — 現在唯一主要工程優先** | 完成 Execution Telemetry Runtime Wiring：Routing/候選、成功與失敗、Retry/Fallback、Task/Trace 關聯、Summary API、重啟持久性；對齊現有 Token/Cost | 依現有 Phase 1 正式退出條件完成測試及可重現的 runtime evidence；**目前尚未完成** |
+| **Phase 1.5 — 原定下一階段** | 真實 LLM/usage、PostgreSQL、隔離 Sandbox、受控 Builder、Main/Audit 與 Policy/Human Escalation | 依既定安全、治理及受控生成驗證門檻；不因新增願景降低 Gate |
+| **Phase 2 — 最小自適應決策 PoC** | Memory Router/Decision Model、Validated Path、Skill Packages、最小 Domain-neutral Context/Objective/Candidate/Risk contracts，受限候選策略選擇與 Fallback | 示範當下 Context 改變時，能依適用條件安全改選、拒絕或 Replan；保留審核和輸入新鮮度 |
+| **Phase 3 — 正式研究驗證** | 至少兩個異質場景、環境漂移/OOD、完整對照與消融、Cost per Successful Task、穩定性及安全失效率 | 事前訂好 oracle、資訊邊界、風險預算；以樣本外驗證檢查是否優於 baseline，允許負面結論 |
+| **更長期 — 證據驅動擴展** | Adaptive Organization、常駐監測／回復、edge/robots、Marketplace、商業化 | 依前述實驗、安全及運維成本結果逐步決定；不預先列為當前 MVP 範圍 |
+
+### 變更控制（避免 Scope Creep）
+
+- **固定的是 North Star 與架構約束，不是某項策略或技術。** 可替換 LLM、資料庫、Builder、Agent 組織形態或具體演算法；不修改核心目標。
+- 任何新增提案都應先回答：對哪個核心假說有幫助？依賴哪個階段？所需資料／成本／安全條件？驗證指標與退出標準為何？
+- 不直接插入 Phase 1 工作清單：可與現有 Telemetry Contract 低成本相容的概念先保留為 optional 欄位；其他放入 Phase 2+ / Future Backlog。
+- 若需調整階段順序或退出條件，必須留下 **ADR / rationale、影響範圍、風險、替代方案、回滾與核准紀錄**；安全修正與已證明不成立的假說可以觸發變更。
+- 每次完成一階段，以經驗證證據決定是否進入下一階段；避免因新研究構想而永遠延後基礎建設交付。
+
+**Implementation status：此節是開發方向與治理基準，不代表新增 Runtime 功能或測試結果。**
+
+---
+
 ## 已完成的工作
 
 1. 建立可注入的 `create_app()`，container 在 lifespan 接收請求前初始化。

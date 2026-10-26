@@ -10,6 +10,35 @@ Capability-Evolving Agent Architecture（CEAA）的核心目標，是研究 **Ag
 
 CEAA 的研究不預設資安、DevOps、企業自動化或任何特定應用領域；場景僅作為可控制、可量化的實驗工作負載，不能反向固化核心架構。
 
+### 核心願景：跨場景的環境感知與自適應決策（2026-10-26 設計補充）
+
+**CEAA 的上位目標不是某個領域的固定 Agent，也不是保證每次求得全域最優解；而是建立一套可跨領域重用的自適應決策基礎架構（Context-Aware Adaptive Decision Architecture）。** 系統面對變動的任務、外部環境與資源條件，應先辨識當前脈絡，再於權限、成本、安全與風險限制內，選出**相對於當下可得資訊、可執行候選與明確目標的較佳行動**；環境改變或原假設不再成立時，必須能重新評估，而不是固守過去有效的策略。
+
+概念上的決策目標是：
+
+```text
+Task + Goals + Current Context + Environment Observations
+  → Candidate Actions / Skills / Packages / Plans（包括不執行、等待、要求人工介入）
+  → Applicability / Evidence / Uncertainty / Risks / Opportunity Cost / Resource Budget
+  → Policy & Human Governance Gate
+  → Relative-best Feasible Decision（非事後已知的全域最優）
+  → Execution + Independent Outcome Validation
+  → Trace / Expected-vs-Observed / Drift Signals
+  → Governed Experience Update or Replanning
+```
+
+研究假說：在相同任務、可用資訊、權限與資源約束下，這種動態選擇和回饋機制是否能比固定 Workflow、單一策略或純 LLM 即時規劃，取得較好的**可驗證任務效用、風險調整後表現與 Cost per Successful Task**？此命題必須以事前定義的效用函數／成功標準、對照組及樣本外評估驗證，**不能預設已達成績效改善**。
+
+跨場景設計契約：
+
+- **共用決策核心、替換領域適配器。** Task/Goal、Context、Candidate、Decision、Risk、Outcome、Evidence、Governance 定義通用介面；財務、企業營運、軟體開發、情報分析、資源調度或機器人等場景，透過各自的資料、Skill Package、執行工具及監管／安全規則接入，不將任何場景假設寫死在核心。
+- **風險與機會成本是決策輸入，不只是事後 KPI。** 明確記錄失敗代價、不可逆性、資源消耗、替代方案與不採取行動的成本；估計值需標註不確定性，不能當成客觀真值。
+- **策略有適用邊界與失效條件。** 儲存 context fingerprint、前置條件、資料／版本新鮮度、confidence（若可用）、漂移訊號及過期／重新評估規則；歷史成功不構成當前適用性或執行授權。
+- **允許 abstain / fallback / escalation。** 缺乏證據、候選方案不合規、風險超出限額或環境分布外時，系統可不執行、降級、要求更多資料或交由人員決策。
+- **結果回饋不等於無限制自我改寫。** 原始觀測與經獨立驗證的決策經驗分離；任何新／修改的能力仍通過 Secure Evolution Gate、Policy 與必要人員核准。
+
+以上是**跨領域架構目標及研究假說，並非現有 Phase 1 Runtime 能力**。Phase 1 不新增實作範圍；先保存足以支援未來 context、decision、risk、outcome 關聯的證據。後續在 Phase 2 定義最小 context/decision adapter 和策略切換 PoC，在 Phase 3 以至少兩種異質場景、環境轉換與失效情境驗證跨領域適應，進一步評估遷移成本與決策穩定性。
+
 ### 兩條互補的主要研究路徑
 
 1. **Capability Evolution（能力演化）**：Agent 能否辨識既有能力的缺口，產生候選 Capability / Skill，經獨立測試、安全驗證、治理與必要的人員核准後啟用，讓後續任務使用？

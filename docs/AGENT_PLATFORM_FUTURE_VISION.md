@@ -54,6 +54,14 @@ This separation is intentional.
 
 ---
 
+## 1A. Cross-domain Adaptive Decision Core — North Star (2026-10-26)
+
+CEAA's intended platform-level value is **context-aware adaptation across application domains**, rather than a single fixed strategy or a financial/DevOps-specific automation product. The future control plane should receive goals, current environment signals, constraints and governed evidence; consider feasible actions, including no-action and human escalation; compare expected utility, downside risk, opportunity cost and execution budget; and adapt choices when observations invalidate prior assumptions.
+
+The **core contract** should be domain-neutral (Task/Goal → Context → Candidate Actions → Risk/Policy Assessment → Decision → Independent Outcome → Governed Feedback), while per-domain data sources, objective functions, Skills/Packages, tool gateways, security policies and validators remain modular. Context/regime detection, strategy routing, drift detection and decision calibration are **proposed capabilities requiring evidence**, not functions of the present CEAA Phase 1 prototype.
+
+Investment research, software development, enterprise workflows, operational intelligence and robotic/edge orchestration may provide **independent transfer tests**. The important claim to test is not guaranteed profit or global optimality, but whether the same governed architecture can improve *context-relative decision quality* and adaptation performance under fair baselines, bounded risk, explicit costs and unseen environment changes. Broader deployment and high-risk autonomous action remain gated by validation and human control.
+
 ## 2. Long-Term Product Vision
 
 The long-term goal is to build an Agent Platform that allows external applications and enterprise systems to consume Agent capabilities without having to independently manage:

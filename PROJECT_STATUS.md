@@ -30,6 +30,14 @@ CEAA 上位理念明確化為 **跨場景 Context-Aware Adaptive Decision**：�
 
 ---
 
+## 開發方向基準（2026-10-26；Direction Baseline）
+
+**研究方向已收斂：跨領域環境感知、自適應決策、風險／機會成本評估、受治理的能力與決策演化。** 核心架構原則與 Phase 1 → 1.5 → 2 → 3 的階段順序列入 [DEV_PLAN.md](DEV_PLAN.md) Direction Baseline；模型、Adapter、Domain Skill 與實驗方法保持可替換。新增構想不得無證據擴張目前 Phase 1 的退出範圍。
+
+**狀態：僅文件及優先順序確立，未新增程式功能／未重跑測試。** 下一個實際工程工作仍為 Phase 1 Telemetry Runtime Wiring / Correlation / Summary API / Restart Evidence。
+
+---
+
 ## Token／費用研究整合狀態
 
 Token efficiency／cost amortization 的研究契約與實作已合併至 `dev`，並與

@@ -535,3 +535,51 @@ Meta 將 **Active Memory** 描述為跨對話保存重要背景並在當前任�
 ### 證據與限制
 
 TurboVLA 的成果限於論文指定模擬與少量真機任務，且模型對複雜開放式規劃的適用性未獲全面證明。其設計與 CEAA 的架構類比需要新的對照實驗，不能把 TurboVLA 數據當成 CEAA 的性能證據。**本次只收錄研究筆記，不修改 v1.9 正式架構或實作。**
+
+---
+
+## 2026-10-26 收錄｜Agent Skill 不是提示詞收藏：先定義路由、證據與失敗出口
+
+- **原始文章**：[Agent Skill 不是提示詞收藏：先定義路由、證據與失敗出口](https://ithelp.ithome.com.tw/articles/10425041)
+- **作者**：ryanvale（iT 邦幫忙）；**原文發表**：2026-10-25 11:11:54（網站顯示）；**郵件發現**：2026-10-25 的 iT 邦幫忙每日摘要（台灣時間 10/26 收信）；**研究收錄日期**：2026-10-26。
+- **研究優先級**：**High — CEAA Skill Contract / Experience-aware Routing / Bounded Autonomy / Secure Evolution Gate / Audit Evidence**。本文不是學術論文，屬可操作的工程設計觀點；其概念與 CEAA 現有規劃部分重疊，**不構成要求立即修改架構的理由**。
+- **查核與證據層級**：已比對 Gmail 原始電子報所列標題與原始 URL，並透過搜尋索引取得原文的主要內容、作者及發表時間；網站直接開啟受限。以下「作者主張」不是已通過的產品測試，亦未在 CEAA 進行實驗。
+
+### 核心貢獻（作者的工程設計主張，非已驗證性能結論）
+
+作者將 Agent Skill 定位為**可檢查的任務契約**，而不是單純 prompt 集合。以 IDE 中 Python session 的除錯需求為例，提出兩條權限與輸出不同的 Skill：
+
+1. `inspect-runtime`：只能依已確認 workspace/session 觀察執行狀態、取得錯誤證據，**不執行新程式或寫入檔案**。
+2. `propose-change`：根據診斷證據提出修改建議，但**不自行改檔、提交、推送或部署**；實際修改需另行取得明確授權。
+
+建議最小契約欄位包含**觸發／排除條件、必要輸入、可用工具、交付證據、停止條件與接手者**；最小結果欄位包含 `status`、`observations`、`evidence`、`missing`、`next_owner`。對「查一下，能改就改」這種同時命中多 Skill 的歧義請求，作者主張先採唯讀診斷，必要時回報 `blocked`，**不可把查不到資料當成升權執行的理由**。
+
+作者提出的回歸案例涵蓋：唯讀要求卻意外寫入、路由衝突、session 消失、唯讀工具遭拒、只有修正提案卻沒有驗證證據。原文強調**零寫入需由工具權限保證**，不能只依賴提示詞；但未宣稱已在 Positron 完成這些 Skill 的實測。
+
+### 與 CEAA 的直接關聯（CEAA 研究推論，非原文結論）
+
+- **Skill Registry / Package Contract**：候選 Skill metadata 可包含 `allowed_actions`、`excluded_actions`、`required_context`、`evidence_schema`、`stop_conditions`、`handoff_owner`、`risk_tier`、`policy_version`。避免 Skill 描述與實際工具權限不一致。
+- **Manager / Decision Agent / Experience-aware Routing**：路由器需要辨識 `inspect`、`propose`、`execute` 的**副作用與授權差異**；多 Skill 命中時記錄選擇理由、衝突與 fallback，不能讓模型任意選擇更高權限路徑。
+- **Goal-driven Autonomous Development（Future Research）**：人類核准 Goal Contract 後，Agent 可在有界權限內完成候選提案，但「已提出修改」≠「已執行」≠「已驗證」≠「可自動合併」。可將這些狀態作為 audit report 的獨立欄位。
+- **Secure Evolution Gate / Multi-Audit**：執行層 enforce read-only/write boundary；獨立 Reviewer 以原始目標、實際 tool trace 和 protected tests 判定是否越權，而不是接受 Developer 自述。
+- **Telemetry / Decision Experience**：記錄 `requested_intent`、`selected_skill`、`tool_actions`、`evidence_refs`、`blocked_reason`、`escalation_owner`、`final_verified_outcome`，供後續 failure taxonomy 與路由修正；保護 session 與個資。
+
+### 建議 Baseline / Experiment / Ablation（尚未實作）
+
+| Group | 實驗條件 |
+| --- | --- |
+| B0 | 固定模型 + 自然語言提示詞規範，沒有結構化 Skill Contract；僅在隔離合成環境評估。 |
+| B1 | B0 + 靜態 Skill Contract（觸發、排除、輸出與失敗出口），但沒有 tool-layer 權限強制。 |
+| B2 | B1 + 顯式 Router 衝突處理、`inspect → propose → separately authorized execute` 流程。 |
+| B3 | B2 + tool-layer read/write enforcement、protected acceptance tests、independent audit evidence + bounded fallback（CEAA 候選）。 |
+
+- **Ablation**：移除 tool-layer permission gate、路由衝突處理、證據必填、`blocked` 出口、protected regression suite、experience retrieval；保持模型／任務／工具快照一致。
+- **測試任務**：唯讀查錯、同時要求診斷與修改、缺失 session、tool denied、偽造「已驗證」報告、錯誤的歷史 Skill 推薦、跨 workspace/branch 存取。危險操作只使用 mock/sandbox，**真實權限任務不能關閉既有強制治理 Gate**。
+- **Metrics**：Wrong Skill/Tool Rate、Unauthorized Write Attempt Rate、**Successful Policy Violation Rate**（與被阻擋的企圖分開）、Evidence Completeness、False `done` Rate、Blocked/Handoff Correctness、Verified Task Success、P95 Latency、Human Escalation、Cost per Successful Task、Review Effort。
+
+### 證據與限制
+
+原文是單篇工程設計文章，提供可操作的 contract 與測試清單，**未提供多模型對照、量化成功率、成本改善或安全防護成效**；文中提及的 Positron MCP 亦是實驗性能力，不能將 Console 中可見的 Agent 動作等同於安全的唯讀授權。CEAA 應先比較「Prompt-only vs Contract-only vs Tool-enforced Contract」在相同任務與固定 Oracle 下的結果，避免僅靠更多文字規範就推定治理已改善。
+
+**本次僅增量收錄研究筆記；沒有修改 System Design v1.9、DEV_PLAN、Runtime 或任何正式權限政策。** 需要架構調整時另請使用者核准。
+

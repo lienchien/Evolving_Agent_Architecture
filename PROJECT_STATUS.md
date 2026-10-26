@@ -22,6 +22,14 @@ Telemetry database foundation 合併至 `dev` 後，完整測試結果為
 [API_CONCURRENCY.md](docs/API_CONCURRENCY.md)。
 Token／費用欄位與研究限制見 [TOKEN_COST_RESEARCH.md](docs/TOKEN_COST_RESEARCH.md)。
 
+## 架構核心定位更新（2026-10-26；Design Only）
+
+CEAA 上位理念明確化為 **跨場景 Context-Aware Adaptive Decision**：共享環境感知／候選決策／風險及機會成本評估／治理／結果回饋機制，依當下環境選擇相對較佳的可行方案；場景專屬資料、Skills、工具及安全政策仍需透過 adapter 接入。此方向整合原有 Capability Evolution、MADE、Skill Packages、Telemetry 與決策歷史，並以跨領域實驗驗證能否提升效用及適應能力。
+
+**狀態：願景與實驗規劃，不是現有 Runtime 功能或已證實改善。** Phase 1 仍先完成原有 Execution Telemetry runtime wiring，無新增完成宣稱；Phase 2／3 的 PoC 和跨場景對照試驗見 [DEV_PLAN.md](DEV_PLAN.md) 與 System Design v1.9。
+
+---
+
 ## Token／費用研究整合狀態
 
 Token efficiency／cost amortization 的研究契約與實作已合併至 `dev`，並與

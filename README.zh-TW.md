@@ -20,6 +20,16 @@ Skill Complexity Optimization、Reliability Evolution、階層式 Package 與長
 
 ---
 
+## 核心願景：跨場景的環境感知與自適應決策（2026-10-26 設計目標）
+
+**CEAA 的核心不是替單一領域建立固定策略，而是建立可跨場景重用的自適應決策架構。** 系統應依任務目標、當下環境與可取得的證據，比較可執行的行動方案（包括暫緩、不執行與人工介入），衡量適用性、不確定性、風險、機會成本、資源與權限限制，在此脈絡下尋找**相對最佳的可行決策**。環境或關鍵假設改變時，再以結果驗證及決策歷史觸發重新評估，而非持續套用過往有效的規則。
+
+Capability Evolution 與 Experience-guided Decision Evolution 是支撐這個共同目標的**核心機制**，不是保證任何場景都能得到客觀最優解。共同的決策／證據／治理契約應保持領域中立；投資、軟體開發、企業營運、情報分析及資源調度等場景，透過可替換的資料、Skill Package、工具與安全限制接入，並作為未來**跨領域驗證場景**。
+
+**狀態：設計原則，尚未實作。** Phase 1 的 Runtime 尚不具備自主 Regime Detection、動態策略切換或跨場景最佳化；先完成既有 Telemetry 證據基礎，Phase 2 規劃受控 PoC，Phase 3 透過多場景、樣本外與環境變化測試驗證。詳見 [System Design v1.9](Capability-Evolving%20Agent%20Architecture%20%E2%80%94%20System%20Design%20v1.9.md) 與 [DEV_PLAN.md](DEV_PLAN.md)。
+
+---
+
 ## 專案狀態
 
 **文件已於 2026-10-24 對齊 v1.9。當前開發階段：Phase 1 — In Progress / Core Baseline Verified / Telemetry Runtime Wiring Outstanding。**

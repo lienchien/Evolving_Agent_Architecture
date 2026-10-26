@@ -30,6 +30,16 @@ Capability Evolution 與 Experience-guided Decision Evolution 是支撐這個共
 
 ---
 
+## 開發方向已收斂（Direction Baseline，2026-10-26）
+
+專案固定三項上位原則：**跨場景通用決策核心、依當下脈絡及風險選擇相對最佳可行行動、以可驗證經驗持續調整**。因此不以單一金融或企業應用取代核心研究，也不把特定模型、交易策略或工具視為長期硬依賴。
+
+**近期工程順序維持不變**：先完成 Phase 1 Execution Telemetry → 再進入 Phase 1.5 真實運行與安全治理 → Phase 2 最小自適應決策 PoC → Phase 3 跨場景與環境變化對照實驗。未來想法先進 Backlog，不任意擴張 Phase 1；細節與變更規則以 [DEV_PLAN.md](DEV_PLAN.md) 的 Direction Baseline 為準。
+
+這是**開發方向基準**，不是聲稱自適應決策已經實作，亦不代表技術或研究假說從此不能修改。
+
+---
+
 ## 專案狀態
 
 **文件已於 2026-10-24 對齊 v1.9。當前開發階段：Phase 1 — In Progress / Core Baseline Verified / Telemetry Runtime Wiring Outstanding。**

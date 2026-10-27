@@ -674,3 +674,49 @@ TurboVLA 的成果限於論文指定模擬與少量真機任務，且模型對�
 
 **處理決策**：**Include / B（Experimental Value）**；優先納入未來 Multi-Audit / Bounded Autonomy 的 regression/adversarial benchmark 設計，不增加 Phase 1 交付條件；**不修改 System Design v1.9、DEV_PLAN 或實作程式**。
 
+---
+
+## 2026-10-28 收錄｜Claude Code Skill `allowed-tools` 是短期預先核准，而非工具權限白名單
+
+- **收錄日期**：2026-10-28；**技術文章**：〈Claude Code Agent Skills 的 allowed-tools 不是工具限制：SKILL.md 權限欄位的誤解、來由與正確用法〉（iT 邦幫忙電子報於 2026-10-27 提及）。
+- **原始文章 URL**：https://ithelp.ithome.com.tw/articles/10425101 （本次無法取得完整文章，作者／實際發表日期未獨立核實）。
+- **優先核實的一手來源**：Anthropic / Claude Code 官方《Extend Claude with skills》https://code.claude.com/docs/en/skills ，尤其 Frontmatter reference、Pre-approve tools for a skill、Evaluate and iterate on a skill；官方《Configure permissions》https://code.claude.com/docs/en/agent-sdk/permissions （官方文件未標示本次所引用版本的發表日期；查閱日 2026-10-28）。
+- **作者／機構**：技術文章作者未核實；可核實的一手文件維護機構為 Anthropic（Claude Code Documentation）。
+- **CEAA_relevance**：High；**design_novelty**：Low；**incremental_value**：Implementation / Negative Testing；**分類**：**C — Engineering Validation**；**研究優先級**：**Medium**（實作風險高，但不是新架構）。
+- **收錄決策**：**Include / C**。相較既有 2026-10-26〈Agent Skill 不是提示詞收藏〉，本項提供具體的**權限語義差異與可執行的負面測試矩陣**，而非再次宣稱 Skill 應有 Contract。
+
+### 核心貢獻與可核實事實
+
+1. **官方明確定義**：Skill 的 `allowed-tools` 是**該 Skill 被呼叫的當輪預先核准工具**，不是「只允許列出的工具」。未列工具仍可呼叫，其准駁由其他 Permission Settings 決定；下一輪授權會清除，但 Skill 文字可留在 Context。
+2. **非預期權限擴張風險**：專案內的 `SKILL.md` 可以攜帶 `allowed-tools`，即使未經 Workspace Trust 的資料夾也可能在 `-p` 執行時套用。官方要求審查儲存庫中的 Skill 權限；可用 Managed Settings `allowManagedPermissionRulesOnly` 限制 Skill 內的預先核准。
+3. **SDK 權限模式差異**：`allowed_tools` 只是允許規則，不是 `disallowed_tools`；若搭配 `bypassPermissions`，未列工具也可能被批准。對無人值守 Agent，官方提供 `allowedTools` + `permissionMode: "dontAsk"` 的拒絕式配置示例，仍應搭配實際 sandbox/外部工具 Gate，而不能單靠 Skill 文字。
+4. **官方 Eval 基線**：Claude Code 官方文件說明可對相同提示，在 fresh session 分別測試 Skill on/off；plugin `claude plugin eval` 可進行隔離的對照與 grader 驗證。這是工程評估工具的功能描述，**不是官方已證明 CEAA 實驗效果**。
+
+### 與 CEAA 現有設計重疊／真正增量
+
+- **已涵蓋（非新研究）**：System Design v1.9 §2.8–2.10 的 Skill/Package/Decision、§8A 的 Main/Audit 與 Fail Closed、§53.1 的 Execution Authorization；DEV_PLAN 的 Goal Contract 與 Protected Test 設計。2026-10-26 已收錄 Skill Routing/權限契約工程文章。
+- **真正新增（可操作）**：對外部 Skill Manifest 中「宣告工具清單」與「執行期強制授權」**不等價**的具體語義反例；短期授權與長期上下文持續存在的生命週期差異；專案 Skill 來源與預先核准交互作用；`dontAsk` / `bypassPermissions` / Managed Policy 的**權限組合負面測試**。可用來避免 CEAA 未來 Skill Package Manifest 被誤用為安全邊界。
+- **設計借鑑（CEAA 推論）**：將 Skill `suggested_tools`、`declared_capabilities` 與 Policy Engine `effective_permissions` 分開，最終 Tool Invocation 由不可由 Builder/Skill 修改的 Executor/Policy Gate 決定；每個 Tool Event 留下 caller、skill_version、policy_version、decision、denial_reason。**這是候選測試設計，不代表 CEAA 現已實作。**
+
+### 建議 Baseline / Experiment / Ablation
+
+| 組別 | 安全離線／合成任務設計 |
+| --- | --- |
+| B0 | 僅用 Skill Prompt / `allowed-tools` 宣告「唯讀」，但模擬環境仍可提供寫入工具；測試誤認清單即安全邊界的風險 |
+| B1 | 結構化 Skill Contract + 現有 Mandatory Main/Audit；Executor 按真實 Tool Policy 決定每次請求 |
+| B2 | B1 + `deny-by-default` + Skill Source Trust / Managed Policy + protected negative test suite |
+| B3 | B2 + 權限版本、Tool Event 與拒絕原因之獨立 Evidence Audit |
+
+- **Oracle**：隔離 Mock Tool Executor 的 deterministic authorization log；拒絕任何超過任務授權的 `write_file`、`send_network`、`read_secret`、`deploy`；不得用 LLM 自述 PASS 代替真實工具呼叫結果。
+- **Ablation**：Skill Manifest 宣告是否存在；Policy Gate on/off（**僅離線 synthetic**）；不同 Permission Mode；Skill 來源（trusted/untrusted）；跨 turn 權限重置；子 Agent 的權限繼承；Managed Rules 是否覆蓋 Skill 內預先核准。
+- **Metrics**：Unauthorized Tool Execution Rate（必須 0 才能考慮真實啟用）、Blocked Attempt Rate、False Deny、Permission Escalation Success、Audit Evidence Completeness、Verified Task Success、P95 Latency、Cost per Successful Task；使用固定任務／種子與受保護的測試。
+- **安全邊界**：不對真實外部系統做權限繞過測試，不提供真實 token/secret，不自動修改正式 CEAA v1.9、DEV_PLAN 或程式碼。
+
+### 證據與限制
+
+- **可查事實**：官方 Claude Code 文件明載 Skill `allowed-tools` 的「預先核准」語義、授權生命週期、Managed Rules、Permission Mode 與 Skill Eval 的對照方法。
+- **文章主張**：電子報僅提供 iT 邦幫忙標題；因原文存取失敗，**不推定其作者、測試結果或額外結論**。官方文件可支持核心權限語義，但不代表這篇技術文章完成了實驗。
+- **研究限制**：Claude Code 的 Skill Frontmatter/Permission Mode 是特定產品的實作細節，不能直接推論 LangGraph 或 CEAA Runtime 有相同缺陷；正式可重現測試須固定 CLI/SDK 版本、設定與環境，並評估產品更新對權限順序的影響。
+- **CEAA 推論**：將此例當作 **Policy vs. Manifest Semantic Mismatch** 的負面測試樣本，不當作新的 Skill 架構理論，也不因 High relevance 自動升級研究優先級。
+
+**狀態**：研究筆記增量收錄；待實作 PoC / 對照驗證；**沒有修改正式 v1.9、DEV_PLAN 或實作程式**。

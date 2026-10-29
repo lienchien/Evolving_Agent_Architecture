@@ -16,6 +16,7 @@ from src.services.validation_service import ValidationService
 
 class EvolutionState(TypedDict, total=False):
     task_id: str
+    trace_id: str
     gap: CapabilityGap
     capability: Capability
     functional_results: list
@@ -60,7 +61,8 @@ class EvolutionAgent:
 
     def _generate(self, state: EvolutionState) -> dict[str, Any]:
         capability = self._evolution_service.evolve(
-            state["gap"], state.get("capability"), state.get("task_id")
+            state["gap"], state.get("capability"), state.get("task_id"),
+            state.get("trace_id"),
         )
         return {"capability": capability}
 
@@ -70,7 +72,8 @@ class EvolutionAgent:
 
     def _test(self, state: EvolutionState) -> dict[str, Any]:
         report = self._testing_service.run_autonomous_tests(
-            state["capability"], state["functional_results"], state.get("task_id")
+            state["capability"], state["functional_results"], state.get("task_id"),
+            state.get("trace_id"),
         )
         capability = self._capability_service.get(state["capability"].capability_id)
         return {"test_report": report, "capability": capability}
@@ -80,11 +83,14 @@ class EvolutionAgent:
         return {"capability": capability}
 
     def run(
-        self, gap: CapabilityGap, reserved: Capability | None = None, task_id: str | None = None,
+        self, gap: CapabilityGap, reserved: Capability | None = None,
+        task_id: str | None = None, trace_id: str | None = None,
     ) -> EvolutionState:
         initial: EvolutionState = {"gap": gap}
         if task_id is not None:
             initial["task_id"] = task_id
+        if trace_id is not None:
+            initial["trace_id"] = trace_id
         if reserved is not None:
             initial["capability"] = reserved
         return self._graph.invoke(initial)

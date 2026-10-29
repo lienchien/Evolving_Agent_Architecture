@@ -35,7 +35,8 @@ class TestingService:
         self._research_metrics = research_metrics
 
     def run_autonomous_tests(
-        self, capability: Capability, functional_results: list, task_id: str | None = None,
+        self, capability: Capability, functional_results: list,
+        task_id: str | None = None, trace_id: str | None = None,
     ) -> TestReport:
         started = perf_counter()
         try:
@@ -44,6 +45,7 @@ class TestingService:
             if self._research_metrics is not None and task_id is not None:
                 self._research_metrics.record_llm_interaction(
                     task_id=task_id,
+                    trace_id=trace_id,
                     task_family=capability.task_family,
                     capability_id=capability.capability_id,
                     capability_version=capability.capability_version,
@@ -62,6 +64,7 @@ class TestingService:
         if self._research_metrics is not None and task_id is not None:
             self._research_metrics.record_llm_interaction(
                 task_id=task_id,
+                trace_id=trace_id,
                 task_family=capability.task_family,
                 capability_id=capability.capability_id,
                 capability_version=capability.capability_version,

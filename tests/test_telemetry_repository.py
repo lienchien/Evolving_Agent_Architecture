@@ -12,6 +12,7 @@ from src.domain.errors import (
     UnsupportedTelemetrySchemaError,
 )
 from src.domain.telemetry import (
+    DecisionEvidence,
     ExecutionFailure,
     ExecutionObservation,
     ExecutionTrace,
@@ -21,7 +22,10 @@ from src.domain.telemetry import (
     ObservationOutcome,
     RecoveryAttempt,
     RecoveryStrategy,
+    RetryDecision,
+    RetryDisposition,
     RoutingDecision,
+    SideEffectStatus,
     TraceOutcome,
 )
 from src.infrastructure.sqlite_telemetry_repository import SqliteTelemetryRepository
@@ -51,6 +55,15 @@ def _telemetry_graph():
         score=4.2,
         decision_model="deterministic",
         decision_model_version="1",
+        policy_version="policy-2026-10",
+        evidence=DecisionEvidence(
+            selection_criteria=["highest_score"],
+            rationale_summary="Selected the strongest eligible candidate",
+            evidence_refs=["CAP-a"],
+            rejected_alternative_summary="CAP-b scored lower",
+            constraints=["active_only"],
+            expected_outcome="successful execution",
+        ),
         latency_ms=2.5,
         recorded_at=_START + timedelta(milliseconds=2),
     )
@@ -60,6 +73,7 @@ def _telemetry_graph():
         decision_id=decision.decision_id,
         target_type="capability",
         target_id="CAP-a",
+        target_version="1.2.3",
         outcome=ObservationOutcome.FAILED,
         started_at=_START + timedelta(milliseconds=3),
         completed_at=_START + timedelta(milliseconds=13),
@@ -85,6 +99,7 @@ def _telemetry_graph():
         kind=ObservationKind.RETRY,
         target_type="capability",
         target_id="CAP-a",
+        target_version="1.2.3",
         outcome=ObservationOutcome.SUCCEEDED,
         started_at=_START + timedelta(milliseconds=15),
         completed_at=_START + timedelta(milliseconds=20),
@@ -98,8 +113,18 @@ def _telemetry_graph():
         strategy=RecoveryStrategy.RETRY,
         target_type="capability",
         target_id="CAP-a",
+        target_version="1.2.3",
         attempt_number=1,
         outcome=ObservationOutcome.SUCCEEDED,
+        retry_decision=RetryDecision(
+            disposition=RetryDisposition.RETRY,
+            retry_allowed=True,
+            retry_count=0,
+            max_retries=1,
+            side_effect_status=SideEffectStatus.IDEMPOTENT,
+            reason_code="TRANSIENT_IDEMPOTENT_FAILURE",
+            backoff_ms=0,
+        ),
         recorded_at=_START + timedelta(milliseconds=21),
     )
     return trace, decision, failed_observation, failure, recovery_observation, recovery
@@ -252,6 +277,23 @@ class TestSqliteTelemetryRepository(TelemetryRepositoryContract):
                 task_family="time",
                 started_at=datetime(2026, 10, 18, 8, 0),
             )
+
+    def test_legacy_routing_payload_uses_extensible_defaults(self):
+        legacy = RoutingDecision.model_validate(
+            {
+                "decision_id": "ROUTE-legacy",
+                "trace_id": "TRACE-legacy",
+                "layer": "root",
+                "node_type": "router",
+                "recorded_at": _START,
+            }
+        )
+
+        assert legacy.contract_version == "1.1"
+        assert legacy.task_id is None
+        assert legacy.selected_target_version is None
+        assert legacy.policy_version is None
+        assert legacy.evidence is None
 
     def test_migration_preserves_existing_capability_data(self, tmp_path):
         database = tmp_path / "existing.db"

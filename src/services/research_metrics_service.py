@@ -35,6 +35,7 @@ class ResearchMetricsService:
         self,
         *,
         task_id: str,
+        trace_id: str | None,
         task_family: str,
         capability_id: str | None,
         capability_version: str | None,
@@ -46,6 +47,7 @@ class ResearchMetricsService:
     ) -> LLMInteractionMetric:
         metric = LLMInteractionMetric(
             task_id=task_id,
+            trace_id=trace_id,
             task_family=task_family,
             capability_id=capability_id,
             capability_version=capability_version,
@@ -80,6 +82,7 @@ class ResearchMetricsService:
         self,
         *,
         task_id: str,
+        trace_id: str | None,
         task_family: str,
         capability_id: str | None,
         capability_version: str | None,
@@ -92,7 +95,7 @@ class ResearchMetricsService:
         error: str | None = None,
         retry_count: int = 0,
     ) -> TaskCostMetric:
-        interactions = self._repository.list_llm_interactions(task_id)
+        interactions = self._repository.list_llm_interactions(task_id, trace_id)
         observed_creation = capability_created or any(
             item.phase == ResearchPhase.GENERATION for item in interactions
         )
@@ -118,6 +121,7 @@ class ResearchMetricsService:
             )
         metric = TaskCostMetric(
             task_id=task_id,
+            trace_id=trace_id,
             task_family=task_family,
             capability_id=capability_id,
             capability_version=capability_version,
@@ -142,11 +146,14 @@ class ResearchMetricsService:
 
     def list_tasks(
         self, task_family: str | None = None, capability_id: str | None = None,
+        trace_id: str | None = None,
     ) -> list[TaskCostMetric]:
-        return self._repository.list_task_costs(task_family, capability_id)
+        return self._repository.list_task_costs(task_family, capability_id, trace_id)
 
-    def list_interactions(self, task_id: str | None = None) -> list[LLMInteractionMetric]:
-        return self._repository.list_llm_interactions(task_id)
+    def list_interactions(
+        self, task_id: str | None = None, trace_id: str | None = None,
+    ) -> list[LLMInteractionMetric]:
+        return self._repository.list_llm_interactions(task_id, trace_id)
 
     def summarize(
         self, task_family: str | None = None, baseline_tokens_per_task: int | None = None,

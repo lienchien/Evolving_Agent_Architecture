@@ -49,7 +49,9 @@ class CapabilityRepository(ABC):
     def save_llm_interaction(self, metric: LLMInteractionMetric) -> None: ...
 
     @abstractmethod
-    def list_llm_interactions(self, task_id: str | None = None) -> list[LLMInteractionMetric]: ...
+    def list_llm_interactions(
+        self, task_id: str | None = None, trace_id: str | None = None,
+    ) -> list[LLMInteractionMetric]: ...
 
     @abstractmethod
     def save_task_cost(self, metric: TaskCostMetric) -> None: ...
@@ -57,4 +59,5 @@ class CapabilityRepository(ABC):
     @abstractmethod
     def list_task_costs(
         self, task_family: str | None = None, capability_id: str | None = None,
+        trace_id: str | None = None,
     ) -> list[TaskCostMetric]: ...

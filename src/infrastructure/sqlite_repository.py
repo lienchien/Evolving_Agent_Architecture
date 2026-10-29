@@ -271,7 +271,9 @@ class SqliteCapabilityRepository(CapabilityRepository):
                 ),
             )
 
-    def list_llm_interactions(self, task_id: str | None = None) -> list[LLMInteractionMetric]:
+    def list_llm_interactions(
+        self, task_id: str | None = None, trace_id: str | None = None,
+    ) -> list[LLMInteractionMetric]:
         query = "SELECT data FROM llm_interactions"
         params: tuple[str, ...] = ()
         if task_id is not None:
@@ -280,7 +282,10 @@ class SqliteCapabilityRepository(CapabilityRepository):
         query += " ORDER BY recorded_at, rowid"
         with self._connect() as conn:
             rows = conn.execute(query, params).fetchall()
-        return [LLMInteractionMetric.model_validate_json(row[0]) for row in rows]
+        metrics = [LLMInteractionMetric.model_validate_json(row[0]) for row in rows]
+        if trace_id is not None:
+            metrics = [metric for metric in metrics if metric.trace_id == trace_id]
+        return metrics
 
     def save_task_cost(self, metric: TaskCostMetric) -> None:
         with self._connect() as conn:
@@ -299,6 +304,7 @@ class SqliteCapabilityRepository(CapabilityRepository):
 
     def list_task_costs(
         self, task_family: str | None = None, capability_id: str | None = None,
+        trace_id: str | None = None,
     ) -> list[TaskCostMetric]:
         clauses: list[str] = []
         params: list[str] = []
@@ -314,4 +320,7 @@ class SqliteCapabilityRepository(CapabilityRepository):
         query += " ORDER BY recorded_at, rowid"
         with self._connect() as conn:
             rows = conn.execute(query, tuple(params)).fetchall()
-        return [TaskCostMetric.model_validate_json(row[0]) for row in rows]
+        metrics = [TaskCostMetric.model_validate_json(row[0]) for row in rows]
+        if trace_id is not None:
+            metrics = [metric for metric in metrics if metric.trace_id == trace_id]
+        return metrics

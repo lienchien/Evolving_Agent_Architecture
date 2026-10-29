@@ -27,7 +27,9 @@ from src.services.gap_detection_service import GapDetectionService
 from src.services.notification_service import NotificationService
 from src.services.report_store import TestReportStore
 from src.services.research_metrics_service import ResearchMetricsService
+from src.services.retry_policy_service import BoundedRetryPolicy
 from src.services.testing_service import TestingService
+from src.services.telemetry_service import TelemetryService
 from src.services.validation_service import ValidationService
 
 
@@ -57,6 +59,8 @@ class Container:
         self.telemetry_repository = telemetry_repository or SqliteTelemetryRepository(
             resolved_database_path
         )
+        self.telemetry_service = TelemetryService(self.telemetry_repository)
+        self.retry_policy = BoundedRetryPolicy()
         self.report_store = TestReportStore(repository)
         self.audit_service = AuditService(repository)
         self.research_metrics_service = ResearchMetricsService(repository)
@@ -95,10 +99,20 @@ class Container:
             self.evolution_agent,
             self.queue,
             self.research_metrics_service,
+            self.telemetry_service,
+            self.retry_policy,
         )
 
 
-from src.api.routes import approvals, audit, capabilities, evolution, research, tasks  # noqa: E402
+from src.api.routes import (  # noqa: E402
+    approvals,
+    audit,
+    capabilities,
+    evolution,
+    research,
+    tasks,
+    telemetry,
+)
 
 
 def create_app(container: Container | None = None) -> FastAPI:
@@ -124,6 +138,7 @@ def create_app(container: Container | None = None) -> FastAPI:
     app.include_router(approvals.router)
     app.include_router(audit.router)
     app.include_router(research.router)
+    app.include_router(telemetry.router)
     return app
 
 

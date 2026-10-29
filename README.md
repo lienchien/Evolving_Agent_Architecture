@@ -4,10 +4,10 @@
 
 ![Status](https://img.shields.io/badge/status-experimental-orange)
 ![Phase](https://img.shields.io/badge/phase-1--in%20progress-blue)
-![Recorded tests](https://img.shields.io/badge/recorded%20tests-35%20passed-green)
+![Recorded tests](https://img.shields.io/badge/recorded%20tests-52%20passed-green)
 
 > [!WARNING]
-> **Research prototype; not production-ready.** The currently implemented runtime uses a mock LLM, SQLite, a Python subprocess executor and console notifications. Real-provider support, hardened sandboxing, production authorization, independent Main/Audit secure review, Memory Router and Decision Agent runtime are **not yet integrated**. The 35-test result is historical evidence from **2026-10-18**, not tests rerun during this README update.
+> **Research prototype; not production-ready.** The currently implemented runtime uses a mock LLM, SQLite, a Python subprocess executor and console notifications. Real-provider support, hardened sandboxing, production authorization, independent Main/Audit secure review, Memory Router and Decision Agent runtime are **not yet integrated**. The current feature branch passed 52 tests on **2026-10-26**; this is controlled development evidence, not production assurance.
 
 CEAA explores how agents can turn real execution history into **versioned, validated, reusable and governed capabilities and decisions**. Its core design is domain-neutral: specific workloads are experiments, not hardwired application architecture.
 
@@ -32,7 +32,7 @@ Capability Evolution and Experience-guided Decision Evolution are **mechanisms s
 
 ## Project Status
 
-**Documentation aligned to v1.9 on 2026-10-24. Current development phase: Phase 1 — In Progress / Core Baseline Verified / Execution Telemetry Runtime Wiring Outstanding.**
+**Documentation aligned to v1.9 and the 2026-10-26 P1 revision. Current development phase: Phase 1 — In Progress / Telemetry Runtime and Bounded Retry Verified / Final Exit Verification Pending.**
 
 | Area | Verified status |
 | --- | --- |
@@ -40,14 +40,14 @@ Capability Evolution and Experience-guided Decision Evolution are **mechanisms s
 | FastAPI, SQLite capability/report/approval/audit, concurrency and restart persistence | Implemented; historical validation |
 | Token / Cost Research foundation and research endpoints | Implemented; missing real provider usage remains unavailable |
 | ExecutionTrace / RoutingDecision / Failure / Recovery domain, TelemetryRepository and SQLite schema v1 | **Foundation implemented**, contract tests recorded |
-| Automatic runtime telemetry writes, success/failure correlation, retry/fallback aggregation and summary API | **Phase 1 required; outstanding** |
+| Runtime telemetry, task/trace correlation, bounded retry evidence, filtering and summary API | **Implemented on the current feature branch**; no eligible alternate-target fallback exists yet |
 | Real providers, Docker Sandbox, PostgreSQL adapter, CodeBuilderRuntime, independent Main/Audit Gate, auth/policy hardening | **Phase 1.5 planned; not implemented** |
 | MemoryRouterInterface, DecisionModelInterface, Static Skill Packages, Validated Path Registry | **Phase 2 PoC planned; not implemented** |
 | Reliable automated recovery, recursive multi-Agent organization, shared capability marketplace | Future / optional research |
 
-**Last recorded full suite: 35 passed, 1 warning (2026-10-18)** in [PROJECT_STATUS.md](PROJECT_STATUS.md) and [DEV_PLAN.md](DEV_PLAN.md); no new test execution is claimed by this documentation change.
+**Current feature-branch full suite: 52 passed, 1 warning in 11.85s (2026-10-26)**. The warning is the existing Starlette/AnyIO `BlockingPortal` alias deprecation.
 
-**Immediate next milestone:** complete Phase 1 runtime writes and queries for structured routing, successful/failed execution, retries/fallbacks, final outcomes and links to existing token/cost data. See [Execution Telemetry Database](docs/TELEMETRY_DATABASE.md).
+**Immediate next milestone:** finish the formal Phase 1 exit checks, especially provider-failure stage mapping, concurrent/missing-event telemetry validation and a governed alternate-target fallback design. See [Execution Telemetry Database](docs/TELEMETRY_DATABASE.md).
 
 **Actually implemented mock flow** (distinct from the full v1.9 design):
 
@@ -85,7 +85,7 @@ The architecture maintains distinct evidence layers:
 
 ### Current evidence requirement
 
-The repository has a Telemetry Repository and SQLite schema, but Main Agent/runtime automated telemetry writing is not yet complete. Phase 1 must establish:
+The repository now has automated Main Agent/runtime telemetry, bounded retry evidence and shared task/trace identity with token-cost metrics. The remaining Phase 1 work is provider-failure mapping, formal exit validation and a safe alternate-target fallback path:
 
 ```text
 Task / Trace → Routing Decision / Candidate Set / Selected Target
@@ -400,7 +400,7 @@ Do not infer production authentication, multi-tenant data isolation, full Code E
 
 # 11. Phase 1 Runtime Validation
 
-The last recorded integrated test result is **35 passed, 1 warning on 2026-10-18** (including Telemetry Repository contracts). Controlled concurrency, HTTP/Uvicorn and restart evidence are documented in [PROJECT_STATUS.md](PROJECT_STATUS.md). These results do **not** establish a production-ready system, real token savings, or implemented MADE; tests were **not rerun** during this README revision.
+The current feature-branch integrated test result is **52 passed, 1 warning on 2026-10-26**. It includes telemetry/recovery contracts, runtime correlation, bounded retry and recovery-gate safety, restart persistence and query filters. Controlled concurrency and prior HTTP/Uvicorn evidence are documented in [PROJECT_STATUS.md](PROJECT_STATUS.md). These results do **not** establish a production-ready system, real token savings, or implemented MADE.
 
 For a configured local environment:
 
@@ -420,7 +420,7 @@ Phase 1 is complete only when runtime success/failure/routing/retry/fallback tel
 
 | Phase | Objective | Status |
 | --- | --- | --- |
-| **1 — Core + Telemetry** | Mock capability lifecycle, token-cost foundation and durable execution/routing/failure history | **In progress**: core verified, runtime telemetry incomplete |
+| **1 — Core + Telemetry** | Mock capability lifecycle, token-cost foundation and durable execution/routing/failure history | **In progress**: runtime telemetry and bounded retry verified; formal exit/fallback work remains |
 | **1.5 — Real Infrastructure + Governed Builder** | Real provider, PostgreSQL, Docker, CodeBuilderRuntime, independent Main/Audit, auth/policy and human oversight | **Planned / not implemented** |
 | **2 — Retrieval + MADE PoC** | Scoped Capability/Memory Retrieval, decision routing, static Skill Packages, validated-path reuse, bounded recovery | **Planned / not implemented** |
 | **3 — Evaluation** | E1 Capability/Cost, E2 Memory×Decision, E3 Skill Optimization, E4 Package Hierarchy, E5 Recovery, optional E6 HYSET tool-retrieval baseline | **Research design / not evaluated** |

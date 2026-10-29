@@ -16,22 +16,26 @@ router = APIRouter(prefix="/api/research", tags=["research"])
 def list_task_costs(
     task_family: str | None = None,
     capability_id: str | None = None,
+    trace_id: str | None = None,
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=500),
     container: Container = Depends(get_container),
 ):
-    metrics = container.research_metrics_service.list_tasks(task_family, capability_id)
+    metrics = container.research_metrics_service.list_tasks(
+        task_family, capability_id, trace_id
+    )
     return metrics[offset : offset + limit]
 
 
 @router.get("/interactions", response_model=list[LLMInteractionMetric])
 def list_llm_interactions(
     task_id: str | None = None,
+    trace_id: str | None = None,
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=500),
     container: Container = Depends(get_container),
 ):
-    metrics = container.research_metrics_service.list_interactions(task_id)
+    metrics = container.research_metrics_service.list_interactions(task_id, trace_id)
     return metrics[offset : offset + limit]
 
 

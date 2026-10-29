@@ -46,6 +46,7 @@ class TokenUsage(BaseModel):
 class LLMInteractionMetric(BaseModel):
     interaction_id: str = Field(default_factory=lambda: f"LLM-{uuid.uuid4().hex[:12]}")
     task_id: str
+    trace_id: str | None = None
     task_family: str
     capability_id: str | None = None
     capability_version: str | None = None
@@ -59,6 +60,7 @@ class LLMInteractionMetric(BaseModel):
 
 class TaskCostMetric(BaseModel):
     task_id: str
+    trace_id: str | None = None
     task_family: str
     capability_id: str | None = None
     capability_version: str | None = None

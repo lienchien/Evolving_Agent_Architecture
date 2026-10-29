@@ -4,6 +4,7 @@ from typing import Any
 
 from src.domain.gap import CapabilityGap
 from src.interfaces.llm import GeneratedCapability, LLMProvider
+from src.infrastructure.sqlite_telemetry_repository import SqliteTelemetryRepository
 from tests.support import build_main_agent
 
 
@@ -47,6 +48,14 @@ def test_failed_functional_test_marks_capability_failed(tmp_path):
     assert result["status"] == "capability_failed"
     capability = capability_service.get(result["capability_id"])
     assert capability.status.value == "failed"
+    telemetry = SqliteTelemetryRepository(str(tmp_path / "capabilities.db"))
+    trace = telemetry.get_trace(result["trace_id"])
+    assert trace.final_outcome.value == "failed"
+    observations = telemetry.list_execution_observations(result["trace_id"])
+    assert observations[0].outcome.value == "failed"
+    failures = telemetry.list_execution_failures(result["trace_id"])
+    assert failures[0].stage.value == "validation"
+    assert failures[0].category.value == "validation"
 
 
 def test_revision_requested_reopens_the_gap(tmp_path):

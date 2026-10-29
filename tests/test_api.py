@@ -59,8 +59,51 @@ def test_api_full_loop_and_registry(tmp_path):
     assert second.json()["status"] == "completed"
     assert second.json()["capability_id"] == capability_id
     assert second.json()["output"]["statistics"]["a"]["sum"] == 4.0
+    assert second.json()["trace_id"].startswith("TRACE-")
     assert len(container.capability_service.list()) == 1
     assert len(client.get("/api/audit").json()) == 2
+
+    traces = client.get("/api/telemetry/traces?task_family=csv_summary")
+    assert traces.status_code == 200
+    assert len(traces.json()) == 2
+    assert {trace["final_outcome"] for trace in traces.json()} == {
+        "partial",
+        "succeeded",
+    }
+
+    detail = client.get(f"/api/telemetry/traces/{second.json()['trace_id']}")
+    assert detail.status_code == 200
+    assert detail.json()["trace"]["task_id"] == second.json()["task_id"]
+    assert detail.json()["routing_decisions"][0]["selected_target_id"] == capability_id
+    assert detail.json()["observations"][0]["outcome"] == "succeeded"
+
+    summary = client.get("/api/telemetry/summary?task_family=csv_summary")
+    assert summary.status_code == 200
+    assert summary.json()["trace_count"] == 2
+    assert summary.json()["completed_trace_count"] == 2
+    assert summary.json()["succeeded_trace_count"] == 1
+    assert summary.json()["partial_trace_count"] == 1
+    assert summary.json()["success_rate"] == 0.5
+    assert summary.json()["routing_decision_count"] == 2
+    assert summary.json()["observation_count"] == 2
+
+
+def test_telemetry_survives_restart_and_unknown_trace_is_404(tmp_path):
+    database = str(tmp_path / "capabilities.db")
+    first = Container(database_path=database, report_directory=str(tmp_path / "reports"))
+    with TestClient(create_app(first)) as client:
+        response = submit_csv(client)
+        trace_id = response.json()["trace_id"]
+
+    restarted = Container(
+        database_path=database,
+        report_directory=str(tmp_path / "restarted-reports"),
+    )
+    with TestClient(create_app(restarted)) as client:
+        detail = client.get(f"/api/telemetry/traces/{trace_id}")
+        assert detail.status_code == 200
+        assert detail.json()["trace"]["final_outcome"] == "partial"
+        assert client.get("/api/telemetry/traces/TRACE-missing").status_code == 404
 
 
 def test_api_approval_errors_and_validation(tmp_path):

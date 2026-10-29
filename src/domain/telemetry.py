@@ -72,6 +72,59 @@ class RecoveryStrategy(str, Enum):
     HUMAN_ESCALATION = "human_escalation"
 
 
+class SideEffectStatus(str, Enum):
+    IDEMPOTENT = "idempotent"
+    NON_IDEMPOTENT = "non_idempotent"
+    UNKNOWN = "unknown"
+
+
+class RetryDisposition(str, Enum):
+    RETRY = "retry"
+    BLOCKED = "blocked"
+    EXHAUSTED = "exhausted"
+
+
+class DecisionEvidence(BaseModel):
+    """Auditable structural evidence, never private chain-of-thought."""
+
+    selection_criteria: list[str] = Field(default_factory=list)
+    rationale_summary: str | None = Field(default=None, max_length=2048)
+    evidence_refs: list[str] = Field(default_factory=list)
+    rejected_alternative_summary: str | None = Field(default=None, max_length=2048)
+    constraints: list[str] = Field(default_factory=list)
+    expected_outcome: str | None = Field(default=None, max_length=1024)
+    observed_outcome: str | None = Field(default=None, max_length=1024)
+    policy_version: str | None = None
+
+
+class FailureContext(BaseModel):
+    task_id: str | None = None
+    trace_id: str
+    span_id: str | None = None
+    failure_id: str
+    stage: FailureStage
+    category: FailureCategory
+    target_type: str
+    target_id: str
+    target_version: str | None = None
+    exception_type: str | None = None
+    recoverable: bool | None = None
+    checkpoint_ref: str | None = None
+
+
+class RetryDecision(BaseModel):
+    disposition: RetryDisposition
+    retry_allowed: bool
+    retry_count: int = Field(ge=0)
+    max_retries: int = Field(ge=0)
+    side_effect_status: SideEffectStatus
+    recoverable: bool | None = None
+    reason_code: str
+    backoff_ms: int | None = Field(default=None, ge=0)
+    remaining_time_ms: int | None = Field(default=None, ge=0)
+    remaining_cost_usd: float | None = Field(default=None, ge=0)
+
+
 class ExecutionTrace(BaseModel):
     """One task's durable correlation root.
 
@@ -101,7 +154,9 @@ class ExecutionTrace(BaseModel):
 
 
 class RoutingDecision(BaseModel):
+    contract_version: str = "1.1"
     decision_id: str = Field(default_factory=lambda: _new_id("ROUTE"))
+    task_id: str | None = None
     trace_id: str
     parent_decision_id: str | None = None
     depth: int = Field(default=0, ge=0)
@@ -109,13 +164,24 @@ class RoutingDecision(BaseModel):
     node_type: str
     candidate_ids: list[str] = Field(default_factory=list)
     selected_target_id: str | None = None
+    selected_target_version: str | None = None
+    package_id: str | None = None
+    package_version: str | None = None
+    path_id: str | None = None
+    path_version: str | None = None
+    step_id: str | None = None
+    parent_step_id: str | None = None
+    sequence: int | None = Field(default=None, ge=0)
+    branch: str | None = None
     confidence: float | None = Field(default=None, ge=0, le=1)
     score: float | None = None
     decision_model: str | None = None
     decision_model_version: str | None = None
+    policy_version: str | None = None
     latency_ms: float | None = Field(default=None, ge=0)
     fallback_reason: str | None = None
     override_reason: str | None = None
+    evidence: DecisionEvidence | None = None
     recorded_at: datetime = Field(default_factory=_utc_now)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
@@ -140,6 +206,8 @@ class ExecutionObservation(BaseModel):
     kind: ObservationKind = ObservationKind.EXECUTION
     target_type: str
     target_id: str
+    target_version: str | None = None
+    policy_version: str | None = None
     outcome: ObservationOutcome
     started_at: datetime = Field(default_factory=_utc_now)
     completed_at: datetime = Field(default_factory=_utc_now)
@@ -183,9 +251,50 @@ class RecoveryAttempt(BaseModel):
     strategy: RecoveryStrategy
     target_type: str
     target_id: str
+    target_version: str | None = None
     attempt_number: int = Field(ge=1)
     outcome: ObservationOutcome
+    retry_decision: RetryDecision | None = None
     recorded_at: datetime = Field(default_factory=_utc_now)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
     _timestamp_is_aware = field_validator("recorded_at")(_require_timezone)
+
+
+class ExecutionTraceDetail(BaseModel):
+    trace: ExecutionTrace
+    routing_decisions: list[RoutingDecision] = Field(default_factory=list)
+    observations: list[ExecutionObservation] = Field(default_factory=list)
+    failures: list[ExecutionFailure] = Field(default_factory=list)
+    recovery_attempts: list[RecoveryAttempt] = Field(default_factory=list)
+
+
+class FailureRecurrence(BaseModel):
+    stage: FailureStage
+    category: FailureCategory
+    error_code: str | None = None
+    exception_type: str | None = None
+    count: int = Field(ge=1)
+
+
+class TelemetrySummary(BaseModel):
+    task_family: str | None = None
+    trace_count: int = Field(ge=0)
+    completed_trace_count: int = Field(ge=0)
+    in_progress_trace_count: int = Field(ge=0)
+    succeeded_trace_count: int = Field(ge=0)
+    failed_trace_count: int = Field(ge=0)
+    partial_trace_count: int = Field(ge=0)
+    cancelled_trace_count: int = Field(ge=0)
+    success_rate: float | None = Field(default=None, ge=0, le=1)
+    failure_rate: float | None = Field(default=None, ge=0, le=1)
+    routing_decision_count: int = Field(ge=0)
+    observation_count: int = Field(ge=0)
+    failure_count: int = Field(ge=0)
+    wrong_selection_proxy_count: int = Field(ge=0)
+    retry_observation_count: int = Field(ge=0)
+    fallback_observation_count: int = Field(ge=0)
+    recovery_attempt_count: int = Field(ge=0)
+    retry_recovery_rate: float | None = Field(default=None, ge=0, le=1)
+    instrumentation_failure_count: int = Field(ge=0)
+    failure_recurrences: list[FailureRecurrence] = Field(default_factory=list)

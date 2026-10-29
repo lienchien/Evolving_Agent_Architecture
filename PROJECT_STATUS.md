@@ -1,21 +1,20 @@
 # Capability-Evolving Agent — Project Status
 
-更新日期：2026-10-18
+更新日期：2026-10-26
 
-開發基準：`dev`；本輪實作來源：`feature/execution-telemetry-database`
+開發基準：`dev`；目前開發分支：`feature/telemetry-runtime-wiring`
 
 ## Current Stage
 
-**Phase 1 — In Progress / Core Baseline Verified; Execution Experience & Evolution Telemetry Required**
+**Phase 1 — In Progress / P1 Telemetry and Bounded-Retry Revision Implemented; Final Exit Verification Pending**
 
 Phase 1 原有的 Core Baseline 開發與驗證條件已完成，但在確認 Execution Experience & Evolution Telemetry 是未來 Experience Memory、system diagnosis、Capability / Agent / Organization Evolution 的必要歷史資料層後，**Phase 1 退出條件已重新開啟並擴充**。
 
-目前狀態應解讀為：**Core Baseline Verified，但 Phase 1 尚未 Complete**。下一個工作不是 Phase 1.5，而是先完成 Phase 1 的 Execution Experience & Evolution Telemetry Foundation；完成後才進入 **Phase 1.5 — Real Infrastructure & Hardening**。
+目前狀態應解讀為：**Core Baseline、Telemetry runtime core 與 bounded retry revision 已驗證，但 Phase 1 尚未 Complete**。Provider failure stage、實際 alternate-target fallback 與剩餘正式退出驗收完成後，才進入 **Phase 1.5 — Real Infrastructure & Hardening**。
 
 核心 mock 流程、FastAPI TestClient 整合、併發一致性與跨程序持久化已取得執行證據。
 獨立 Uvicorn 已完成 loopback HTTP 全流程與停止／重啟持久化驗證；新增 Token／費用
-Telemetry database foundation 合併至 `dev` 後，完整測試結果為
-**35 passed, 1 warning in 12.04s**。
+Telemetry P1 修訂開發分支目前完整測試結果為 **52 passed, 1 warning**。
 這不是 production-ready 或任意負載下的效能保證；安全與營運強化仍屬後續工作。
 
 歷史過程見 [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md)；API 行為及升級條件見
@@ -26,7 +25,15 @@ Token／費用欄位與研究限制見 [TOKEN_COST_RESEARCH.md](docs/TOKEN_COST_
 
 CEAA 上位理念明確化為 **跨場景 Context-Aware Adaptive Decision**：共享環境感知／候選決策／風險及機會成本評估／治理／結果回饋機制，依當下環境選擇相對較佳的可行方案；場景專屬資料、Skills、工具及安全政策仍需透過 adapter 接入。此方向整合原有 Capability Evolution、MADE、Skill Packages、Telemetry 與決策歷史，並以跨領域實驗驗證能否提升效用及適應能力。
 
-**狀態：願景與實驗規劃，不是現有 Runtime 功能或已證實改善。** Phase 1 仍先完成原有 Execution Telemetry runtime wiring，無新增完成宣稱；Phase 2／3 的 PoC 和跨場景對照試驗見 [DEV_PLAN.md](DEV_PLAN.md) 與 System Design v1.9。
+**狀態：願景與實驗規劃，不是現有 Runtime 功能或已證實改善。** Phase 1 已完成本輪 Execution Telemetry／bounded retry 修訂，但仍不宣稱自適應決策、診斷或修復 Agent 已存在；Phase 2／3 的 PoC 和跨場景對照試驗見 [DEV_PLAN.md](DEV_PLAN.md) 與 System Design v1.9。
+
+---
+
+## 開發方向基準（2026-10-26；Direction Baseline）
+
+**研究方向已收斂：跨領域環境感知、自適應決策、風險／機會成本評估、受治理的能力與決策演化。** 核心架構原則與 Phase 1 → 1.5 → 2 → 3 的階段順序列入 [DEV_PLAN.md](DEV_PLAN.md) Direction Baseline；模型、Adapter、Domain Skill 與實驗方法保持可替換。新增構想不得無證據擴張目前 Phase 1 的退出範圍。
+
+**狀態：方向基準本身僅是文件與優先順序，不代表新增 Runtime 功能。** 本 feature 已完成 Telemetry runtime、bounded retry 與 Recovery contract 的 P1 修訂；下一個實際工程工作仍包括 provider failure stage 對應、alternate-target fallback 及並行／missing-event 正式退出驗收。
 
 ---
 
@@ -45,7 +52,7 @@ Token efficiency／cost amortization 的研究契約與實作已合併至 `dev`�
 - baseline、saving rate 與 break-even reuse count 的基礎計算；
 - `tests/test_research_metrics.py`。
 
-目前完整 runtime 基準為 **28 passed, 1 warning**。真實 provider usage、static baseline runner、
+Token/Cost 功能最初基準為 **28 passed, 1 warning**；目前整體分支基準為 **52 passed, 1 warning**。真實 provider usage、static baseline runner、
 Exact／Near-Similar／Generalized 長序列實驗仍屬下一階段研究工作，不能以目前 mock 測試結果
 宣稱 CEAA 已證明節省 Token。
 
@@ -62,19 +69,20 @@ Adaptive Agent Organization 已被列為長期主力研究方向，但**自動�
 - [x] task-level token / cost / latency measurement foundation
 - [x] backend-neutral telemetry domain／repository contract
 - [x] SQLite telemetry schema v1、migration、WAL、索引與 restart persistence
-- [ ] routing decision persistence
-- [ ] candidate-set / selected-target persistence
-- [ ] normalized failure taxonomy
-- [ ] retry / fallback linkage
-- [ ] task / trace / routing correlation
-- [ ] routing success / failure summary API
-- [ ] restart-persistent routing / failure evidence
-- [ ] durable raw operational history（success / failure / retry / fallback）
-- [ ] repeated-exception aggregation / systemic-pattern analysis foundation
+- [x] routing decision persistence
+- [x] candidate-set / selected-target persistence
+- [x] normalized failure taxonomy
+- [ ] retry / fallback linkage（bounded retry 已完成；alternate-target fallback 尚無 runtime）
+- [x] task / trace / routing correlation
+- [x] routing success / failure summary API
+- [x] restart-persistent routing / failure evidence
+- [ ] durable raw operational history（success / failure / retry 已有；fallback 尚無合格執行路徑）
+- [x] repeated-exception aggregation / systemic-pattern analysis foundation
 - [ ] longitudinal dataset for future Experience Memory、Evolution Signal 與 organization experiments
 
-前三項只代表資料庫 foundation 已可保存這些模型。現有 Agent/runtime 尚未自動寫入
-routing、execution、failure 或 recovery observation，因此其餘退出條件仍維持未完成。
+Agent/runtime 現已自動寫入 routing、execution、failure、retry/recovery 與 final outcome，並以
+同一 `task_id` / `trace_id` 連結 Token/Cost metrics。系統目前每個 task family 只允許一個 active
+capability，沒有可安全選用的替代 target，因此仍不製造虛假的 fallback 事件。
 Schema 與 PostgreSQL 替換邊界見 [TELEMETRY_DATABASE.md](docs/TELEMETRY_DATABASE.md)。
 
 預定資料鏈：
@@ -113,7 +121,7 @@ Raw History
 
 設計已補充至 System Design v1.9（§2.9）及 DEV_PLAN。**尚未實作** Package Router、Package-local Decision、Path Registry、LLM Decision Rationale generation 或 Experience Fast Path。這是對既有 Manager Decision / Telemetry / Skill Tiering 的整合，不代表 Phase 1 工作已完成。
 
-- Phase 1：先完成現有 Telemetry runtime wiring，為 global/local decision、parent-child step/path、optional rationale/expected-vs-observed evidence 定義 backend-neutral contract 與必要測試；不要求自動產生理由或 Package 執行。
+- Phase 1：Telemetry runtime wiring 與 optional package/path/step、policy/model version、結構化 `DecisionEvidence` contract 已完成；不要求自動產生理由或 Package 執行。
 - Phase 1.5：接真實 provider、security policy、sandbox、audit/version。
 - Phase 2：package-scoped experience、Manifest/Registry、受控 validated path fast-path PoC。
 - Phase 3：flat vs hierarchical vs history vs fast-path vs rationale-aware Decision 的正式實驗、消融和 Cost per Successful Task 分析。
@@ -262,18 +270,20 @@ Queue 保留擴充介面，Phase 1 不透過它執行背景任務。
 
 新增 Phase 1 必做項目：
 
-- [ ] Durable raw execution observations：success / failure / retry / fallback。
-- [ ] Task / trace / routing correlation。
-- [ ] Candidate set / selected target / routing decision persistence。
-- [ ] Failure stage / normalized category / raw exception metadata。
-- [ ] Retry / fallback linkage and recovery outcome。
-- [ ] Success denominator、failure rate、exception recurrence aggregation。
-- [ ] Operational-history query / summary capability。
-- [ ] Restart-persistent telemetry evidence。
-- [ ] Telemetry 與 token / cost metrics 的一致 identity linkage。
-- [ ] 對 success、failure、retry、missing metrics、persistence 的自動測試。
+- [ ] Durable raw execution observations：success / failure / retry 已完成；alternate-target fallback 尚未實作。
+- [x] Task / trace / routing correlation。
+- [x] Candidate set / selected target / routing decision persistence。
+- [ ] Failure stage / normalized category：routing／selection／tool／validation 與 sanitized exception type 已完成；provider generation failure 目前仍記為 runtime/execution。
+- [ ] Retry / fallback linkage and recovery outcome：retry lineage／outcome 已完成；fallback 尚未實作。
+- [x] Success denominator、failure rate、exception recurrence aggregation。
+- [x] Operational-history query / summary capability。
+- [x] Restart-persistent telemetry evidence。
+- [x] Telemetry 與 token / cost metrics 共用 `task_id` / `trace_id` identity linkage。
+- [x] 對 success、failure、retry、missing metrics、persistence 的自動測試。
 
-因此 **Phase 1 = In Progress**。既有 28-test 結果代表 Core Baseline Verified，不再代表整個 Phase 1 Complete。
+因此 **Phase 1 = In Progress**。Telemetry 核心 runtime wiring、bounded retry、阻擋／耗盡證據、
+recovery analysis/planner/gate/outcome contracts 與 restart correlation 已完成；provider failure
+stage 對應、alternate-target fallback、完整 missing-event/並行 correlation 驗收與正式 exit checklist 尚未完成。
 
 ---
 

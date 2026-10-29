@@ -1099,3 +1099,101 @@ SQLite schema v1 新增：
 - Feature 已推送至 `origin/feature/execution-telemetry-database` 並設定 upstream。
 - Merge commit：`0923c7f` — `merge: add SQLite execution telemetry foundation`。
 - 合併後 `dev` 完整測試：**35 passed, 1 warning in 12.04s**。
+
+---
+
+## 2026-10-25 — Phase 1 Telemetry Runtime Wiring
+
+### 分支與範圍
+
+從 `dev` 建立 `feature/telemetry-runtime-wiring`，只處理 Phase 1 的 telemetry runtime 與
+operational-history 查詢；未提前實作 Package Router、MADE、PostgreSQL 或自主 Recovery Agent。
+
+### Runtime 與資料關聯
+
+- 新增 backend-neutral `TelemetryService`，將 repository 寫入錯誤與主要 task outcome 隔離，
+  並以 process-local counter 與 log 暴露 instrumentation failure。
+- MainAgent 以同一 `task_id` / `trace_id` 記錄 capability routing candidate/selection、
+  evolution/execution observation、sanitized failure evidence 與 final outcome。
+- Task response 新增 `trace_id`；token/cost metrics 與 telemetry 共用 `task_id`。
+- 不保存 task input、secret 或原始 exception message，只保存 normalized category、error code、
+  exception type 與固定摘要。
+
+### Operational-history API
+
+- `GET /api/telemetry/traces`
+- `GET /api/telemetry/traces/{trace_id}`
+- `GET /api/telemetry/summary`
+
+Summary 提供明確 completed denominator、success/failure rate、事件數與 failure recurrence；
+無完成 trace 時 rate 維持 null。資料可在 Container 重建後由 SQLite 讀回。
+
+### 驗證
+
+- 完整 pytest：**38 passed, 1 warning**。
+- 覆蓋 success、partial、validation failure、execution exception、sanitized failure、API query、
+  summary denominator/recurrence、重啟讀回與 instrumentation failure isolation。
+- 現行 runtime 沒有真正 retry/fallback 策略，因此尚未宣告 RecoveryAttempt runtime linkage 完成。
+
+---
+
+## 2026-10-26 — P1 Telemetry／Bounded Retry 修訂
+
+### 修訂範圍
+
+依 System Design v1.9 與 DEV_PLAN 的 Phase 1 要求，在既有 telemetry runtime wiring 上完成：
+
+- 新增 backend-neutral `RetryPolicyInterface`、`FailureContext`、`RetryDecision`、side-effect 與
+  retry disposition contract；
+- `BoundedRetryPolicy` 採 fail-closed：只有明確 `idempotent=true`、暫時性且仍在已提供 budget
+  內的失敗可重試，並受全域 hard cap 限制；目前 runtime 提供 attempt cap，time／cost budget
+  保留在 contract 並以單元測試驗證 exhaustion 行為；
+- 未知副作用、非冪等、不可恢復、budget 耗盡與 retry exhaustion 都停止執行，保存 policy
+  observation 與 `RecoveryAttempt`，不啟動自主 Repair Agent；
+- Retry observation 透過 parent observation 連回原始 failure，成功、再次失敗與最終停止皆可在
+  SQLite 重啟後查詢；目前沒有第二個合格 target，不建立虛假的 fallback 成功事件；
+- `RoutingDecision` 加入 versioned optional package/path/step、target version、policy version 與
+  結構化 `DecisionEvidence`，只保存可稽核摘要，不保存 private chain-of-thought；
+- 新增 `FailureAnalysisInterface`、`RecoveryPlannerInterface`、`RecoveryGateInterface`、
+  `RecoveryOutcomeRepository` 與最小資料契約；DENIED／UNKNOWN gate 由 domain invariant 強制
+  fail closed，且不得被記為 resolved；未連接自主診斷或修復 Agent；
+- Telemetry operational-history API 加入 capability、target、exception type、outcome 與
+  timezone-aware time-window filter；
+- `llm_interactions`、`task_cost_metrics` 與 telemetry 共用 `task_id` / `trace_id`；
+- MainAgent 的 task-level error metric 改存 exception type，避免把 runtime exception message 寫入
+  research metric。
+
+### 驗證
+
+- 新增 bounded retry success、unsafe retry blocked、retry exhaustion、time/cost budget exhaustion、
+  redaction、restart persistence、query filters、trace/cost correlation 與 optional contract
+  compatibility 測試。
+- 完整 pytest：**52 passed, 1 warning in 11.85s**。
+- `git diff --check` 通過；警告仍為既有 Starlette／AnyIO `BlockingPortal` alias 棄用。
+- 第一次測試因 Windows 中文使用者名稱對應的系統 temp 目錄權限失敗，改用 workspace-local
+  `--basetemp` 後完整通過；該失敗未進入程式測試邏輯。
+
+### 尚未完成
+
+- alternate-target fallback eligibility／runtime；
+- 並行 task telemetry correlation 與 missing-event 的正式 Phase 1 exit 驗收；
+- 認證、tenant scope、真正安全 sandbox、真實 provider、PostgreSQL 與自主診斷／修復流程。
+
+本輪仍在 `feature/telemetry-runtime-wiring`，尚未提交、推送或合併。
+
+---
+
+## 2026-10-26 — 同步 GitHub `dev` Direction Baseline 文件
+
+- Fetch 後確認 `origin/dev` 由 `bd5bf80` 前進至 `f87faeb`，包含三個純文件提交：
+  `79254de`、`de536fe`、`f87faeb`。
+- 遠端只修改 `DEV_PLAN.md`、`PROJECT_STATUS.md`、`README.zh-TW.md`，新增 Direction Baseline、
+  Design Invariants、固定 Phase 1 → 1.5 → 2 → 3 交付順序與 Scope Guard；沒有遠端程式碼變更。
+- 因目前 feature 工作樹含未提交的 P1 程式與同檔文件變更，未直接執行會覆蓋內容的 pull／checkout；
+  改以逐段整合遠端新增內容，並將其中「Telemetry runtime 尚未完成」的舊狀態對齊目前已驗證的
+  runtime writing、bounded retry、Recovery contracts 與 52-test 結果。
+- 本地 `dev` 無獨有提交，已安全 fast-forward 至 `origin/dev` 的 `f87faeb`；目前 active branch
+  仍為 `feature/telemetry-runtime-wiring`，P1 工作樹未提交、未推送、未合併。
+- 依最新 Direction Baseline 重新核對程式後，確認尚有三類 Phase 1 差異：provider generation
+  failure 仍記為 runtime/execution、沒有合格 alternate-target fallback、並行 telemetry correlation
+  與 missing-event 尚未完成正式退出驗收；狀態文件已改為 partial／outstanding，未誤標完成。

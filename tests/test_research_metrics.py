@@ -65,6 +65,7 @@ def test_mock_usage_is_persisted_as_unavailable_without_estimation(tmp_path):
 
         task_metric = client.get(f"/api/research/tasks?task_family=research_words").json()[0]
         assert task_metric["task_id"] == task_id
+        assert task_metric["trace_id"] == created["trace_id"]
         assert task_metric["capability_created"] is True
         assert task_metric["outcome_status"] == "capability_pending_approval"
         assert task_metric["task_success"] is False
@@ -77,6 +78,10 @@ def test_mock_usage_is_persisted_as_unavailable_without_estimation(tmp_path):
         assert [item["phase"] for item in interactions] == ["generation", "testing"]
         assert all(item["usage"]["source"] == "unavailable" for item in interactions)
         assert all(item["usage"]["total_tokens"] is None for item in interactions)
+        assert all(item["trace_id"] == created["trace_id"] for item in interactions)
+        assert client.get(
+            "/api/research/interactions", params={"trace_id": created["trace_id"]}
+        ).json() == interactions
 
         summary = client.get("/api/research/summary?task_family=research_words").json()
         assert summary["task_count"] == 1

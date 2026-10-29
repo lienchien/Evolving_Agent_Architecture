@@ -6,6 +6,7 @@ from src.infrastructure.console_notification import ConsoleNotificationProvider
 from src.infrastructure.memory_queue import InMemoryEvolutionQueue
 from src.infrastructure.mock_llm import MockLLMProvider
 from src.infrastructure.sqlite_repository import SqliteCapabilityRepository
+from src.infrastructure.sqlite_telemetry_repository import SqliteTelemetryRepository
 from src.infrastructure.subprocess_sandbox import SubprocessSandbox
 from src.interfaces.llm import LLMProvider
 from src.services.approval_service import ApprovalService
@@ -17,12 +18,16 @@ from src.services.gap_detection_service import GapDetectionService
 from src.services.notification_service import NotificationService
 from src.services.report_store import TestReportStore
 from src.services.research_metrics_service import ResearchMetricsService
+from src.services.retry_policy_service import BoundedRetryPolicy
 from src.services.testing_service import TestingService
+from src.services.telemetry_service import TelemetryService
 from src.services.validation_service import ValidationService
 
 
 def build_main_agent(tmp_path, llm_provider: LLMProvider | None = None):
-    repository = SqliteCapabilityRepository(str(tmp_path / "capabilities.db"))
+    database_path = str(tmp_path / "capabilities.db")
+    repository = SqliteCapabilityRepository(database_path)
+    telemetry = TelemetryService(SqliteTelemetryRepository(database_path))
     llm_provider = llm_provider or MockLLMProvider()
     sandbox = SubprocessSandbox()
 
@@ -60,5 +65,7 @@ def build_main_agent(tmp_path, llm_provider: LLMProvider | None = None):
         evolution_agent,
         queue,
         research_metrics,
+        telemetry,
+        BoundedRetryPolicy(),
     )
     return main_agent, capability_service, approval_service

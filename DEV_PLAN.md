@@ -1,15 +1,16 @@
 # Capability-Evolving Agent — Phase 1 Development Plan
 
-更新日期：2026-10-18
+更新日期：2026-10-26
 
 ## 目前基準
 
 **Phase 1 — In Progress：Core Baseline 已驗證；Execution Experience & Evolution Telemetry Foundation 納入 Phase 1 必做項目。**
 
-本輪實作來源為 `feature/execution-telemetry-database`；既有 Core Baseline 與 Token／費用研究
-功能已完成驗證，但 **Phase 1 尚未退出**。Telemetry 的 backend-neutral domain／repository
-contract 與 SQLite schema v1 已建立；Agent/runtime 自動寫入及 summary API 尚未實作。
-合併至 `dev` 後的最近完整測試為 **35 passed, 1 warning in 12.04s**。
+目前實作分支為 `feature/telemetry-runtime-wiring`；既有 Core Baseline 與 Token／費用研究
+功能已完成驗證，但 **Phase 1 尚未退出**。Telemetry 的 backend-neutral domain／repository、
+SQLite schema v1、runtime writing、bounded retry、Recovery contracts 與 summary/filter API 已建立；
+provider failure stage、alternate-target fallback 與正式並行／missing-event 退出驗收尚未完成。
+目前 `feature/telemetry-runtime-wiring` 的最近完整測試為 **52 passed, 1 warning in 11.85s**（2026-10-26）；尚未提交或合併至 `dev`。
 實作仍採 Mock LLM、SQLite、Python subprocess 與 Console Notification。
 本輪實際過程見 [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md)，完成度見
 [PROJECT_STATUS.md](PROJECT_STATUS.md)。
@@ -27,6 +28,43 @@ contract 與 SQLite schema v1 已建立；Agent/runtime 自動寫入及 summary 
 - **長期（視實驗結果）：** 將跨場景適應延伸至自適應 Agent 組織及更大規模系統；高風險領域保留專屬政策與人類控制，不宣稱所有場景都能自動最佳化。
 
 **實驗判準：** 相對最佳是「在給定資訊／可行候選／目標／治理限制下的決策品質」，不是事後挑出最高報酬路徑；改善幅度需相對明確 baseline，且在完整成本與風險約束下成立。
+
+---
+
+## 開發方向基準（Direction Baseline / Scope Guard，2026-10-26）
+
+> **決策：固定核心研究問題、系統邊界與階段順序；不凍結技術選型、實驗假說或必要的安全修正。**
+>
+> 核心目標：建立**跨領域、環境感知、風險受控的自適應決策架構**，在當前資訊、權限、資源及不確定性條件下比較可行候選（含 abstain／human escalation），尋找相對較佳的決策，並以獨立結果驗證和持久化經驗驅動調整。**不宣稱全域最優、正報酬或任務成功保證。**
+
+### 固定的架構原則（Design Invariants）
+
+1. **Domain-neutral Core**：Task/Objective、Context、Decision、Capability、Risk/Policy、Outcome/Evidence 的共用契約不內建任何金融、新聞、DevOps 或企業業務規則；領域差異放在可替換的 Adapter / Skill Package / Validator。
+2. **Decision before execution**：保留候選方案、選擇依據（可稽核的結構摘要，非模型隱藏推理）、適用條件、風險／機會成本、限制及版本。無合格候選時允許放棄、延期、Fallback 或交由人工。
+3. **Governed capability evolution**：新能力與新版本必須通過獨立測試、Policy / Secure Evolution Gate 與必要人工核准；任何 Decision/Memory 重用不得繞過授權與當次結果驗證。
+4. **Raw evidence first**：成功、失敗、路由、Retry/Fallback、成本、實際結果都持久記錄；Raw History 與 Curated/Validated Experience 分離，支持失效分析與可重現實驗。
+5. **Measurable relative improvement**：相對最佳解只在明確任務目標、可得資訊、候選與約束下成立；新機制須與固定 Workflow／無 Memory／純規則／LLM baseline 做公平對照，衡量品質、尾端風險、成本與適應能力。
+6. **Interface-first and replaceable infrastructure**：維持 Agent → Service → Interface → Infrastructure Adapter，不綁特定模型、資料庫、框架、Builder 或硬體。
+
+### 固定的交付順序與階段門檻
+
+| 順序 | 當前或目標工作 | 進入下一階段前的證據 |
+| --- | --- | --- |
+| **Phase 1 — 現在唯一主要工程優先** | 完成 Execution Telemetry Runtime、Recovery contracts、Routing/候選、成功與失敗、Retry/Fallback、Task/Trace 關聯、Summary API、重啟持久性及 Token/Cost 對齊 | 本 feature 已完成 runtime wiring、bounded retry 與 recovery contracts；仍須完成 provider failure stage 對應、alternate-target fallback、並行／missing-event 正式驗收，才能退出 Phase 1 |
+| **Phase 1.5 — 原定下一階段** | 真實 LLM/usage、PostgreSQL、隔離 Sandbox、受控 Builder、Main/Audit 與 Policy/Human Escalation | 依既定安全、治理及受控生成驗證門檻；不因新增願景降低 Gate |
+| **Phase 2 — 最小自適應決策 PoC** | Memory Router/Decision Model、Validated Path、Skill Packages、最小 Domain-neutral Context/Objective/Candidate/Risk contracts，受限候選策略選擇與 Fallback | 示範當下 Context 改變時，能依適用條件安全改選、拒絕或 Replan；保留審核和輸入新鮮度 |
+| **Phase 3 — 正式研究驗證** | 至少兩個異質場景、環境漂移/OOD、完整對照與消融、Cost per Successful Task、穩定性及安全失效率 | 事前訂好 oracle、資訊邊界、風險預算；以樣本外驗證檢查是否優於 baseline，允許負面結論 |
+| **更長期 — 證據驅動擴展** | Adaptive Organization、常駐監測／回復、edge/robots、Marketplace、商業化 | 依前述實驗、安全及運維成本結果逐步決定；不預先列為當前 MVP 範圍 |
+
+### 變更控制（避免 Scope Creep）
+
+- **固定的是 North Star 與架構約束，不是某項策略或技術。** 可替換 LLM、資料庫、Builder、Agent 組織形態或具體演算法；不修改核心目標。
+- 任何新增提案都應先回答：對哪個核心假說有幫助？依賴哪個階段？所需資料／成本／安全條件？驗證指標與退出標準為何？
+- 不直接插入 Phase 1 工作清單：可與現有 Telemetry Contract 低成本相容的概念先保留為 optional 欄位；其他放入 Phase 2+ / Future Backlog。
+- 若需調整階段順序或退出條件，必須留下 **ADR / rationale、影響範圍、風險、替代方案、回滾與核准紀錄**；安全修正與已證明不成立的假說可以觸發變更。
+- 每次完成一階段，以經驗證證據決定是否進入下一階段；避免因新研究構想而永遠延後基礎建設交付。
+
+**Implementation status：此節是開發方向與治理基準，不代表新增 Runtime 功能或測試結果。**
 
 ---
 
@@ -52,7 +90,7 @@ contract 與 SQLite schema v1 已建立；Agent/runtime 自動寫入及 summary 
 
 ## 已整合基礎：Token／費用研究量測
 
-研究契約與實作均已納入 `dev`，詳見 [TOKEN_COST_RESEARCH.md](docs/TOKEN_COST_RESEARCH.md)。目前 Core Baseline 為 **28 passed, 1 warning**；此量測基礎保留為 Phase 1 已驗證能力，下一個必做項目是 Execution Experience & Evolution Telemetry Foundation。
+研究契約與實作均已納入 `dev`，詳見 [TOKEN_COST_RESEARCH.md](docs/TOKEN_COST_RESEARCH.md)。原 Token/Cost Core Baseline 為 **28 passed, 1 warning**；目前功能分支已把 task 與 interaction 接到同一 `trace_id`，並納入 52-test Phase 1 回歸。
 
 後續接入真實 provider 前仍應重新檢查：
 
@@ -90,8 +128,9 @@ contract 與 SQLite schema v1 已建立；Agent/runtime 自動寫入及 summary 
 - `telemetry_schema_migrations`
 
 詳細 schema、SQLite／PostgreSQL adapter 邊界與驗證見
-[TELEMETRY_DATABASE.md](docs/TELEMETRY_DATABASE.md)。下一個增量是 service／runtime wiring，
-不能因資料表已存在就將 routing persistence、failure aggregation 或 Phase 1 標記完成。
+[TELEMETRY_DATABASE.md](docs/TELEMETRY_DATABASE.md)。目前 service／runtime wiring、有界重試、
+Recovery contracts、failure aggregation 與查詢增量已完成；仍不能在 provider failure stage、
+alternate-target fallback 與正式並行／missing-event 驗收前將 Phase 1 標記完成。
 
 這不是未來才做的 Adaptive Agent Organization 功能，而是**現在就必須建立的研究資料基礎**。
 
@@ -210,16 +249,16 @@ Phase 1 不再以既有 28-test Core Baseline 作為完整退出點。既有結�
 
 - [x] Core capability evolution loop、approval、reuse、persistence 與 concurrency baseline。
 - [x] Task / LLM interaction token-cost measurement foundation。
-- [ ] Durable execution observation schema，可保存 success / failure / retry / fallback。
-- [ ] Task / trace / routing decision correlation。
-- [ ] Candidate set、selected target、routing depth / parent decision（適用時）持久化。
-- [ ] Normalized failure stage / category，同時保留可分析的 raw exception metadata。
-- [ ] Retry / fallback 與原始 failure 關聯。
-- [ ] Success denominator 與 failure recurrence / failure-rate 聚合。
-- [ ] 可依 task family / capability / target / exception type / time window 查詢 operational history。
-- [ ] Restart 後 telemetry 仍可讀回。
-- [ ] 成功、失敗、retry、缺失 metrics、持久化與 correlation 測試。
-- [ ] Telemetry 與既有 `llm_interactions` / `task_cost_metrics` 使用一致 task / trace identity。
+- [x] Durable execution observation schema，可保存 success / failure / retry / fallback。
+- [x] Task / trace / routing decision correlation。
+- [x] Candidate set、selected target、routing depth / parent decision（適用時）持久化。
+- [ ] Normalized failure stage / category：routing／selection／tool／validation 已接入且不保存敏感 exception message；provider generation failure 目前仍記為 runtime/execution，需改為 provider stage。
+- [ ] Retry / fallback 與原始 failure 關聯：bounded retry 已完成；尚無合格替代 target 的 runtime fallback。
+- [x] Success denominator 與 failure recurrence / failure-rate 聚合。
+- [x] 可依 task family / capability / target / exception type / time window 查詢 operational history。
+- [x] Restart 後 telemetry 仍可讀回。
+- [x] 成功、失敗、retry、缺失 metrics、持久化與 correlation 測試。
+- [x] Telemetry 與既有 `llm_interactions` / `task_cost_metrics` 使用一致 task / trace identity。
 
 完成後 Phase 1 才可重新標記為 **Complete**，並進入 Phase 1.5 的 real infrastructure / hardening。
 
@@ -256,7 +295,7 @@ Build upon existing `execution_traces`, `routing_decisions`, `execution_observat
 - Durable event lineage: original failure → retry attempts → escalation/analysis → candidate repair → gate decision → final outcome. Keep both successful and failed executions as denominator for population analysis.
 - Distinguish retryable transient errors from semantic, policy, authorization, state/side-effect and permanent errors. Non-idempotent actions must not be blindly retried; ambiguous completion must first be reconciled.
 - Contract tests with Mock diagnostics: bounded retry, retry exhaustion, unsafe retry blocked, failed/unknown gate fails closed, budget exhaustion, restart-persistent correlation, redacted payloads. **No autonomous repair Agent required for Phase 1 exit.**
-- Existing Phase 1 telemetry runtime wiring and aggregation exit criteria remain required and incomplete until independently verified.
+- Implemented on `feature/telemetry-runtime-wiring`: `RetryPolicyInterface`, `FailureAnalysisInterface`, `RecoveryPlannerInterface`, `RecoveryGateInterface`, `RecoveryOutcomeRepository`; the minimum retry/recovery data contracts; fail-closed bounded retry and denied/unknown gates; budget/retry exhaustion; unsafe-retry blocking; durable lineage; restart persistence and redaction tests. Provider failure stage mapping, a real alternate-target fallback and the remaining formal exit verification are still outstanding.
 
 ### Phase 1.5 — integration hardening
 

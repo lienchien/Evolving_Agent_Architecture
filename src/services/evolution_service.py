@@ -22,7 +22,8 @@ class EvolutionService:
         self._research_metrics = research_metrics
 
     def evolve(
-        self, gap: CapabilityGap, reserved: Capability | None = None, task_id: str | None = None,
+        self, gap: CapabilityGap, reserved: Capability | None = None,
+        task_id: str | None = None, trace_id: str | None = None,
     ) -> Capability:
         started = perf_counter()
         try:
@@ -31,6 +32,7 @@ class EvolutionService:
             if self._research_metrics is not None and task_id is not None:
                 self._research_metrics.record_llm_interaction(
                     task_id=task_id,
+                    trace_id=trace_id,
                     task_family=gap.task_family,
                     capability_id=reserved.capability_id if reserved else None,
                     capability_version=reserved.capability_version if reserved else None,
@@ -61,6 +63,7 @@ class EvolutionService:
         if self._research_metrics is not None and task_id is not None:
             self._research_metrics.record_llm_interaction(
                 task_id=task_id,
+                trace_id=trace_id,
                 task_family=gap.task_family,
                 capability_id=capability.capability_id,
                 capability_version=capability.capability_version,

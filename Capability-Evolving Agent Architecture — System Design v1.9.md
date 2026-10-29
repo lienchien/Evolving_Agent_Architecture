@@ -2930,23 +2930,27 @@ Break-even Reuse Count
 
 # 58. Phase 1 — Core MVP + Execution Experience Foundation
 
-**Current Status: In Progress / Core Baseline Verified / Telemetry Runtime Wiring Outstanding。** 此狀態依 dev 程式與 PROJECT_STATUS.md / DEV_PLAN.md（最近實作證據日期：2026-10-18）核對；**本輪僅修改設計文件，未重新執行 pytest、API 或真實 LLM benchmark**。
+**Current Status: In Progress / Telemetry Runtime + Bounded Retry P1 Revision Verified / Final Exit Verification Pending。** 此狀態依 `feature/telemetry-runtime-wiring` 程式與 PROJECT_STATUS.md 核對（最近實作證據日期：2026-10-26）；完整 pytest 與 TestClient API/重啟驗證已執行，未執行真實 LLM benchmark。
 
 ### 58.1 已存在的實作與歷史驗證
 
 - Mock Task → Capability Search / Gap → Evolution Agent → Validation / Testing → Test Report → Pending Approval → Active / Reuse 的核心流程；MainAgent 使用 LangGraph。
 - SQLite Capability / TestReport / Approval / Audit 與 API、併發防重複、revision/transaction、重啟持久化；實際使用 MockLLMProvider、SubprocessSandbox 和 Console Notification。
 - Task / LLM interaction Token-Cost Metrics Foundation，包括 unavailable token 不估算、task summary / research API、已有基準可計算 saving / break-even 的契約。
-- **Telemetry database/repository foundation**：`TelemetryRepository` 介面、ExecutionTrace / RoutingDecision / ExecutionObservation / ExecutionFailure / RecoveryAttempt Domain、SQLite Schema v1、migration、WAL、索引、contract / read-back tests。**有資料表不等於 MainAgent / runtime 已自動寫入完整 Telemetry。**
-- PROJECT_STATUS.md / DEV_PLAN.md 最近記載合併後 **35 passed, 1 warning（2026-10-18）**，另有 Uvicorn／HTTP／重啟與併發測試證據；本節不宣稱當前 commit 又跑過相同測試。
+- **Telemetry database/repository foundation + runtime P1 wiring**：MainAgent 以一致 task/trace ID 寫入 routing candidate/selection、evolution/execution observation、normalized failure、bounded retry/recovery 與 final outcome；提供完整 filters、traces/detail/summary API、denominator/rate/recurrence 聚合、重啟讀回與 instrumentation-failure isolation。未知／非冪等或不可恢復 operation fail closed。
+- `feature/telemetry-runtime-wiring` 最近完整結果為 **52 passed, 1 warning in 11.85s（2026-10-26）**；警告為既有 Starlette／AnyIO alias 棄用。真實 provider benchmark 尚未執行。
 
 ### 58.2 尚未完成的 Phase 1 退出條件
 
-- [ ] 將 Task / Routing / Execution / Failure / Retry / Fallback 真正接上 durable telemetry runtime writing，保留成功與失敗事件。
-- [ ] Task / Trace / Decision 的 candidate-set、selected target、parent decision、node type、failure taxonomy 與 final outcome correlation。
-- [ ] Retry / fallback linkage、可分析 raw exception metadata、成功母體分母、failure rate / recurrence 聚合。
-- [ ] Operational-history query / summary API、重啟讀回、與既有 LLM Token/Cost Metrics ID 一致的 contract 與 integration tests。
-- [ ] 依 DEV_PLAN / PROJECT_STATUS 正式 checklist 驗收；不能只依原本的 28-test Core Baseline 標示 Phase 1 complete。
+- [x] Task / Routing / Evolution / Execution / Failure 已接上 durable telemetry runtime writing，保留 success / partial / failure 與 sanitized failure evidence。
+- [x] Task / Trace / Decision 的 candidate-set、selected target、parent decision、node type、failure taxonomy 與 final outcome correlation。
+- [x] 成功母體分母、success/failure rate、failure recurrence 聚合與缺失分母回傳 null。
+- [x] Operational-history traces/detail/summary API、重啟讀回、與既有 LLM Token/Cost Metrics 共用 task ID 的 integration tests。
+- [x] Fail-closed bounded retry、retry exhaustion／budget exhaustion／unsafe retry blocked 與 RecoveryAttempt parent linkage；重啟後仍可查詢。
+- [x] Recovery analysis/planner/gate/outcome 的 contract-only interfaces 與 denied/unknown gate fail-closed tests；未接自主診斷／修復 Agent。
+- [ ] Provider／LLM generation failure 的 provider stage/category runtime mapping 與測試。
+- [ ] Alternate-target fallback；現有每個 task family 僅一個 active capability，不得為不存在的 runtime path 製造假事件。
+- [ ] 依 DEV_PLAN / PROJECT_STATUS 完成並行／missing-event 等正式 checklist 驗收；不能只依測試總數標示 Phase 1 complete。
 
 Phase 1 **不要求** MemoryRouterInterface runtime、Local/Global Decision、Package Router、Path Registry、Full CodeBuilderRuntime、真實 Provider 或 Autonomous Recovery Agents。現行 Mock、安全政策、subprocess、呼叫端 reviewer 的基礎僅供受控開發，**不是 production-ready auth / isolation / governance**。
 
@@ -3254,7 +3258,7 @@ Capability Subscription
 
 | Stage | 目標 | 目前狀態 |
 | --- | --- | --- |
-| **Phase 1** | Mock Capability Core + Durable Execution Telemetry + Token/Cost Metrics | **In Progress**：Core Baseline Verified；Telemetry Repository/schema v1 有，Runtime Wiring 未完成 |
+| **Phase 1** | Mock Capability Core + Durable Execution Telemetry + Token/Cost Metrics | **In Progress**：Runtime wiring、bounded retry、query/correlation 已驗證；正式退出與 alternate fallback 待完成 |
 | **Phase 1.5** | Real Provider、Postgres、Docker、Builder、Secure Review、Auth/Policy | **Planned / Not Implemented** |
 | **Phase 2** | Retrieval、Memory Router × Decision Agent、Static Package / Path PoC | **Planned / Not Implemented** |
 | **Phase 3** | `60 E1–E6 Success、Decision Stability、CPST、Safety Evaluation | **Research Plan / Not Evaluated** |
@@ -3264,7 +3268,7 @@ Capability Subscription
 
 ```mermaid
 flowchart LR
-    P1["Phase 1: Core Verified\nTelemetry incomplete"] --> P15["Phase 1.5: Provider / Governance"]
+    P1["Phase 1: Telemetry + Retry Verified\nExit checks pending"] --> P15["Phase 1.5: Provider / Governance"]
     P15 --> P2["Phase 2: Retrieval + MADE PoC"]
     P2 --> P3["Phase 3: Research Evaluation"]
     P3 -. "Only if evidence supports" .-> FUT["Phase 4–11: Future Extensions"]
@@ -3356,15 +3360,15 @@ Task / Main Agent                         [existing core]
 | Status | 對外可宣稱內容 | 尚不可宣稱 |
 | --- | --- | --- |
 | **Implemented & Historically Verified** | Mock Task→Gap→Generate→Test→Approval→Reuse；SQLite 核心儲存、Token/Cost 基礎 | 真實 LLM 自主泛化、Production-grade Governance |
-| **Foundation Only** | Telemetry Domain、Repository、SQLite Schema v1 與 Contract Tests | Runtime 自動寫入全部 routing/exception/retry／完整 Summary API |
-| **Phase 1 Outstanding** | Telemetry Runtime Wiring、Task/Trace Correlation、Failure Aggregation、Restart/Regression Tests | 未完成前不得標 Phase 1 Complete |
+| **Implemented on feature branch** | Telemetry Domain/Repository/SQLite、Runtime routing/failure、Task/Trace/Cost correlation、bounded retry、filters/Summary、Restart/Regression Tests | 不代表 alternate fallback、自主診斷／修復或 production reliability |
+| **Phase 1 Outstanding** | Provider failure mapping、alternate-target fallback、並行／missing-event 正式退出驗收 | 未完成前不得標 Phase 1 Complete |
 | **Phase 1.5 Planned** | Provider、Postgres、Docker、Code Builder、Main/Audit、Auth/Policy、Human Escalation | 任何元件已正式整合／通過真實安全驗證 |
 | **Phase 2–3 Research** | MADE、Package Router、Validated Paths、Recovery、E1–E6 Baseline／Ablation | 尚無實測足以證實 Decision Stability 或降低 CPST |
 | **Future / Opt-in** | Workers、Local Full LLM、Enterprise / Security、Sharing / Marketplace | 不是目前 MVP 的完成內容 |
 
-**目前下一個真正工程里程碑**：按 DEV_PLAN.md 既定退出條件完成成功／失敗 routing trace、選擇證據、fallback / failure lineage、success denominator、Query / Summary、Token-Cost Correlation 與重啟讀回。Phase 1.5 的真實工具與安全硬化是其後工作；Phase 2/3 才做 Memory/Decision 效能實驗。
+**目前下一個真正工程里程碑**：按 DEV_PLAN.md 完成並行／missing-event 正式退出驗收，並為未來多候選 target 定義受治理的 fallback eligibility。Phase 1.5 的真實工具與安全硬化是其後工作；Phase 2/3 才做 Memory/Decision 效能實驗。
 
-最新可查證的歷史測試紀錄是 **2026-10-18：35 passed, 1 warning**；本次僅檢查 Github dev 原始碼與文件，未重新執行測試或 benchmark。現有 Mock、SQLite、Subprocess 的成功測試**不證明**多 Tenant 隔離、自動修復、24/7 管理或可安全接入企業 production 系統。
+最新可查證的功能分支測試紀錄是 **2026-10-26：52 passed, 1 warning in 11.85s**；未執行真實 provider benchmark。現有 Mock、SQLite、Subprocess 的成功測試**不證明**多 Tenant 隔離、自動修復、24/7 管理或可安全接入企業 production 系統。
 
 `2.9–2.10、`8A、`53、`55.1 的治理限制維持：資料檢索、路徑選擇、執行授權與新 Artifact 啟用是不同決策；高信心與記憶命中不代表可跳過 Policy、Independent Validation 或必要的 Human Approval。
 

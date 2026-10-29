@@ -720,3 +720,59 @@ TurboVLA 的成果限於論文指定模擬與少量真機任務，且模型對�
 - **CEAA 推論**：將此例當作 **Policy vs. Manifest Semantic Mismatch** 的負面測試樣本，不當作新的 Skill 架構理論，也不因 High relevance 自動升級研究優先級。
 
 **狀態**：研究筆記增量收錄；待實作 PoC / 對照驗證；**沒有修改正式 v1.9、DEV_PLAN 或實作程式**。
+
+---
+
+## 2026-10-29 收錄｜VulnBump：獨立驗證安全依賴修補的 Agent Benchmark（B 類研究實驗增量）
+
+- **收錄日期**：2026-10-29（台灣）；**論文首次發表**：2026-10-12；**Snyk 工程說明**：2026-10-15。由 2026-10-28 收到的《科技曼讀》「PHP2Shell 事件的啟發」郵件追索到原始論文與公開 Benchmark；**並非當天新發表的論文**。
+- **標題**：*VulnBump: A Benchmark for Fixing Vulnerable Dependencies in Real Projects While Keeping the Build and Tests Green*。
+- **作者**：Gabija Pasiunaite、Ryan McMorrow、Brian Clark、Liran Tal、Luke Tu。
+- **原始論文 URL**：https://arxiv.org/abs/2610.17374
+- **作者／團隊技術說明**：https://snyk.io/blog/vulnbump/
+- **公開 Benchmark / 方法／報告**：https://github.com/snyk-labs/snyk-vulnbump
+- **郵件入口**：《科技曼讀》2026-10-28，〈PHP2Shell 事件的啟發：AI 加速了什麼，以及誰從中得利〉（文章是發現線索，**下列量化結果以論文與公開 Repo 為準**）。
+- **CEAA_relevance**：High；**design_novelty**：Medium（對 CEAA 既有治理概念而言）；**incremental_value**：Experiment / Reproducible Benchmark；**admission_decision**：Include；**類別**：**B — 新實驗／Benchmark／可重現證據**；**研究優先級**：**High（外部實驗基準，非架構變更）**。
+
+### 核心貢獻與可核對事實
+
+VulnBump 將「漏洞修補成功」定義為獨立驗證者在**全新容器**內同時確認四項條件：**(1) 依賴可解析／安裝、(2) 重新掃描後目標漏洞消失、(3) 專案可建置、(4) 原本通過的測試仍通過**。驗證者只信任自身工具與環境取得的證據，不把 Development Agent 的自述當作 PASS。資料集含 **43 個真實 Repository、6 種 Package Manager、307 個依賴升級任務、2,066 個可修補漏洞實例**。
+
+原論文報告同一基礎模型 Claude Sonnet 5.5、每任務最多 110 agent turns 的對照結果：
+
+| Baseline / Harness | 四重 Gate PASS | 解讀 |
+| --- | ---: | --- |
+| Non-agentic package-manager bump | **46.9%**（144/307） | 只套用掃描器建議版本，無 Agent |
+| Claude Code unaided | **59.6%**（183/307） | 無 Snyk 掃描或修補版本提示 |
+| Claude Code + Snyk scan | **77.5%**（238/307） | 同模型 + 外部漏洞掃描與建議版本 |
+| Snyk Evo Remediation Agent | **90.2%**（277/307） | 同模型 + 領域專用修補 Harness |
+
+**原作者主張**：SCA 證據使 Claude Code 的 PASS 提升 **17.9 個百分點**；同樣可取得 Snyk 證據，專用 Harness 又比一般 Harness 高 **12.7 個百分點**。這支持「工具／領域知識與 Harness 設計會影響 Agent 成功率」的可測假說，但不能推論到所有任務或所有模型。原文還指出，通過 Build 不代表漏洞已修復，部分 Agent 曾回報修復成功但獨立掃描仍有漏洞。
+
+### 與 CEAA 既有設計的重疊（不是新的架構發現）
+
+- **System Design v1.9 §8A**：Independent Main/Audit Review、受控 Builder 與 Secure Evolution Gate；**§25–26**：Execution Evidence / Audit Trail；**§56**：Verified Success、CPST、Cost、False PASS 與其他共同研究指標；**§60**：Skill／Routing／Evolution 實驗設計。
+- **DEV_PLAN.md**：Phase 1.5 Builder + Main/Audit、Protected CI / Regression、未來 Goal-driven Autonomous Development 與 Multi-Audit。
+- **既有 Research Watch**：2026-10-16 Google ADK overnight code optimization、2026-10-27 Anthropic/AISI 獨立審查與越界測試、2026-10-28 Claude Code Tool Permission Negative Tests 已涵蓋「開發結果不能只靠 Agent 自評」的概念。
+
+**真正的研究增量**不是「CEAA 應增加一個 Auditor」，而是**有明確任務、固定比較組、可重現獨立 Oracle、可量化失敗分類的 307 題外部 Benchmark**，並將「有無專業掃描資訊」與「一般／專用 Harness」拆成可比較因子。可作 CEAA Secure Evolution、Tool Evidence、Model/Workflow Selection 的外部 Baseline。
+
+### 建議 Baseline / Experiment / Ablation（CEAA 推論；尚未執行）
+
+- **B0 — Deterministic Upgrade**：固定版本升級，不呼叫 Agent（對照最低成本／最低能力）。
+- **B1 — Generic Development Agent**：固定模型、無領域漏洞資料；保留 CEAA 強制審查（真實權限環境不得關閉 Mandatory Gate）。
+- **B2 — B1 + SCA Evidence**：加入固定時間點的掃描結果、目標安全版本、依賴圖；驗證額外資訊對成功率／Token 成本的貢獻。
+- **B3 — B2 + Specialized Skill / Harness**：增加版本相容性診斷、分步修補、bounded retries、受保護測試與 evidence-aware workflow；比較專用流程增量。
+- **B4 — B3 + CEAA Experience-aware Routing**：依任務難度／修補類型選擇 deterministic / generic / specialized，並允許不執行與 Human Escalation；驗證是否在不降低成功與安全的條件下降低 **Cost per Successful Task**。
+
+**Independent Outcome Oracle**：在獨立且乾淨的 container/worktree、固定 dependency DB snapshot／scanner version 下執行 Install → Vulnerability Rescan → Build → Protected Regression Tests；附加「不得新增高嚴重度漏洞」、「不得修改 Protected Tests 以作弊」、「需有完整 Tool/CI Trace」。候選變更與受測 Commit SHA 必須一致；若環境／依賴漂移則標記 UNKNOWN，不當作 PASS。
+
+**Metrics**：Four-Gate Verified PASS、Target Vulnerability Removal、New Vulnerability Rate、Regression / Build Failure、False Self-Reported PASS、Human Escalation、P50/P95 Latency、Token/Tool/CI Cost、**Cost per Successful Task**、不同 Task Difficulty 的成功率；以同任務 paired comparison、固定預算及獨立 holdout 進行。
+
+### 證據與限制
+
+- **證據層級**：原始 arXiv 論文、Snyk 作者說明與公開 GitHub Benchmark（cases、methodology、harness、reports）；研究團隊與工具供應商有利益關聯，尚非獨立第三方跨模型驗證。
+- **原文限制**：同一模型、每升級任務僅一次嘗試；使用 **Snyk Open Source 同時作為資料來源與評分掃描器**，可能有評分器偏差；**未處罰升級新引入的漏洞**；漏洞公告資料庫會隨時間變動，舊 Commit 不保證相同掃描結果。
+- **可重現性限制**：需 Docker、Snyk token、Agent 模型 API、資源與執行時間；官方說明部分容器可用到約 24GB 記憶體、完整跑批需顯著算力。CEAA 尚未跑此 Benchmark，不能把外部結果視為 CEAA 成效。
+- **研究判斷**：適合優先作 **Benchmark Methodology / Oracle Contract** 參考；是否直接使用完整 307 題，須先評估授權、資料集更新、工具費用、資源與安全隔離。僅更新 Research Watch；**未修改 v1.9、DEV_PLAN 或實作程式**。
+

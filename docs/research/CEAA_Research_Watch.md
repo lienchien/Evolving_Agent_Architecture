@@ -776,3 +776,48 @@ VulnBump 將「漏洞修補成功」定義為獨立驗證者在**全新容器**�
 - **可重現性限制**：需 Docker、Snyk token、Agent 模型 API、資源與執行時間；官方說明部分容器可用到約 24GB 記憶體、完整跑批需顯著算力。CEAA 尚未跑此 Benchmark，不能把外部結果視為 CEAA 成效。
 - **研究判斷**：適合優先作 **Benchmark Methodology / Oracle Contract** 參考；是否直接使用完整 307 題，須先評估授權、資料集更新、工具費用、資源與安全隔離。僅更新 Research Watch；**未修改 v1.9、DEV_PLAN 或實作程式**。
 
+---
+
+## 2026-10-30 收錄｜NeMo Relay × Hermes ToolPerf：Trace 驅動的 Agent Harness 改善與模型依賴的演化取捨（B 類實驗增量）
+
+- **收錄日期**：2026-10-30；**原文發表**：2026-09-30（本日 NVIDIA 技術郵件再次推薦；不是 10/30 新發表的論文）。
+- **文章標題／原始 URL**：[Tracing Agent Harness Behavior with NVIDIA NeMo Relay](https://developer.nvidia.com/blog/tracing-agent-harness-behavior-with-nvidia-nemo-relay/)。
+- **作者**：William Markito Oliveira、Maryam Najafian、Moon Chung、Teknium（NVIDIA 技術部落格；Teknium 為 Nous Research / Hermes Agent 貢獻者）。
+- **可重現來源**：[NousResearch/hermes-toolperf-evals](https://github.com/NousResearch/hermes-toolperf-evals)（benchmark、方法、August 6 rerun traces）；[NVIDIA/nemoclaw-community Hermes Relay tutorial](https://github.com/NVIDIA/nemoclaw-community/tree/main/examples/tools/hermes-relay-tracing)（範例與 verifier）。
+- **研究優先級**：**High（研究方法與可重現 A/B 證據）**；`CEAA_relevance=High`；`design_novelty=Low`；`incremental_value=Experiment`；`admission_decision=Include`；**分類 B**。不代表 CEAA 已完成能力演化，也不是新的架構模組。
+
+### 核心貢獻：從執行歷史找出可修補失敗模式，並以固定 Oracle 驗證修改
+
+**可核對事實**：NeMo Relay 提供 ATOF（有父子關係、時間戳與起訖事件的 JSONL）、ATIF（逐步互動與工具軌跡）、OpenTelemetry/OpenInference traces；ATIF 的「請求工具呼叫」不能證明工具實際成功，需與 ATOF tool start/end、error、UUID 交叉核對。官方教程提供隔離 Docker 工具執行、明確成功標記及可重跑範例。
+
+**外部研究方法**：Nous Research 從 production session logs 與 tool schema 問題分類萃取 9 種失敗模式，將其轉成 deterministic benchmark；比較固定 Hermes baseline 與 tool-layer fixes，在 2 個模型、9 個任務、每任務每組 3 次，共 **108 runs**；使用相同 prompt、工具、執行限制與驗證標準，ATOF 記錄模型／工具呼叫、錯誤、重試、payload 與延遲。原始資料及 rerun 結果已公開。
+
+| 2026-08-06 canonical rerun | Baseline verified success | Fixes verified success | 平均 LLM calls | 平均 tool calls | 平均時長 |
+| --- | ---: | ---: | --- | --- | --- |
+| Claude Sonnet 4.5 | 24/27（89%） | 23/27（85%） | 2.9 → 2.8 | 2.2 → 2.1 | 16 → 22 秒 |
+| Qwen3 Coder 30B | 19/27（70%） | 22/27（81%） | 3.8 → 4.9 | 2.8 → 3.9 | 27 → 42 秒 |
+
+**作者報告與限制**：Qwen 的 tool-layer fixes 讓額外 3/27 次任務成功，但平均工具呼叫、結果資料量（16→33 KB）與時間也增加；Sonnet 的成功數反而少 1/27。某些錯誤復原成功改善，但 case-insensitive search 任務因 probe 造成多餘探索，屬回歸。這是**小樣本、特定工具失敗案例、模型依賴**的對照，不可將 70→81% 當成一般 Agent 或 CEAA 的通用增益；原 repo README 另有早期 headline numbers，應以含原始 trace 的 **2026-08-06 rerun** 為優先可重現證據。
+
+### 與 CEAA 既有設計重疊（非新增架構）
+
+- **System Design v1.9 §1、§2.8–2.10、§8A、§25–26、§56–60**：Capability/Skill Evolution、Decision/Memory Routing、Trace、Independent Outcome Validation、Secure Evolution Gate、Cost per Successful Task 與長期消融都已規劃；**DEV_PLAN.md Phase 1 Telemetry Runtime** 已有 task/trace、retry/fallback、cost、summary 的基礎，尚有缺失事件與並行驗收未完成。
+- **既有 Research Watch**：2026-10-15 Langfuse/LangSmith Observability、2026-10-16 Google ADK 優化、2026-10-17 KDD Cup Trace-driven 改善、2026-10-29 VulnBump 專用 Harness 與 Independent Oracle，均已討論「可觀測性、流程改善與驗證」。不能因主題相似就宣稱 CEAA 新架構發現。
+
+**真正新增的研究價值**：提供**由真實失敗 trace → failure taxonomy → deterministic fixtures → 版本化修補候選 → 多模型重複 A/B → 失敗回歸分析**的完整可重現方法，且外部數據顯示「成功率改善可能伴隨成本上升、在另一模型上失效」。這是 CEAA **Skill/Agent 隨時間成長與優化**研究可直接採用的實驗範本，能避免把單次改善或更多執行步數誤認為能力演化。
+
+### 建議 Baseline / Experiment / Ablation（CEAA 推論；尚未實施）
+
+- **B0 — Static Agent / Skill**：固定版本、無演化，僅蒐集 trace；共同模型、工具、預算、任務與 oracle。
+- **B1 — Naive Iterative Tuning**：僅憑成功率／Agent 自述或人工挑選案例調整 prompt/tool，無完整 failure taxonomy；需保留獨立 verifier 以公平比較。
+- **B2 — Trace-derived Evolution Candidate**：從完整成功／失敗 trace 萃取錯誤類型，提出可版本化 Skill/Tool/Harness 修補候選，逐類做 targeted regression。
+- **B3 — B2 + Independent Gate**：每次候選變更以固定 deterministic oracle、相同模型快照、預算、重複試驗、held-out regression、Policy / Secure Evolution Gate 驗證；不達門檻拒絕或回滾。
+- **B4 — CEAA Governed Longitudinal Evolution**：在多輪任務中依結果更新 Skill 版本與選擇策略；每個時間點保留 frozen benchmark 與 unseen holdout，比較 B0/B3/B4 的**長期能力成長曲線、能力保留、跨任務遷移與總成本**。將歷史學習資料與評估集分離，禁止未來資訊洩漏。
+
+**Oracle / Metrics**：工具實際執行與獨立驗證產物（非僅 ATIF request 或 Agent「完成」回覆）；Verified Task Success、按失敗類型的 Recovery/Regression、False PASS、Capability Retention、Unseen Task Transfer、Model-dependent Effect、P50/P95 Latency、LLM/Tool Calls、Token/Tool Result Bytes、Human Oversight、**Cost per Successful Task（包含探索、測試、審核、回滾的演化成本）**。要求記錄 `skill_version`、`candidate_change`、`trace_id`、`failure_class`、`oracle_result`、`promotion_decision` 與 `rollback_reason`。
+
+### 證據、限制與執行邊界
+
+- **來源可信度**：NVIDIA 官方工程教程 + Nous Research 公開 benchmark 與 traces；仍屬參與開發團隊的自有實驗，尚未獨立跨框架重現。作者與來源日期已核對。
+- **可重現性限制**：9 個故意觸發工具錯誤的案例，每模型／組別／任務僅 3 次；不代表一般任務分布。需要相同版本、可執行 harness、模型 API、隔離工具環境；部分官方教程要求 Docker，且原始結果的模型版本未必可長期取得。測試需報告信賴區間與成本變異，不因 1/27 的變動宣稱顯著。
+- **CEAA 實作狀態**：上述均為待驗證實驗設計；本次僅更新 Research Watch，**未修改正式 v1.9、DEV_PLAN 或實作程式**。Phase 1 既有 Telemetry 退出條件仍優先，不因研究收錄自動擴張工程範圍。

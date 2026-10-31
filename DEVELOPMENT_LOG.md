@@ -1299,3 +1299,13 @@ Summary 提供明確 completed denominator、success/failure rate、事件數與
 - 警告仍為既有 Starlette／AnyIO `BlockingPortal` alias 棄用。
 - 既定 Phase 1 exit checklist 已全部通過，**Phase 1 在目前 feature 分支標記 Complete**。
 - 本輪尚未提交、推送或合併；整合至 `dev` 後才進入 Phase 1.5。
+
+---
+
+## 2026-10-31 — Phase 1 提交與 `dev` 合併
+
+- `feature/provider-failure-stage` 提交 `5029547`（`feat: complete Phase 1 telemetry and recovery exit criteria`），並推送至 `origin/feature/provider-failure-stage`。
+- 合併前確認本地 `dev`、`origin/dev` 與 feature 起點同為 `1e2f485`，因此沒有待整合的遠端差異。
+- 以保留 merge commit 的方式合併至 `dev`：`7f48db7`（`merge: complete Phase 1 telemetry and recovery`）。
+- 合併後在 `dev` 執行完整 pytest：**59 passed, 1 warning in 15.20s**；警告仍為既有 Starlette／AnyIO `BlockingPortal` alias 棄用。
+- `README.md`、`README.zh-TW.md`、`PROJECT_STATUS.md`、`DEV_PLAN.md` 與 Telemetry 文件已更新為 Phase 1 完成且合併至 `dev` 的狀態。Phase 1.5 仍未開始。

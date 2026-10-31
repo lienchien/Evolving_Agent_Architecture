@@ -2,7 +2,7 @@
 
 更新日期：2026-10-31
 
-目前實作分支：`feature/provider-failure-stage`
+Phase 1 實作分支：`feature/provider-failure-stage`（已合併至 `dev`）
 
 ## 目的與邊界
 
@@ -160,10 +160,8 @@ Provider／LLM capability generation 與 boundary-test generation failure 已從
 runtime/execution 改為 `stage=provider`，並保存固定 error code、去敏摘要、原始 exception type
 及 provider operation metadata。
 
-Phase 1 正式 checklist（包含並行 task telemetry correlation 與 missing-event 行為）已在目前 feature
-分支完成。後續工作：
+Phase 1 正式 checklist（包含並行 task telemetry correlation 與 missing-event 行為）已完成並合併至 `dev`。後續工作：
 
-1. 整合此 feature 分支至 `dev`。
-2. 視查詢量決定是否將 service-side filter／summary 下推為 repository aggregate contract。
-3. Phase 1.5 加入 PostgreSQL adapter，執行同一套 contract tests 與 migration 驗證，並將
+1. 視查詢量決定是否將 service-side filter／summary 下推為 repository aggregate contract。
+2. Phase 1.5 加入 PostgreSQL adapter，執行同一套 contract tests 與 migration 驗證，並將
    instrumentation health 接入正式監控／告警。

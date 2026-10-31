@@ -7,7 +7,7 @@
 ![Recorded tests](https://img.shields.io/badge/recorded%20tests-59%20passed-green)
 
 > [!WARNING]
-> **Research prototype; not production-ready.** The currently implemented runtime uses a mock LLM, SQLite, a Python subprocess executor and console notifications. Real-provider support, hardened sandboxing, production authorization, independent Main/Audit secure review, Memory Router and Decision Agent runtime are **not yet integrated**. The current feature branch passed 59 tests on **2026-10-31**; this is controlled development evidence, not production assurance.
+> **Research prototype; not production-ready.** The currently implemented runtime uses a mock LLM, SQLite, a Python subprocess executor and console notifications. Real-provider support, hardened sandboxing, production authorization, independent Main/Audit secure review, Memory Router and Decision Agent runtime are **not yet integrated**. The Phase 1 implementation passed 59 tests on **2026-10-31**; this is controlled development evidence, not production assurance.
 
 CEAA explores how agents can turn real execution history into **versioned, validated, reusable and governed capabilities and decisions**. Its core design is domain-neutral: specific workloads are experiments, not hardwired application architecture.
 
@@ -32,7 +32,7 @@ Capability Evolution and Experience-guided Decision Evolution are **mechanisms s
 
 ## Project Status
 
-**Documentation aligned to v1.9 and the 2026-10-31 Phase 1 exit revision. Phase 1 exit criteria are verified on the current feature branch; integration into `dev` is still pending, and Phase 1.5 has not started.**
+**Documentation aligned to v1.9 and the 2026-10-31 Phase 1 exit revision. Phase 1 exit criteria are verified and merged into `dev`. Phase 1.5 has not started.**
 
 | Area | Verified status |
 | --- | --- |
@@ -40,14 +40,14 @@ Capability Evolution and Experience-guided Decision Evolution are **mechanisms s
 | FastAPI, SQLite capability/report/approval/audit, concurrency and restart persistence | Implemented; historical validation |
 | Token / Cost Research foundation and research endpoints | Implemented; missing real provider usage remains unavailable |
 | ExecutionTrace / RoutingDecision / Failure / Recovery domain, TelemetryRepository and SQLite schema v1 | **Foundation implemented**, contract tests recorded |
-| Runtime telemetry, task/trace correlation, bounded retry/fallback evidence, missing-event detection, filtering and summary API | **Implemented and Phase 1 exit-verified on the current feature branch**; alternate targets are explicitly eligible, same-scope, idempotent, priority ordered and single-attempt |
+| Runtime telemetry, task/trace correlation, bounded retry/fallback evidence, missing-event detection, filtering and summary API | **Implemented and Phase 1 exit-verified on `dev`**; alternate targets are explicitly eligible, same-scope, idempotent, priority ordered and single-attempt |
 | Real providers, Docker Sandbox, PostgreSQL adapter, CodeBuilderRuntime, independent Main/Audit Gate, auth/policy hardening | **Phase 1.5 planned; not implemented** |
 | MemoryRouterInterface, DecisionModelInterface, Static Skill Packages, Validated Path Registry | **Phase 2 PoC planned; not implemented** |
 | Reliable automated recovery, recursive multi-Agent organization, shared capability marketplace | Future / optional research |
 
-**Current feature-branch full suite: 59 passed, 1 warning in 14.69s (2026-10-31)**. The warning is the existing Starlette/AnyIO `BlockingPortal` alias deprecation.
+**Phase 1 integrated full suite: 59 passed, 1 warning (2026-10-31)**. The warning is the existing Starlette/AnyIO `BlockingPortal` alias deprecation.
 
-**Immediate next milestone:** integrate the verified feature branch, then begin the planned Phase 1.5 real-infrastructure and security hardening work. The Phase 1 exit suite now covers concurrent task/trace/event/cost correlation and restart-persistent missing-event detection. See [Execution Telemetry Database](docs/TELEMETRY_DATABASE.md).
+**Immediate next milestone:** begin the planned Phase 1.5 real-infrastructure and security hardening work. The Phase 1 exit suite covers concurrent task/trace/event/cost correlation and restart-persistent missing-event detection. See [Execution Telemetry Database](docs/TELEMETRY_DATABASE.md).
 
 **Actually implemented mock flow** (distinct from the full v1.9 design):
 
@@ -85,7 +85,7 @@ The architecture maintains distinct evidence layers:
 
 ### Current evidence requirement
 
-The repository now has automated Main Agent/runtime telemetry, bounded retry and governed alternate-target fallback evidence, provider-failure mapping, concurrent correlation and restart-persistent missing-event detection, with shared task/trace identity across token-cost metrics. These satisfy the defined Phase 1 evidence path on the current feature branch:
+The repository now has automated Main Agent/runtime telemetry, bounded retry and governed alternate-target fallback evidence, provider-failure mapping, concurrent correlation and restart-persistent missing-event detection, with shared task/trace identity across token-cost metrics. These satisfy the defined Phase 1 evidence path on `dev`:
 
 ```text
 Task / Trace → Routing Decision / Candidate Set / Selected Target
@@ -400,7 +400,7 @@ Do not infer production authentication, multi-tenant data isolation, full Code E
 
 # 11. Phase 1 Runtime Validation
 
-The current feature-branch integrated test result is **59 passed, 1 warning on 2026-10-31**. It includes telemetry/recovery contracts, provider-failure mapping, concurrent runtime/cost correlation, durable missing-event detection, bounded retry, governed alternate-target fallback and recovery-gate safety, restart persistence and query filters. Controlled concurrency and prior HTTP/Uvicorn evidence are documented in [PROJECT_STATUS.md](PROJECT_STATUS.md). These results do **not** establish a production-ready system, real token savings, or implemented MADE.
+The Phase 1 integrated test result is **59 passed, 1 warning on 2026-10-31**. It includes telemetry/recovery contracts, provider-failure mapping, concurrent runtime/cost correlation, durable missing-event detection, bounded retry, governed alternate-target fallback and recovery-gate safety, restart persistence and query filters. Controlled concurrency and prior HTTP/Uvicorn evidence are documented in [PROJECT_STATUS.md](PROJECT_STATUS.md). These results do **not** establish a production-ready system, real token savings, or implemented MADE.
 
 For a configured local environment:
 
@@ -420,7 +420,7 @@ Phase 1 is complete only when runtime success/failure/routing/retry/fallback tel
 
 | Phase | Objective | Status |
 | --- | --- | --- |
-| **1 — Core + Telemetry** | Mock capability lifecycle, token-cost foundation and durable execution/routing/failure history | **Complete on current feature branch**: all defined exit checks passed; integration into `dev` remains pending |
+| **1 — Core + Telemetry** | Mock capability lifecycle, token-cost foundation and durable execution/routing/failure history | **Complete on `dev`**: all defined exit checks passed |
 | **1.5 — Real Infrastructure + Governed Builder** | Real provider, PostgreSQL, Docker, CodeBuilderRuntime, independent Main/Audit, auth/policy and human oversight | **Planned / not implemented** |
 | **2 — Retrieval + MADE PoC** | Scoped Capability/Memory Retrieval, decision routing, static Skill Packages, validated-path reuse, bounded recovery | **Planned / not implemented** |
 | **3 — Evaluation** | E1 Capability/Cost, E2 Memory×Decision, E3 Skill Optimization, E4 Package Hierarchy, E5 Recovery, optional E6 HYSET tool-retrieval baseline | **Research design / not evaluated** |

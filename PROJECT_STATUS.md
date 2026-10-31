@@ -2,19 +2,19 @@
 
 更新日期：2026-10-31
 
-開發基準：`dev`；目前開發分支：`feature/provider-failure-stage`
+目前分支：`dev`；Phase 1 feature：`feature/provider-failure-stage`（已合併）
 
 ## Current Stage
 
-**Phase 1 — Complete on Current Feature Branch / Integration into `dev` Pending**
+**Phase 1 — Complete on `dev` / Phase 1.5 Not Started**
 
 Phase 1 原有的 Core Baseline 開發與驗證條件已完成，但在確認 Execution Experience & Evolution Telemetry 是未來 Experience Memory、system diagnosis、Capability / Agent / Organization Evolution 的必要歷史資料層後，**Phase 1 退出條件已重新開啟並擴充**。
 
-目前狀態應解讀為：**Core Baseline、Telemetry runtime core、bounded retry、provider failure stage、受治理 alternate-target fallback、並行 correlation 與 missing-event detection 均已通過既定退出驗證**。Phase 1 在目前 feature 分支完成；整合至 `dev` 後才開始 **Phase 1.5 — Real Infrastructure & Hardening**。
+目前狀態應解讀為：**Core Baseline、Telemetry runtime core、bounded retry、provider failure stage、受治理 alternate-target fallback、並行 correlation 與 missing-event detection 均已通過既定退出驗證，並合併至 `dev`**。下一階段為 **Phase 1.5 — Real Infrastructure & Hardening**。
 
 核心 mock 流程、FastAPI TestClient 整合、併發一致性與跨程序持久化已取得執行證據。
 獨立 Uvicorn 已完成 loopback HTTP 全流程與停止／重啟持久化驗證；新增 Token／費用
-Phase 1 退出修訂分支目前完整測試結果為 **59 passed, 1 warning**。
+Phase 1 合併至 `dev` 後完整測試結果為 **59 passed, 1 warning**。
 這不是 production-ready 或任意負載下的效能保證；安全與營運強化仍屬後續工作。
 
 歷史過程見 [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md)；API 行為及升級條件見
@@ -33,7 +33,7 @@ CEAA 上位理念明確化為 **跨場景 Context-Aware Adaptive Decision**：�
 
 **研究方向已收斂：跨領域環境感知、自適應決策、風險／機會成本評估、受治理的能力與決策演化。** 核心架構原則與 Phase 1 → 1.5 → 2 → 3 的階段順序列入 [DEV_PLAN.md](DEV_PLAN.md) Direction Baseline；模型、Adapter、Domain Skill 與實驗方法保持可替換。新增構想不得無證據擴張目前 Phase 1 的退出範圍。
 
-**狀態：方向基準本身僅是文件與優先順序，不代表新增 Runtime 功能。** Telemetry runtime、bounded retry、Recovery contract、provider failure stage、受治理 alternate-target fallback、並行／missing-event 正式退出驗收均已完成；下一個階段是整合此分支後進入 Phase 1.5。
+**狀態：方向基準本身僅是文件與優先順序，不代表新增 Runtime 功能。** Telemetry runtime、bounded retry、Recovery contract、provider failure stage、受治理 alternate-target fallback、並行／missing-event 正式退出驗收均已完成並合併至 `dev`；下一個階段是 Phase 1.5。
 
 ---
 
@@ -288,10 +288,10 @@ Queue 保留擴充介面，Phase 1 不透過它執行背景任務。
 - [x] 16 個並行 task 的 trace／decision／observation／cost identity 無交叉污染，重啟後一致。
 - [x] Telemetry observation 寫入故障不改變 task outcome，missing-event summary 可在重啟後重建。
 
-因此 **Phase 1 = Complete on current feature branch**。Telemetry 核心 runtime wiring、bounded retry、
+因此 **Phase 1 = Complete on `dev`**。Telemetry 核心 runtime wiring、bounded retry、
 阻擋／耗盡證據、recovery analysis/planner/gate/outcome contracts、provider failure stage、受治理
 alternate-target fallback、restart correlation、並行 identity isolation 與 durable missing-event detection
-均已完成正式 exit checklist；目前只剩提交／整合程序，不再是 Phase 1 工程阻塞。
+均已完成正式 exit checklist；Phase 1 工程阻塞已解除。
 
 ---
 
@@ -396,7 +396,7 @@ Neither changes mandatory Phase 1.5 exit criteria. Strix does not replace Main/A
 
 | 階段 | 規劃與狀態 |
 |---|---|
-| Phase 1 | 目前 feature 分支已完成：Core Baseline 與 Execution Experience & Evolution Telemetry 正式退出條件均通過；待整合至 `dev` |
+| Phase 1 | 已於 `dev` 完成：Core Baseline 與 Execution Experience & Evolution Telemetry 正式退出條件均通過 |
 | Phase 1.5 | 尚未開始：Real Infrastructure + Controlled Code Evolution + Experimental Validation。除 LiteLLM/NIM/OpenRouter、PostgreSQL、Docker、auth/policy/recovery 外，實作 Skill/Sub-Agent autonomous construction、Main/Audit Secure Evolution Gate、frontier semantic review、Validation Incident、mandatory Human Escalation，並執行 reviewer ablation、known-defect security benchmark、model configuration 與 escalation-burden 實驗；不包含完整 recursive organization runtime |
 | Phase 2 | 規劃：pgvector、embedding、語意檢索、相容性篩選與排序；目前僅完成 task_family 精確去重 |
 | Phase 3 | 規劃：在 Phase 1 量測基礎上，以 tracing、Phoenix/DeepEval/MLflow 執行跨模型 baseline、token amortization、相似度、重用與回歸實驗 |

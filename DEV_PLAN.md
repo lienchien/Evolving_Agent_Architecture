@@ -4,14 +4,14 @@
 
 ## 目前基準
 
-**Phase 1 — Complete on current feature branch：Core Baseline 與 Execution Experience & Evolution Telemetry 正式退出條件均已驗證。**
+**Phase 1 — Complete on `dev`：Core Baseline 與 Execution Experience & Evolution Telemetry 正式退出條件均已驗證。**
 
-目前實作分支為 `feature/provider-failure-stage`；既有 Core Baseline 與 Token／費用研究
+Phase 1 feature 分支為 `feature/provider-failure-stage`，已合併至 `dev`；既有 Core Baseline 與 Token／費用研究
 功能已完成驗證。Telemetry 的 backend-neutral domain／repository、
 SQLite schema v1、runtime writing、bounded retry、Recovery contracts 與 summary/filter API 已建立；
 provider failure stage、受治理 alternate-target fallback、並行 correlation 與 durable missing-event detection
-已完成正式驗收。Phase 1 在目前 feature 分支完成，尚待提交或合併至 `dev`。
-目前 `feature/provider-failure-stage` 的完整測試為 **59 passed, 1 warning in 14.69s**（2026-10-31）。
+已完成正式驗收。Phase 1 在 `dev` 完成。
+合併後 `dev` 的完整測試為 **59 passed, 1 warning**（2026-10-31）。
 實作仍採 Mock LLM、SQLite、Python subprocess 與 Console Notification。
 本輪實際過程見 [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md)，完成度見
 [PROJECT_STATUS.md](PROJECT_STATUS.md)。
@@ -51,7 +51,7 @@ provider failure stage、受治理 alternate-target fallback、並行 correlatio
 
 | 順序 | 當前或目標工作 | 進入下一階段前的證據 |
 | --- | --- | --- |
-| **Phase 1 — 已完成（目前 feature 分支）** | 完成 Execution Telemetry Runtime、Recovery contracts、Routing/候選、成功與失敗、Retry/Fallback、Task/Trace 關聯、Summary API、重啟持久性及 Token/Cost 對齊 | Runtime wiring、bounded retry、recovery contracts、provider failure stage、受治理 alternate-target fallback、並行 correlation 與 missing-event 正式驗收均已通過；待整合至 `dev` |
+| **Phase 1 — 已完成（`dev`）** | 完成 Execution Telemetry Runtime、Recovery contracts、Routing/候選、成功與失敗、Retry/Fallback、Task/Trace 關聯、Summary API、重啟持久性及 Token/Cost 對齊 | Runtime wiring、bounded retry、recovery contracts、provider failure stage、受治理 alternate-target fallback、並行 correlation 與 missing-event 正式驗收均已通過並合併至 `dev` |
 | **Phase 1.5 — 原定下一階段** | 真實 LLM/usage、PostgreSQL、隔離 Sandbox、受控 Builder、Main/Audit 與 Policy/Human Escalation | 依既定安全、治理及受控生成驗證門檻；不因新增願景降低 Gate |
 | **Phase 2 — 最小自適應決策 PoC** | Memory Router/Decision Model、Validated Path、Skill Packages、最小 Domain-neutral Context/Objective/Candidate/Risk contracts，受限候選策略選擇與 Fallback | 示範當下 Context 改變時，能依適用條件安全改選、拒絕或 Replan；保留審核和輸入新鮮度 |
 | **Phase 3 — 正式研究驗證** | 至少兩個異質場景、環境漂移/OOD、完整對照與消融、Cost per Successful Task、穩定性及安全失效率 | 事前訂好 oracle、資訊邊界、風險預算；以樣本外驗證檢查是否優於 baseline，允許負面結論 |
@@ -131,7 +131,7 @@ provider failure stage、受治理 alternate-target fallback、並行 correlatio
 詳細 schema、SQLite／PostgreSQL adapter 邊界與驗證見
 [TELEMETRY_DATABASE.md](docs/TELEMETRY_DATABASE.md)。目前 service／runtime wiring、有界重試、
 Recovery contracts、failure aggregation、查詢增量與 provider failure stage 已完成；仍不能在
-既定並行／missing-event 驗收已完成，Phase 1 可在目前 feature 分支標記完成；整合至 `dev` 後進入 Phase 1.5。
+既定並行／missing-event 驗收已完成，Phase 1 已在 `dev` 標記完成；下一階段為 Phase 1.5。
 
 這不是未來才做的 Adaptive Agent Organization 功能，而是**現在就必須建立的研究資料基礎**。
 
@@ -298,7 +298,7 @@ Build upon existing `execution_traces`, `routing_decisions`, `execution_observat
 - Durable event lineage: original failure → retry attempts → escalation/analysis → candidate repair → gate decision → final outcome. Keep both successful and failed executions as denominator for population analysis.
 - Distinguish retryable transient errors from semantic, policy, authorization, state/side-effect and permanent errors. Non-idempotent actions must not be blindly retried; ambiguous completion must first be reconciled.
 - Contract tests with Mock diagnostics: bounded retry, retry exhaustion, unsafe retry blocked, failed/unknown gate fails closed, budget exhaustion, restart-persistent correlation, redacted payloads. **No autonomous repair Agent required for Phase 1 exit.**
-- Implemented on `feature/telemetry-runtime-wiring`: `RetryPolicyInterface`, `FailureAnalysisInterface`, `RecoveryPlannerInterface`, `RecoveryGateInterface`, `RecoveryOutcomeRepository`; the minimum retry/recovery data contracts; fail-closed bounded retry and denied/unknown gates; budget/retry exhaustion; unsafe-retry blocking; durable lineage; restart persistence and redaction tests. `feature/provider-failure-stage` adds explicit provider-operation errors, maps capability/boundary-test generation failures to sanitized provider-stage telemetry, provides a bounded alternate-target fallback restricted to explicit same-scope, input-compatible, idempotent active capabilities, and completes formal concurrent/missing-event exit verification. Phase 1 is complete on the current feature branch; integration into `dev` remains pending.
+- Implemented on `feature/telemetry-runtime-wiring`: `RetryPolicyInterface`, `FailureAnalysisInterface`, `RecoveryPlannerInterface`, `RecoveryGateInterface`, `RecoveryOutcomeRepository`; the minimum retry/recovery data contracts; fail-closed bounded retry and denied/unknown gates; budget/retry exhaustion; unsafe-retry blocking; durable lineage; restart persistence and redaction tests. `feature/provider-failure-stage` adds explicit provider-operation errors, maps capability/boundary-test generation failures to sanitized provider-stage telemetry, provides a bounded alternate-target fallback restricted to explicit same-scope, input-compatible, idempotent active capabilities, and completes formal concurrent/missing-event exit verification. Phase 1 is complete and merged into `dev`.
 
 ### Phase 1.5 — integration hardening
 

@@ -14,9 +14,9 @@ from src.domain.research import LLMInteractionMetric, TaskCostMetric
 from src.interfaces.repository import CapabilityRepository
 
 
-# A family has one current generation/review/active slot. Terminal versions
-# remain in the registry without blocking a replacement.
-_OPEN_STATUSES = "'draft','candidate','validating','testing','tested','pending_approval','approved','active'"
+# A family has one current generation/review slot and one primary active
+# capability. Explicit fallback capabilities may also remain active.
+_RESERVATION_STATUSES = "'draft','candidate','validating','testing','tested','pending_approval','approved'"
 
 
 class SqliteCapabilityRepository(CapabilityRepository):
@@ -56,18 +56,38 @@ class SqliteCapabilityRepository(CapabilityRepository):
             columns = {row[1] for row in conn.execute("PRAGMA table_info(capabilities)")}
             if "revision" not in columns:
                 conn.execute("ALTER TABLE capabilities ADD COLUMN revision INTEGER NOT NULL DEFAULT 0")
-            duplicates = conn.execute(
-                f"SELECT task_family FROM capabilities WHERE status IN ({_OPEN_STATUSES}) "
+            duplicate_reservations = conn.execute(
+                f"SELECT task_family FROM capabilities WHERE status IN ({_RESERVATION_STATUSES}) "
                 "GROUP BY task_family HAVING COUNT(*) > 1 LIMIT 1"
             ).fetchone()
-            if duplicates:
+            if duplicate_reservations:
                 raise CapabilityConflictError(
-                    "Existing database has multiple open capabilities for a task family; "
+                    "Existing database has multiple reserved capabilities for a task family; "
                     "resolve them explicitly before starting the upgraded service"
                 )
+            duplicate_primaries = conn.execute(
+                "SELECT task_family FROM capabilities WHERE status = 'active' "
+                "AND COALESCE(json_extract(data, '$.fallback_eligible'), 0) = 0 "
+                "GROUP BY task_family HAVING COUNT(*) > 1 LIMIT 1"
+            ).fetchone()
+            if duplicate_primaries:
+                raise CapabilityConflictError(
+                    "Existing database has multiple primary active capabilities for a "
+                    "task family; mark explicit fallbacks or resolve them before startup"
+                )
+            conn.execute("DROP INDEX IF EXISTS uq_capabilities_open_family")
             conn.execute(
-                "CREATE UNIQUE INDEX IF NOT EXISTS uq_capabilities_open_family "
-                f"ON capabilities(task_family) WHERE status IN ({_OPEN_STATUSES})"
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_capabilities_reserved_family "
+                f"ON capabilities(task_family) WHERE status IN ({_RESERVATION_STATUSES})"
+            )
+            conn.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_capabilities_primary_active_family "
+                "ON capabilities(task_family) WHERE status = 'active' "
+                "AND COALESCE(json_extract(data, '$.fallback_eligible'), 0) = 0"
+            )
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS ix_capabilities_active_family "
+                "ON capabilities(task_family, status) WHERE status = 'active'"
             )
             conn.execute(
                 """CREATE TABLE IF NOT EXISTS test_reports (
@@ -149,7 +169,17 @@ class SqliteCapabilityRepository(CapabilityRepository):
         with self._connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
             row = conn.execute(
-                f"SELECT data FROM capabilities WHERE task_family = ? AND status IN ({_OPEN_STATUSES})",
+                "SELECT data FROM capabilities WHERE task_family = ? AND status = 'active' "
+                "AND COALESCE(json_extract(data, '$.fallback_eligible'), 0) = 0 "
+                "ORDER BY COALESCE(json_extract(data, '$.routing_priority'), 100), "
+                "capability_id LIMIT 1",
+                (task_family,),
+            ).fetchone()
+            if row is not None:
+                return Capability.model_validate_json(row[0]), False
+            row = conn.execute(
+                f"SELECT data FROM capabilities WHERE task_family = ? "
+                f"AND status IN ({_RESERVATION_STATUSES})",
                 (task_family,),
             ).fetchone()
             if row is not None:
@@ -245,14 +275,27 @@ class SqliteCapabilityRepository(CapabilityRepository):
         return [Capability.model_validate_json(r[0]) for r in rows]
 
     def find_active_by_task_family(self, task_family: str) -> Capability | None:
+        candidates = self.list_active_by_task_family(task_family)
+        return next(
+            (candidate for candidate in candidates if not candidate.fallback_eligible),
+            None,
+        )
+
+    def list_active_by_task_family(self, task_family: str) -> list[Capability]:
         with self._connect() as conn:
-            row = conn.execute(
+            rows = conn.execute(
                 "SELECT data FROM capabilities WHERE task_family = ? AND status = ?",
                 (task_family, CapabilityStatus.ACTIVE.value),
-            ).fetchone()
-        if row is None:
-            return None
-        return Capability.model_validate_json(row[0])
+            ).fetchall()
+        candidates = [Capability.model_validate_json(row[0]) for row in rows]
+        return sorted(
+            candidates,
+            key=lambda item: (
+                item.fallback_eligible,
+                item.routing_priority,
+                item.capability_id,
+            ),
+        )
 
     def save_llm_interaction(self, metric: LLMInteractionMetric) -> None:
         with self._connect() as conn:

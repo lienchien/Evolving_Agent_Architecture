@@ -10,7 +10,7 @@ from langgraph.graph import END, StateGraph
 from src.agents.evolution_agent import EvolutionAgent
 from src.domain.gap import CapabilityGap
 from src.domain.capability import CapabilityStatus
-from src.domain.errors import CapabilityConflictError
+from src.domain.errors import CapabilityConflictError, ProviderOperationError
 from src.domain.telemetry import (
     DecisionEvidence,
     FailureContext,
@@ -46,6 +46,7 @@ class TaskState(TypedDict, total=False):
     capability_reused: bool
     capability_execution_ms: float
     retry_count: int
+    fallback_count: int
     routing_decision_id: str
 
 
@@ -97,8 +98,12 @@ class MainAgent:
         started_at = datetime.now(timezone.utc)
         started = perf_counter()
         try:
-            capability = self._capability_service.find_active_by_task_family(
+            candidates = self._capability_service.list_active_by_task_family(
                 state["task_family"]
+            )
+            capability = next(
+                (candidate for candidate in candidates if not candidate.fallback_eligible),
+                None,
             )
         except Exception as exc:
             completed_at = datetime.now(timezone.utc)
@@ -130,7 +135,7 @@ class MainAgent:
             decision = self._telemetry.record_routing_decision(
                 trace_id=state["trace_id"],
                 task_id=state.get("task_id"),
-                candidate_ids=[capability.capability_id] if capability else [],
+                candidate_ids=[item.capability_id for item in candidates],
                 selected_target_id=capability.capability_id if capability else None,
                 selected_target_version=(
                     capability.capability_version if capability else None
@@ -143,7 +148,7 @@ class MainAgent:
                         if capability
                         else "No active capability matched the task family"
                     ),
-                    evidence_refs=[capability.capability_id] if capability else [],
+                    evidence_refs=[item.capability_id for item in candidates],
                     expected_outcome=(
                         "execute_active_capability"
                         if capability
@@ -164,6 +169,7 @@ class MainAgent:
         capability_id = state.get("capability_id") or "unresolved"
         trace_id = state.get("trace_id") or f"UNPERSISTED-{state.get('task_id', 'task')}"
         capability = self._capability_service.get(capability_id)
+        primary_capability = capability
         safety_requirements = (
             capability.safety_requirements if capability is not None else {}
         )
@@ -184,8 +190,12 @@ class MainAgent:
             else 0
         )
         retry_count = 0
+        fallback_count = 0
+        attempted_capability_ids = {capability_id}
+        current_decision_id = state.get("routing_decision_id")
         parent_observation_id: str | None = None
         pending_recovery: tuple[str, RetryDecision] | None = None
+        pending_fallback: tuple[str, int] | None = None
 
         while True:
             started_at = datetime.now(timezone.utc)
@@ -199,7 +209,7 @@ class MainAgent:
                     raise CapabilityConflictError(
                         "Capability is no longer active; retry the task"
                     )
-                if retry_count > 0 and (
+                if (retry_count > 0 or fallback_count > 0) and (
                     current_capability.capability_version
                     != capability.capability_version
                     or current_capability.safety_requirements.get("idempotent") is not True
@@ -218,12 +228,14 @@ class MainAgent:
                 if self._telemetry is not None:
                     observation = self._telemetry.record_observation(
                         trace_id=trace_id,
-                        decision_id=state.get("routing_decision_id"),
+                        decision_id=current_decision_id,
                         parent_observation_id=parent_observation_id,
                         kind=(
-                            ObservationKind.EXECUTION
-                            if retry_count == 0
+                            ObservationKind.FALLBACK
+                            if fallback_count > 0
                             else ObservationKind.RETRY
+                            if retry_count > 0
+                            else ObservationKind.EXECUTION
                         ),
                         target_type="capability",
                         target_id=capability_id,
@@ -252,6 +264,23 @@ class MainAgent:
                             outcome=ObservationOutcome.FAILED,
                             retry_decision=prior_decision,
                         )
+                        pending_recovery = None
+                    if pending_fallback is not None:
+                        prior_failure_id, fallback_attempt = pending_fallback
+                        self._telemetry.record_recovery_attempt(
+                            trace_id=trace_id,
+                            failure_id=prior_failure_id,
+                            observation_id=observation.observation_id,
+                            strategy=RecoveryStrategy.FALLBACK,
+                            target_type="capability",
+                            target_id=capability_id,
+                            target_version=(
+                                capability.capability_version if capability else None
+                            ),
+                            attempt_number=fallback_attempt,
+                            outcome=ObservationOutcome.FAILED,
+                        )
+                        pending_fallback = None
                     category = (
                         FailureCategory.UNAVAILABLE
                         if conflict
@@ -290,7 +319,17 @@ class MainAgent:
                     failure_id = failure.failure_id
 
                 retry_decision = (
-                    self._retry_policy.decide(
+                    RetryDecision(
+                        disposition=RetryDisposition.BLOCKED,
+                        retry_allowed=False,
+                        retry_count=retry_count,
+                        max_retries=0,
+                        side_effect_status=side_effect_status,
+                        recoverable=transient,
+                        reason_code="FALLBACK_TARGET_SINGLE_ATTEMPT",
+                    )
+                    if fallback_count > 0
+                    else self._retry_policy.decide(
                         FailureContext(
                             task_id=state.get("task_id"),
                             trace_id=trace_id,
@@ -338,6 +377,86 @@ class MainAgent:
                     retry_count += 1
                     continue
 
+                fallback_candidates = (
+                    self._capability_service.list_eligible_fallbacks(
+                        primary_capability,
+                        state["input"],
+                        excluded_ids=attempted_capability_ids,
+                    )
+                    if primary_capability is not None
+                    and side_effect_status is SideEffectStatus.IDEMPOTENT
+                    and (transient or conflict)
+                    else []
+                )
+                if fallback_candidates:
+                    fallback = fallback_candidates[0]
+                    if self._telemetry is not None:
+                        selection_started = perf_counter()
+                        decision = self._telemetry.record_routing_decision(
+                            trace_id=trace_id,
+                            task_id=state.get("task_id"),
+                            candidate_ids=[
+                                candidate.capability_id
+                                for candidate in fallback_candidates
+                            ],
+                            selected_target_id=fallback.capability_id,
+                            selected_target_version=fallback.capability_version,
+                            latency_ms=(perf_counter() - selection_started) * 1000,
+                            parent_decision_id=current_decision_id,
+                            depth=(fallback_count + 1 if current_decision_id else 0),
+                            layer="recovery",
+                            node_type="alternate_capability_fallback",
+                            policy_version="fallback-policy-v1",
+                            fallback_reason=(
+                                "selected_capability_unavailable"
+                                if conflict
+                                else "transient_execution_failure"
+                            ),
+                            evidence=DecisionEvidence(
+                                selection_criteria=[
+                                    "same_task_family",
+                                    "active",
+                                    "fallback_eligible",
+                                    "identity_scope_match",
+                                    "input_compatible",
+                                    "idempotent",
+                                    "not_previously_attempted",
+                                ],
+                                rationale_summary=(
+                                    "Selected the highest-priority eligible alternate "
+                                    "capability after a recoverable failure"
+                                ),
+                                evidence_refs=[
+                                    fallback.capability_id,
+                                    failure_id or "unpersisted_failure",
+                                ],
+                                expected_outcome="recover_with_alternate_capability",
+                                constraints=["single_attempt_per_fallback_target"],
+                            ),
+                        )
+                        current_decision_id = decision.decision_id
+
+                    capability = fallback
+                    capability_id = fallback.capability_id
+                    attempted_capability_ids.add(capability_id)
+                    safety_requirements = fallback.safety_requirements
+                    side_effect_status = (
+                        SideEffectStatus.IDEMPOTENT
+                        if safety_requirements.get("idempotent") is True
+                        else SideEffectStatus.NON_IDEMPOTENT
+                        if safety_requirements.get("idempotent") is False
+                        else SideEffectStatus.UNKNOWN
+                    )
+                    max_retries = 0
+                    fallback_count += 1
+                    pending_fallback = (
+                        (failure_id, fallback_count)
+                        if failure_id is not None
+                        else None
+                    )
+                    parent_observation_id = failed_observation_id
+                    continue
+
                 if (
                     self._telemetry is not None
                     and failure_id is not None
@@ -369,12 +488,13 @@ class MainAgent:
                         target_version=(
                             capability.capability_version if capability else None
                         ),
-                        attempt_number=retry_count + 1,
+                        attempt_number=retry_count + fallback_count + 1,
                         outcome=ObservationOutcome.CANCELLED,
                         retry_decision=retry_decision,
                     )
                 try:
                     setattr(exc, "_ceaa_retry_count", retry_count)
+                    setattr(exc, "_ceaa_fallback_count", fallback_count)
                 except Exception:
                     pass
                 raise
@@ -383,12 +503,14 @@ class MainAgent:
             if self._telemetry is not None:
                 observation = self._telemetry.record_observation(
                     trace_id=trace_id,
-                    decision_id=state.get("routing_decision_id"),
+                    decision_id=current_decision_id,
                     parent_observation_id=parent_observation_id,
                     kind=(
-                        ObservationKind.EXECUTION
-                        if retry_count == 0
+                        ObservationKind.FALLBACK
+                        if fallback_count > 0
                         else ObservationKind.RETRY
+                        if retry_count > 0
+                        else ObservationKind.EXECUTION
                     ),
                     target_type="capability",
                     target_id=capability.capability_id,
@@ -412,6 +534,19 @@ class MainAgent:
                         outcome=ObservationOutcome.SUCCEEDED,
                         retry_decision=prior_decision,
                     )
+                if pending_fallback is not None:
+                    prior_failure_id, fallback_attempt = pending_fallback
+                    self._telemetry.record_recovery_attempt(
+                        trace_id=trace_id,
+                        failure_id=prior_failure_id,
+                        observation_id=observation.observation_id,
+                        strategy=RecoveryStrategy.FALLBACK,
+                        target_type="capability",
+                        target_id=capability.capability_id,
+                        target_version=capability.capability_version,
+                        attempt_number=fallback_attempt,
+                        outcome=ObservationOutcome.SUCCEEDED,
+                    )
             return {
                 "output": output,
                 "status": "completed",
@@ -419,6 +554,7 @@ class MainAgent:
                 "capability_reused": True,
                 "capability_execution_ms": latency_ms,
                 "retry_count": retry_count,
+                "fallback_count": fallback_count,
             }
 
     def _evolve(self, state: TaskState) -> dict[str, Any]:
@@ -500,6 +636,12 @@ class MainAgent:
                     gap, capability, state.get("task_id"), state.get("trace_id")
                 )["capability"]
             except Exception as exc:
+                provider_error = (
+                    exc if isinstance(exc, ProviderOperationError) else None
+                )
+                root_exception = (
+                    provider_error.cause if provider_error is not None else exc
+                )
                 current = self._capability_service.get(capability.capability_id)
                 if current is not None and current.status in {
                     CapabilityStatus.DRAFT, CapabilityStatus.CANDIDATE, CapabilityStatus.VALIDATING,
@@ -513,23 +655,74 @@ class MainAgent:
                     observation = self._telemetry.record_observation(
                         trace_id=state["trace_id"],
                         decision_id=state.get("routing_decision_id"),
-                        target_type="capability_evolution",
-                        target_id=capability.capability_id,
-                        target_version=capability.capability_version,
+                        target_type=(
+                            "llm_provider"
+                            if provider_error is not None
+                            else "capability_evolution"
+                        ),
+                        target_id=(
+                            provider_error.provider_name
+                            if provider_error is not None
+                            else capability.capability_id
+                        ),
+                        target_version=(
+                            None
+                            if provider_error is not None
+                            else capability.capability_version
+                        ),
                         outcome=ObservationOutcome.FAILED,
                         started_at=started_at,
                         completed_at=datetime.now(timezone.utc),
                         latency_ms=(perf_counter() - started) * 1000,
+                        metadata=(
+                            {"operation": provider_error.operation}
+                            if provider_error is not None
+                            else {}
+                        ),
+                    )
+                    provider_error_code = {
+                        "capability_generation": (
+                            "PROVIDER_CAPABILITY_GENERATION_FAILED"
+                        ),
+                        "boundary_test_generation": (
+                            "PROVIDER_BOUNDARY_TEST_GENERATION_FAILED"
+                        ),
+                    }.get(
+                        provider_error.operation if provider_error is not None else "",
+                        "PROVIDER_OPERATION_FAILED",
                     )
                     self._telemetry.record_failure(
                         trace_id=state["trace_id"],
                         observation_id=observation.observation_id,
-                        stage=FailureStage.RUNTIME,
-                        category=FailureCategory.EXECUTION,
-                        error_code="CAPABILITY_EVOLUTION_FAILED",
-                        summary="Capability evolution failed",
-                        exception=exc,
-                        recoverable=True,
+                        stage=(
+                            FailureStage.PROVIDER
+                            if provider_error is not None
+                            else FailureStage.RUNTIME
+                        ),
+                        category=(
+                            FailureCategory.TIMEOUT
+                            if provider_error is not None
+                            and isinstance(root_exception, TimeoutError)
+                            else FailureCategory.DEPENDENCY
+                            if provider_error is not None
+                            else FailureCategory.EXECUTION
+                        ),
+                        error_code=(
+                            provider_error_code
+                            if provider_error is not None
+                            else "CAPABILITY_EVOLUTION_FAILED"
+                        ),
+                        summary=(
+                            "LLM provider operation failed"
+                            if provider_error is not None
+                            else "Capability evolution failed"
+                        ),
+                        exception=root_exception,
+                        recoverable=(
+                            isinstance(root_exception, (TimeoutError, ConnectionError))
+                            if provider_error is not None
+                            else True
+                        ),
                     )
                 raise
         evolution_failed = capability.status == CapabilityStatus.FAILED
@@ -609,6 +802,7 @@ class MainAgent:
                     task_success=False,
                     error=type(exc).__name__,
                     retry_count=getattr(exc, "_ceaa_retry_count", 0),
+                    fallback_count=getattr(exc, "_ceaa_fallback_count", 0),
                 )
             if self._telemetry is not None and trace is not None:
                 self._telemetry.complete_trace(trace.trace_id, TraceOutcome.FAILED)
@@ -630,6 +824,7 @@ class MainAgent:
                 outcome_status=result.get("status", "unknown"),
                 task_success=result.get("status") == "completed",
                 retry_count=result.get("retry_count", 0),
+                fallback_count=result.get("fallback_count", 0),
             )
         if self._telemetry is not None and trace is not None:
             status = result.get("status", "unknown")

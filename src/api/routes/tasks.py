@@ -25,6 +25,8 @@ class TaskResponse(BaseModel):
     status: str
     capability_id: str | None = None
     output: dict | None = None
+    retry_count: int = 0
+    fallback_count: int = 0
 
 
 @router.post("", response_model=TaskResponse)
@@ -36,4 +38,6 @@ def submit_task(task: TaskRequest, container: Container = Depends(get_container)
         status=result.get("status", "unknown"),
         capability_id=result.get("capability_id"),
         output=result.get("output"),
+        retry_count=result.get("retry_count", 0),
+        fallback_count=result.get("fallback_count", 0),
     )

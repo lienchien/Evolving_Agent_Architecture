@@ -3,11 +3,11 @@
 **語言：** [English](README.md) | 繁體中文
 
 ![Status](https://img.shields.io/badge/status-experimental-orange)
-![Phase](https://img.shields.io/badge/phase-1--in%20progress-blue)
-![Recorded tests](https://img.shields.io/badge/recorded%20tests-52%20passed-green)
+![Phase](https://img.shields.io/badge/phase-1%20complete-brightgreen)
+![Recorded tests](https://img.shields.io/badge/recorded%20tests-59%20passed-green)
 
 > [!WARNING]
-> **研究原型，尚非可部署於生產環境的系統。** 現有 Runtime 使用 Mock LLM、SQLite、Python subprocess 與 Console Notification。真實 LLM Provider、正式安全隔離、完整認證授權、獨立 Main/Audit Secure Evolution Gate、Memory Router 與 Decision Agent Runtime **尚未整合**。目前 feature 分支於 **2026-10-26** 通過 52 項測試；這是受控開發證據，不是 production assurance。
+> **研究原型，尚非可部署於生產環境的系統。** 現有 Runtime 使用 Mock LLM、SQLite、Python subprocess 與 Console Notification。真實 LLM Provider、正式安全隔離、完整認證授權、獨立 Main/Audit Secure Evolution Gate、Memory Router 與 Decision Agent Runtime **尚未整合**。目前 feature 分支於 **2026-10-31** 通過 59 項測試；這是受控開發證據，不是 production assurance。
 
 CEAA 研究如何將 Agent 的實際執行經驗轉換成**經驗證、可重用、可版本管理、可治理的能力與決策資產**，在維持安全與結果驗證的前提下減少不必要的重複推論。架構保持**領域中立**，特定應用只作為實驗工作負載，不成為核心設計依賴。
 
@@ -42,7 +42,7 @@ Capability Evolution 與 Experience-guided Decision Evolution 是支撐這個共
 
 ## 專案狀態
 
-**文件已對齊 v1.9 與 2026-10-26 P1 修訂。當前開發階段：Phase 1 — In Progress / Telemetry Runtime 與 Bounded Retry 已驗證 / 正式退出驗收待完成。**
+**文件已對齊 v1.9 與 2026-10-31 Phase 1 退出修訂。目前 feature 分支已通過 Phase 1 退出條件；尚待整合至 `dev`，Phase 1.5 尚未開始。**
 
 | 功能 | 目前狀態 |
 | --- | --- |
@@ -50,14 +50,14 @@ Capability Evolution 與 Experience-guided Decision Evolution 是支撐這個共
 | FastAPI、SQLite Capability/Report/Approval/Audit、併發及重啟持久化 | 已實作，已有歷史驗證 |
 | Token / Cost Research Foundation 與研究 API | 已實作；缺少的真實 Provider Usage 維持 unavailable |
 | ExecutionTrace / RoutingDecision / Failure / Recovery Domain、TelemetryRepository、SQLite Schema v1 | **資料層基礎已建立**，Repository 測試已記錄 |
-| Runtime 自動寫入、Task/Trace 關聯、bounded retry 證據、查詢與 Summary API | **目前 feature 分支已實作**；尚無合格 alternate-target fallback |
+| Runtime 自動寫入、Task/Trace 關聯、bounded retry/fallback 證據、missing-event detection、查詢與 Summary API | **目前 feature 分支已實作並完成 Phase 1 退出驗證**；替代目標須明確標記、同 scope、冪等、依優先序且每個 target 僅嘗試一次 |
 | Real LLM、Docker Sandbox、PostgreSQL Adapter、CodeBuilderRuntime、獨立 Main/Audit Gate、完整 Auth/Policy | **Phase 1.5 規劃中，未實作** |
 | MemoryRouterInterface、DecisionModelInterface、Static Skill Packages、Validated Path Registry | **Phase 2 PoC 規劃中，未實作** |
 | 完整自動修復、遞迴多 Agent 組織、Capability Sharing / Marketplace | 遠期研究／可選商品化 |
 
-**目前 feature 分支完整整合測試：2026-10-26，52 passed、1 warning（11.85s）。** 警告為既有 Starlette／AnyIO `BlockingPortal` alias 棄用。
+**目前 feature 分支完整整合測試：2026-10-31，59 passed、1 warning（14.69s）。** 警告為既有 Starlette／AnyIO `BlockingPortal` alias 棄用。
 
-**下一個真正的工程里程碑**是完成 Phase 1 正式退出驗收，特別是 provider failure stage 對應、並行／missing-event telemetry 驗證，以及受治理的 alternate-target fallback 設計。詳見 [Telemetry Database](docs/TELEMETRY_DATABASE.md)。
+**下一個真正的工程里程碑**是整合已驗證的 feature 分支，之後進入 Phase 1.5 的真實基礎設施與安全強化。Phase 1 退出套件已涵蓋並行 task/trace/event/cost 關聯，以及重啟後仍可辨識的 missing-event detection。詳見 [Telemetry Database](docs/TELEMETRY_DATABASE.md)。
 
 **現有已實作的 Mock 核心流程**（與 v1.9 完整目標架構不同）：
 
@@ -95,7 +95,7 @@ CEAA 將 **Capability** 視為一等系統資產：可執行、可檢查、可�
 
 ### 現階段的經驗資料基礎
 
-目前 Main Agent／Runtime 已自動寫入 Telemetry、保存 bounded retry 證據，並以同一 Task/Trace identity 串接 Token/Cost metrics。Phase 1 剩餘工作是 provider failure stage、正式退出驗收與安全 alternate-target fallback：
+目前 Main Agent／Runtime 已自動寫入 Telemetry、保存 bounded retry、受治理 alternate-target fallback、provider failure、並行關聯及 missing-event 證據，並以同一 Task/Trace identity 串接 Token/Cost metrics。目前 feature 分支已滿足既定 Phase 1 evidence path：
 
 ```text
 Task / Trace → Routing Decision / Candidate Set / Selected Target
@@ -386,7 +386,7 @@ tests/
 | --- | --- |
 | LLM | `MockLLMProvider`（固定模板，不是真實推論 Provider） |
 | Capability Persistence | SQLite |
-| Execution Evidence | SQLite `TelemetryRepository`、Runtime Writing、bounded retry、Recovery contracts 與 Summary/Filter API 已建立；alternate-target fallback 與正式退出驗收尚待完成 |
+| Execution Evidence | SQLite `TelemetryRepository`、Runtime Writing、bounded retry、受治理 alternate-target fallback、並行關聯、missing-event detection、Recovery contracts 與 Summary/Filter API 已建立並完成 Phase 1 退出驗證 |
 | Queue | `InMemoryEvolutionQueue`（非持久化背景 Worker） |
 | Sandbox | Python subprocess（**不等於正式安全隔離**） |
 | Notification | Console |
@@ -410,7 +410,7 @@ tests/
 
 # 11. Phase 1 Runtime Validation
 
-目前 feature 分支完整整合測試為 **2026-10-26：52 passed、1 warning**，已包含 Telemetry／Recovery contracts、Runtime correlation、bounded retry／recovery-gate safety、restart persistence 與 query filters。受控併發及既有 HTTP/Uvicorn 證據詳見 [PROJECT_STATUS.md](PROJECT_STATUS.md)。這些結果仍不代表 Production 安全驗證、真實 Token 節省或 MADE 已實作。
+目前 feature 分支完整整合測試為 **2026-10-31：59 passed、1 warning**，已包含 Telemetry／Recovery contracts、provider failure mapping、並行 Runtime／cost correlation、持久 missing-event detection、bounded retry、受治理 alternate-target fallback／recovery-gate safety、restart persistence 與 query filters。受控併發及既有 HTTP/Uvicorn 證據詳見 [PROJECT_STATUS.md](PROJECT_STATUS.md)。這些結果仍不代表 Production 安全驗證、真實 Token 節省或 MADE 已實作。
 
 本機已安裝相依套件時可執行：
 
@@ -430,7 +430,7 @@ uvicorn src.main:app --reload
 
 | 階段 | 核心目標 | 狀態 |
 | --- | --- | --- |
-| **Phase 1 — Core + Telemetry** | Mock Capability Lifecycle、Token/Cost 基礎與完整執行／路由／失敗資料 | **進行中**：Runtime Telemetry 與 bounded retry 已驗證；正式退出／fallback 尚待完成 |
+| **Phase 1 — Core + Telemetry** | Mock Capability Lifecycle、Token/Cost 基礎與完整執行／路由／失敗資料 | **目前 feature 分支已完成**：所有既定退出檢查通過；尚待整合至 `dev` |
 | **Phase 1.5 — Real Infrastructure + Governed Builder** | 真實 Provider、PostgreSQL、Docker、CodeBuilderRuntime、Main/Audit、Auth/Policy 與 Human Governance | **規劃中，未實作** |
 | **Phase 2 — Retrieval + MADE PoC** | Capability/Memory Retrieval、Decision Routing、Static Skill Packages、Validated Path 與有限 Recovery | **規劃中，未實作** |
 | **Phase 3 — Evaluation** | E1 Capability/Cost、E2 Memory×Decision、E3 Skill Optimization、E4 Package Hierarchy、E5 Recovery、可選 E6 HYSET | **研究設計完成，尚未實驗驗證** |

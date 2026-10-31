@@ -76,6 +76,7 @@ class TaskCostMetric(BaseModel):
     latency_ms: float = Field(ge=0)
     capability_execution_ms: float | None = Field(default=None, ge=0)
     retry_count: int = Field(default=0, ge=0)
+    fallback_count: int = Field(default=0, ge=0)
     outcome_status: str
     task_success: bool
     error: str | None = None

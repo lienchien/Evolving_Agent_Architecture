@@ -94,6 +94,7 @@ class ResearchMetricsService:
         task_success: bool,
         error: str | None = None,
         retry_count: int = 0,
+        fallback_count: int = 0,
     ) -> TaskCostMetric:
         interactions = self._repository.list_llm_interactions(task_id, trace_id)
         observed_creation = capability_created or any(
@@ -137,6 +138,7 @@ class ResearchMetricsService:
             latency_ms=latency_ms,
             capability_execution_ms=capability_execution_ms,
             retry_count=retry_count,
+            fallback_count=fallback_count,
             outcome_status=outcome_status,
             task_success=task_success,
             error=error,

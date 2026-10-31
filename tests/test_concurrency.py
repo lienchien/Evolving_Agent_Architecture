@@ -137,7 +137,7 @@ def test_24_same_family_requests_share_one_generation_across_apps(tmp_path, monk
         assert containers[0].audit_service.list() == containers[1].audit_service.list()
 
 
-def test_database_rejects_duplicate_active_family(tmp_path):
+def test_database_allows_explicit_fallback_but_rejects_duplicate_primary(tmp_path):
     container = make_container(tmp_path)
     first = pending_capability(container, "unique_family")
     container.approval_service.approve(first.capability_id)
@@ -147,7 +147,47 @@ def test_database_rejects_duplicate_active_family(tmp_path):
     )
     with pytest.raises(CapabilityConflictError):
         container.capability_service.create(duplicate)
-    assert len(container.capability_service.list()) == 1
+    fallback = Capability(
+        name="fallback",
+        task_family="unique_family",
+        status=CapabilityStatus.ACTIVE,
+        fallback_eligible=True,
+        implementation=Implementation(code="def run(input): return input"),
+    )
+    container.capability_service.create(fallback)
+    assert len(container.capability_service.list()) == 2
+    assert [
+        item.capability_id
+        for item in container.capability_service.list_active_by_task_family(
+            "unique_family"
+        )
+    ] == [first.capability_id, fallback.capability_id]
+
+
+def test_fallback_only_active_does_not_bypass_primary_reservation(tmp_path):
+    container = make_container(tmp_path)
+    fallback = Capability(
+        name="fallback-only",
+        task_family="fallback_only_family",
+        status=CapabilityStatus.ACTIVE,
+        fallback_eligible=True,
+        safety_requirements={"idempotent": True},
+        implementation=Implementation(code="def run(input): return input"),
+    )
+    container.capability_service.create(fallback)
+
+    assert (
+        container.capability_service.find_active_by_task_family(
+            "fallback_only_family"
+        )
+        is None
+    )
+    reserved, created = container.capability_service.reserve_for_task(
+        "fallback_only_family", "create a primary instead of directly using fallback"
+    )
+    assert created is True
+    assert reserved.fallback_eligible is False
+    assert reserved.status is CapabilityStatus.DRAFT
 
 
 def test_generation_exception_releases_family_for_retry(tmp_path, monkeypatch):
@@ -336,7 +376,7 @@ def test_legacy_duplicates_require_explicit_resolution(tmp_path):
         implementation=Implementation(code="")) for _ in range(2)]
     path = tmp_path / "legacy-duplicates.db"
     make_legacy_database(path, capabilities)
-    with pytest.raises(CapabilityConflictError, match="multiple open capabilities"):
+    with pytest.raises(CapabilityConflictError, match="multiple primary active"):
         SqliteCapabilityRepository(str(path))
     conn = sqlite3.connect(path)
     try:

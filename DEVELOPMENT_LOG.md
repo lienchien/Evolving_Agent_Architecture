@@ -1197,3 +1197,105 @@ Summary 提供明確 completed denominator、success/failure rate、事件數與
 - 依最新 Direction Baseline 重新核對程式後，確認尚有三類 Phase 1 差異：provider generation
   failure 仍記為 runtime/execution、沒有合格 alternate-target fallback、並行 telemetry correlation
   與 missing-event 尚未完成正式退出驗收；狀態文件已改為 partial／outstanding，未誤標完成。
+
+---
+
+## 2026-10-31 — Provider Failure Stage Mapping
+
+### 分支與實作
+
+- 從同步完成的 `dev`（`1e2f485`）建立 `feature/provider-failure-stage`。
+- 新增 `ProviderOperationError`，在 provider adapter 邊界標記 `capability_generation` 與
+  `boundary_test_generation`，保留原始 exception 作為因果鏈但不把訊息寫入 telemetry。
+- MainAgent 將上述錯誤記為 `stage=provider`，依 timeout／dependency 正規化 category，並以
+  固定 error code、去敏 summary、provider class 與 operation metadata 保存 correlation。
+- `TelemetryService.record_observation()` 補齊既有 domain model 已支援的 metadata 傳遞。
+- 非 provider 的 capability evolution 例外仍維持既有 runtime/execution 分類。
+
+### 驗證
+
+- 新增 capability generation 與 boundary-test generation provider failure 測試，確認 stage、
+  category、error code、trace correlation、原始 exception type 與 secret redaction。
+- 相關 telemetry／research／concurrency 測試：**20 passed, 1 warning in 8.40s**。
+- 完整 pytest：**54 passed, 1 warning in 13.09s**。
+- 警告仍為既有 Starlette／AnyIO `BlockingPortal` alias 棄用。
+
+### Phase 1 剩餘阻塞
+
+- 受治理且有合格替代目標的 alternate-target fallback；
+- 並行 telemetry correlation、missing-event detection 與正式 exit checklist。
+
+---
+
+## 2026-10-31 — Governed Alternate-target Fallback
+
+### Registry 與 eligibility
+
+- `Capability` 新增 `routing_priority` 與明確的 `fallback_eligible`；預設能力仍是 primary，
+  不會因存在多個 active row 就自動成為替代目標。
+- 每個 task family 維持一個 primary active，以及零個以上明確 fallback active；SQLite 將
+  generation/review reservation 與 primary active 改由兩個獨立 unique partial index 保護。
+- 啟動 migration 會移除舊版將 `active` 包含在 reservation 內的索引；若舊資料已有多個
+  primary active，明確拒絕啟動且不改寫資料。
+- Eligibility 採 fail closed：alternate 必須同 task family、tenant、owner、organization、scope、
+  trust level，輸入 schema 可滿足且明確 `idempotent=true`；已嘗試 target 永久排除於該 task。
+
+### Runtime 與證據鏈
+
+- Primary 在 transient connection/timeout 或 capability conflict 失敗且 retry 不可用／耗盡後，
+  MainAgent 依 `(routing_priority, capability_id)` 選擇下一個合格 alternate。
+- 每個 fallback target 最多嘗試一次，不在 fallback target 上再進行 retry；若失敗，只能選擇
+  尚未嘗試且仍合格的下一個 alternate，避免循環或無界重試。
+- 每次切換建立 child `RoutingDecision`，保存 parent decision、完整候選、selected version、
+  policy、fallback reason、evidence 與 single-attempt constraint；failure、fallback observation 與
+  `RecoveryAttempt(strategy=fallback)` 完整關聯。
+- Task response 與 `TaskCostMetric` 增加 `fallback_count`；成功與失敗 fallback 都納入 summary，
+  不合格或跨 scope alternate 不產生虛假的 fallback event。
+
+### 驗證
+
+- 新增 primary 失敗 → 第一 alternate 失敗 → 第二 alternate 成功的測試，確認每個 target 僅呼叫
+  一次、decision parent chain、observation/recovery outcome、cost metric、summary 與重啟持久化。
+- 新增跨 tenant alternate 被拒絕的測試，確認只有 primary execution 且沒有 fallback observation
+  或 recovery attempt。
+- 更新 concurrency 測試：明確 fallback active 可共存，但第二個 primary active 仍由資料庫拒絕。
+- 新增 fallback-only active 不得被初始路由直接選用、且不得阻擋 primary reservation 的回歸測試。
+- 最終 retry／concurrency 聚焦測試：**26 passed, 1 warning in 9.18s**。
+- 完整 pytest：**57 passed, 1 warning in 13.52s**。
+- 警告仍為既有 Starlette／AnyIO `BlockingPortal` alias 棄用。
+
+### Phase 1 剩餘阻塞
+
+- 並行 task telemetry correlation、missing-event detection 與正式 exit checklist。
+
+---
+
+## 2026-10-31 — Phase 1 Final Exit Verification
+
+### Missing-event detection
+
+- `TelemetrySummary` 新增 `missing_event_count` 與 `missing_event_trace_count`。
+- 已完成 trace 若沒有任何 observation，計為核心事件缺失；非 failed 的已完成 trace 若沒有
+  routing decision，再計一項缺失。計數由 durable history 重建，不依賴記憶體 counter。
+- 保留既有 process-local `instrumentation_failure_count` 作即時寫入失敗訊號；文件明確區分兩者，
+  並註記 detector 無法只靠 telemetry 推斷從未寫入成功的 root trace。
+- 故障注入讓 observation 寫入失敗後，主要 task 仍回到 pending approval；即時 counter 為 1，
+  SQLite 重啟後 missing-event 仍為 1，並可由 `/api/telemetry/summary` 查得。
+
+### 並行 correlation 正式驗收
+
+- 先建立並啟用同一 capability，再以 8 個 thread worker 同時執行 16 個相同 task family 任務。
+- 16 個 task ID 與 trace ID 全部唯一；每條 trace 各自只關聯一個 routing decision 與 execution
+  observation，selected target 一致，但 decision／observation 不會跨 trace。
+- 每個 `TaskCostMetric` 的 task ID、trace ID、capability ID 與 task success 均與對應 runtime
+  結果一致；整體 summary 為 17 traces（含 setup 的 partial trace）、16 succeeded、1 partial，
+  17 decisions、17 observations、0 missing events、0 instrumentation failures。
+- Container／SQLite 重啟後 summary 完全一致。
+
+### 驗證與階段決定
+
+- Telemetry／repository／research 聚焦測試：**17 passed, 1 warning in 4.19s**。
+- 完整 pytest：**59 passed, 1 warning in 14.69s**。
+- 警告仍為既有 Starlette／AnyIO `BlockingPortal` alias 棄用。
+- 既定 Phase 1 exit checklist 已全部通過，**Phase 1 在目前 feature 分支標記 Complete**。
+- 本輪尚未提交、推送或合併；整合至 `dev` 後才進入 Phase 1.5。

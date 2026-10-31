@@ -4,11 +4,14 @@ from unittest.mock import Mock
 
 import pytest
 
+from src.domain.capability import Capability, CapabilityStatus, Implementation
 from src.domain.telemetry import (
     FailureCategory,
     FailureContext,
     FailureStage,
     ObservationKind,
+    ObservationOutcome,
+    RecoveryStrategy,
     RetryDisposition,
     SideEffectStatus,
 )
@@ -193,3 +196,164 @@ def test_retry_limit_exhaustion_is_persisted(tmp_path):
     )[0]
     assert task_metric.retry_count == 1
     assert task_metric.error == "TimeoutError"
+
+
+def _fallback_capability(
+    container: Container,
+    task_family: str,
+    name: str,
+    priority: int,
+    **overrides,
+) -> Capability:
+    values = {
+        "name": name,
+        "task_family": task_family,
+        "status": CapabilityStatus.ACTIVE,
+        "fallback_eligible": True,
+        "routing_priority": priority,
+        "safety_requirements": {"idempotent": True},
+        "implementation": Implementation(code="def run(input): return input"),
+    }
+    values.update(overrides)
+    capability = Capability(**values)
+    container.capability_service.create(capability)
+    return capability
+
+
+def test_alternate_targets_are_eligible_bounded_and_fully_correlated(tmp_path):
+    database = tmp_path / "fallback.db"
+    container = Container(
+        database_path=str(database),
+        report_directory=str(tmp_path / "reports"),
+    )
+    primary = _active_capability(container, "fallback_success")
+    primary.safety_requirements = {"idempotent": True, "max_retries": 0}
+    container.capability_service.update(primary)
+    first_fallback = _fallback_capability(
+        container, "fallback_success", "first-fallback", 10
+    )
+    second_fallback = _fallback_capability(
+        container, "fallback_success", "second-fallback", 20
+    )
+    calls = []
+
+    def execute(capability, input_data):
+        calls.append(capability.capability_id)
+        if capability.capability_id == primary.capability_id:
+            raise ConnectionError("primary unavailable")
+        if capability.capability_id == first_fallback.capability_id:
+            raise TimeoutError("first fallback unavailable")
+        return {"selected": capability.capability_id, "input": input_data}
+
+    container.execution_service.execute = execute
+    result = container.main_agent.run_task(
+        "fallback_success", "use bounded alternate targets", {"value": 7}
+    )
+
+    assert result["status"] == "completed"
+    assert result["capability_id"] == second_fallback.capability_id
+    assert result["retry_count"] == 0
+    assert result["fallback_count"] == 2
+    assert calls == [
+        primary.capability_id,
+        first_fallback.capability_id,
+        second_fallback.capability_id,
+    ]
+    assert len(calls) == len(set(calls))
+
+    detail = container.telemetry_service.get_trace_detail(result["trace_id"])
+    assert detail.routing_decisions[0].selected_target_id == primary.capability_id
+    assert detail.routing_decisions[0].candidate_ids == [
+        primary.capability_id,
+        first_fallback.capability_id,
+        second_fallback.capability_id,
+    ]
+    fallback_decisions = [
+        item
+        for item in detail.routing_decisions
+        if item.node_type == "alternate_capability_fallback"
+    ]
+    assert [item.selected_target_id for item in fallback_decisions] == [
+        first_fallback.capability_id,
+        second_fallback.capability_id,
+    ]
+    assert fallback_decisions[0].parent_decision_id == detail.routing_decisions[0].decision_id
+    assert fallback_decisions[1].parent_decision_id == fallback_decisions[0].decision_id
+    assert all(item.fallback_reason for item in fallback_decisions)
+
+    assert [item.kind for item in detail.observations] == [
+        ObservationKind.EXECUTION,
+        ObservationKind.FALLBACK,
+        ObservationKind.FALLBACK,
+    ]
+    assert [item.outcome for item in detail.observations] == [
+        ObservationOutcome.FAILED,
+        ObservationOutcome.FAILED,
+        ObservationOutcome.SUCCEEDED,
+    ]
+    assert detail.observations[1].parent_observation_id == detail.observations[0].observation_id
+    assert detail.observations[2].parent_observation_id == detail.observations[1].observation_id
+    assert [item.strategy for item in detail.recovery_attempts] == [
+        RecoveryStrategy.FALLBACK,
+        RecoveryStrategy.FALLBACK,
+    ]
+    assert [item.outcome for item in detail.recovery_attempts] == [
+        ObservationOutcome.FAILED,
+        ObservationOutcome.SUCCEEDED,
+    ]
+    assert [item.attempt_number for item in detail.recovery_attempts] == [1, 2]
+
+    metric = container.research_metrics_service.list_tasks(
+        trace_id=result["trace_id"]
+    )[0]
+    assert metric.capability_id == second_fallback.capability_id
+    assert metric.fallback_count == 2
+    summary = container.telemetry_service.summarize(
+        task_family="fallback_success"
+    )
+    assert summary.fallback_observation_count == 2
+
+    restarted = Container(
+        database_path=str(database),
+        report_directory=str(tmp_path / "reports-restarted"),
+    )
+    assert (
+        restarted.telemetry_service.get_trace_detail(result["trace_id"])
+        == detail
+    )
+
+
+def test_ineligible_alternate_does_not_create_false_fallback_event(tmp_path):
+    container = Container(
+        database_path=str(tmp_path / "ineligible-fallback.db"),
+        report_directory=str(tmp_path / "reports"),
+    )
+    primary = _active_capability(container, "fallback_blocked")
+    primary.safety_requirements = {"idempotent": True, "max_retries": 0}
+    container.capability_service.update(primary)
+    _fallback_capability(
+        container,
+        "fallback_blocked",
+        "wrong-tenant",
+        10,
+        tenant_id="other-tenant",
+    )
+    container.execution_service.execute = Mock(
+        side_effect=ConnectionError("primary unavailable")
+    )
+
+    with pytest.raises(ConnectionError):
+        container.main_agent.run_task(
+            "fallback_blocked", "reject cross-tenant alternate", {}
+        )
+
+    failed_trace = container.telemetry_service.list_traces(
+        task_family="fallback_blocked"
+    )[-1]
+    detail = container.telemetry_service.get_trace_detail(failed_trace.trace_id)
+    assert container.execution_service.execute.call_count == 1
+    assert all(item.kind is not ObservationKind.FALLBACK for item in detail.observations)
+    assert all(
+        item.strategy is not RecoveryStrategy.FALLBACK
+        for item in detail.recovery_attempts
+    )

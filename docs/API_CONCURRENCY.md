@@ -15,16 +15,18 @@
 
 - Phase 1 為同步演化，請求直接處理自己的 CapabilityGap，不經共享 queue。
   `/api/evolution/queue` 仍是預留介面，不代表有背景 worker 正在處理任務。
-- 每個 `task_family` 最多有一個「處理中、待核准或已啟用」的能力。
+- 每個 `task_family` 最多有一個「處理中或待核准」的 generation/review reservation，
   SQLite partial unique index 涵蓋 `draft / candidate / validating / testing /
-  tested / pending_approval / approved / active`。
+  tested / pending_approval / approved`。每個 family 另有且只有一個未標記 fallback 的
+  primary active；明確 `fallback_eligible=true` 的 active alternate 不佔 primary 名額。
 - 第一個請求以短交易預留 draft，交易結束後才執行生成與測試。
   後續同類請求回傳相同 capability ID 與當時狀態，例如 `capability_draft`
   或 `capability_pending_approval`，HTTP 狀態維持 `200`，`output` 為 `null`。
 - 跟隨請求的 input 不會排入背景執行；能力核准後，需要重新提交任務才會執行。
-- `failed / revision_requested / archived / deprecated / revoked` 不佔用該名額。
-  新任務可建立新能力，舊能力仍保留。既有 active 需先 deprecated 或 revoked
-  才能建立替代版本；目前透過 service 提供這些 lifecycle 操作。
+- `failed / revision_requested / archived / deprecated / revoked` 不佔用 reservation 或 primary 名額。
+  新任務可建立新能力，舊能力仍保留。替換 primary 時，既有 primary active 需先 deprecated 或
+  revoked；明確 fallback active 可共存，但執行時還須通過相同 tenant／owner／organization／scope／
+  trust、輸入相容、冪等與單次嘗試的 eligibility 檢查。
 - 可捕捉的演化例外會將處理中的能力設為 failed，讓後續請求可以重試。
   程序被強制終止時尚無租約或自動復原 worker；殘留的處理中能力需要先確認
   原工作已停止，再由管理流程處理。不可在仍執行時盲目釋放名額。
@@ -44,8 +46,9 @@
 ## 既有資料升級
 
 啟動會以交易新增 `revision` 欄位、治理資料表與唯一索引。
-若同 task family 已有多個處理中或 active 能力，啟動會明確失敗並保留原資料，
-不會自行刪除或選擇勝出版本。需先備份，明確處理重複紀錄，再啟動升級。
+若同 task family 已有多個 reservation 或多個 primary active，啟動會明確失敗並保留原資料，
+不會自行刪除或選擇勝出版本。升級前應先備份；合法 alternate 必須明確標記
+`fallback_eligible=true`，其餘重複紀錄須由管理者處理後再啟動。
 所有 worker 應一起升級，避免舊版程式繞過新版 revision 檢查。
 
 ## Token／費用研究
@@ -64,3 +67,8 @@ Token／費用研究資料的欄位語意、查詢 API 與 unavailable 規則見
 - 多個獨立 Python 程序的預留與核准競爭。
 - 交易回滾、跨 app／程序與重啟後的報告及治理紀錄查詢。
 - 舊 schema 升級及重複資料的非破壞性拒絕。
+- 8 個 thread worker 並行執行 16 個相同 family 的已啟用 capability 任務；每個 task 的
+  trace、routing decision、observation 與 cost metric identity 均保持一對一，沒有跨 trace 污染，
+  重啟後 summary 一致。
+- Telemetry observation 寫入故障時不改變主要 task outcome；completed trace 的核心事件缺失會由
+  `missing_event_count` / `missing_event_trace_count` 顯示，且重啟後仍可重建。

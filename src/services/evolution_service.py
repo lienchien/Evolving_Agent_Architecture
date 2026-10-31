@@ -3,6 +3,7 @@ from __future__ import annotations
 from time import perf_counter
 
 from src.domain.capability import Capability, CapabilityStatus, Implementation
+from src.domain.errors import ProviderOperationError
 from src.domain.gap import CapabilityGap
 from src.domain.research import ResearchPhase, TokenUsage
 from src.interfaces.llm import LLMProvider, LLMResponse
@@ -42,7 +43,11 @@ class EvolutionService:
                     success=False,
                     error=str(exc),
                 )
-            raise
+            raise ProviderOperationError(
+                operation="capability_generation",
+                provider_name=type(self._llm_provider).__name__,
+                cause=exc,
+            ) from exc
         response = (
             raw_response if isinstance(raw_response, LLMResponse)
             else LLMResponse(value=raw_response)

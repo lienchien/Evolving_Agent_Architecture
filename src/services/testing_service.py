@@ -4,6 +4,7 @@ from pathlib import Path
 from time import perf_counter
 
 from src.domain.capability import Capability, CapabilityStatus
+from src.domain.errors import ProviderOperationError
 from src.domain.report import RiskLevel, TestReport
 from src.domain.research import ResearchPhase, TokenUsage
 from src.interfaces.llm import LLMProvider, LLMResponse
@@ -55,7 +56,11 @@ class TestingService:
                     success=False,
                     error=str(exc),
                 )
-            raise
+            raise ProviderOperationError(
+                operation="boundary_test_generation",
+                provider_name=type(self._llm_provider).__name__,
+                cause=exc,
+            ) from exc
         response = (
             raw_response if isinstance(raw_response, LLMResponse)
             else LLMResponse(value=raw_response)

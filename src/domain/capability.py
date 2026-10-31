@@ -72,6 +72,8 @@ class Capability(BaseModel):
 
     compatibility: dict[str, Any] = Field(default_factory=dict)
     trust_level: str = "untrusted"
+    routing_priority: int = Field(default=100, ge=0)
+    fallback_eligible: bool = False
 
     status: CapabilityStatus = CapabilityStatus.DRAFT
 

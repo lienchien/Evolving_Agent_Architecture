@@ -94,7 +94,7 @@ Claude Code（Sonnet 5, `claude-sonnet-5`），使用者 talent4925@gmail.com �
 ### 已排除項目（Ruled Out）
 
 - **SQL Injection**：`sqlite_repository.py` 全部查詢皆使用參數化語法（`?` placeholder），
-  未發現字串拼接組 SQL 的情形（僅 `_OPEN_STATUSES` 為程式內固定常數，非外部輸入）。
+  未發現字串拼接組 SQL 的情形（僅 `_RESERVATION_STATUSES` 為程式內固定常數，非外部輸入）。
 - **路徑穿越（Path Traversal）**：`capability_id` 由伺服器端 `uuid.uuid4()` 產生
   （`CAP-{uuid4().hex[:8]}`），非使用者可控字串，`testing_service.py` 寫入報告檔案時
   以此為目錄名稱，不受外部輸入影響。

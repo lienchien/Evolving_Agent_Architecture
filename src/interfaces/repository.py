@@ -28,6 +28,9 @@ class CapabilityRepository(ABC):
     def find_active_by_task_family(self, task_family: str) -> Capability | None: ...
 
     @abstractmethod
+    def list_active_by_task_family(self, task_family: str) -> list[Capability]: ...
+
+    @abstractmethod
     def reserve_for_task(self, task_family: str, description: str) -> tuple[Capability, bool]: ...
 
     @abstractmethod

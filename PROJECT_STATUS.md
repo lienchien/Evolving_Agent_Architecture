@@ -1,20 +1,20 @@
 # Capability-Evolving Agent — Project Status
 
-更新日期：2026-10-26
+更新日期：2026-10-31
 
-開發基準：`dev`；目前開發分支：`feature/telemetry-runtime-wiring`
+開發基準：`dev`；目前開發分支：`feature/provider-failure-stage`
 
 ## Current Stage
 
-**Phase 1 — In Progress / P1 Telemetry and Bounded-Retry Revision Implemented; Final Exit Verification Pending**
+**Phase 1 — Complete on Current Feature Branch / Integration into `dev` Pending**
 
 Phase 1 原有的 Core Baseline 開發與驗證條件已完成，但在確認 Execution Experience & Evolution Telemetry 是未來 Experience Memory、system diagnosis、Capability / Agent / Organization Evolution 的必要歷史資料層後，**Phase 1 退出條件已重新開啟並擴充**。
 
-目前狀態應解讀為：**Core Baseline、Telemetry runtime core 與 bounded retry revision 已驗證，但 Phase 1 尚未 Complete**。Provider failure stage、實際 alternate-target fallback 與剩餘正式退出驗收完成後，才進入 **Phase 1.5 — Real Infrastructure & Hardening**。
+目前狀態應解讀為：**Core Baseline、Telemetry runtime core、bounded retry、provider failure stage、受治理 alternate-target fallback、並行 correlation 與 missing-event detection 均已通過既定退出驗證**。Phase 1 在目前 feature 分支完成；整合至 `dev` 後才開始 **Phase 1.5 — Real Infrastructure & Hardening**。
 
 核心 mock 流程、FastAPI TestClient 整合、併發一致性與跨程序持久化已取得執行證據。
 獨立 Uvicorn 已完成 loopback HTTP 全流程與停止／重啟持久化驗證；新增 Token／費用
-Telemetry P1 修訂開發分支目前完整測試結果為 **52 passed, 1 warning**。
+Phase 1 退出修訂分支目前完整測試結果為 **59 passed, 1 warning**。
 這不是 production-ready 或任意負載下的效能保證；安全與營運強化仍屬後續工作。
 
 歷史過程見 [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md)；API 行為及升級條件見
@@ -33,15 +33,7 @@ CEAA 上位理念明確化為 **跨場景 Context-Aware Adaptive Decision**：�
 
 **研究方向已收斂：跨領域環境感知、自適應決策、風險／機會成本評估、受治理的能力與決策演化。** 核心架構原則與 Phase 1 → 1.5 → 2 → 3 的階段順序列入 [DEV_PLAN.md](DEV_PLAN.md) Direction Baseline；模型、Adapter、Domain Skill 與實驗方法保持可替換。新增構想不得無證據擴張目前 Phase 1 的退出範圍。
 
-**狀態：方向基準本身僅是文件與優先順序，不代表新增 Runtime 功能。** 本 feature 已完成 Telemetry runtime、bounded retry 與 Recovery contract 的 P1 修訂；下一個實際工程工作仍包括 provider failure stage 對應、alternate-target fallback 及並行／missing-event 正式退出驗收。
-
----
-
-## 開發方向基準（2026-10-26；Direction Baseline）
-
-**研究方向已收斂：跨領域環境感知、自適應決策、風險／機會成本評估、受治理的能力與決策演化。** 核心架構原則與 Phase 1 → 1.5 → 2 → 3 的階段順序列入 [DEV_PLAN.md](DEV_PLAN.md) Direction Baseline；模型、Adapter、Domain Skill 與實驗方法保持可替換。新增構想不得無證據擴張目前 Phase 1 的退出範圍。
-
-**狀態：僅文件及優先順序確立，未新增程式功能／未重跑測試。** 下一個實際工程工作仍為 Phase 1 Telemetry Runtime Wiring / Correlation / Summary API / Restart Evidence。
+**狀態：方向基準本身僅是文件與優先順序，不代表新增 Runtime 功能。** Telemetry runtime、bounded retry、Recovery contract、provider failure stage、受治理 alternate-target fallback、並行／missing-event 正式退出驗收均已完成；下一個階段是整合此分支後進入 Phase 1.5。
 
 ---
 
@@ -60,7 +52,7 @@ Token efficiency／cost amortization 的研究契約與實作已合併至 `dev`�
 - baseline、saving rate 與 break-even reuse count 的基礎計算；
 - `tests/test_research_metrics.py`。
 
-Token/Cost 功能最初基準為 **28 passed, 1 warning**；目前整體分支基準為 **52 passed, 1 warning**。真實 provider usage、static baseline runner、
+Token/Cost 功能最初基準為 **28 passed, 1 warning**；目前整體分支基準為 **59 passed, 1 warning**。真實 provider usage、static baseline runner、
 Exact／Near-Similar／Generalized 長序列實驗仍屬下一階段研究工作，不能以目前 mock 測試結果
 宣稱 CEAA 已證明節省 Token。
 
@@ -80,17 +72,22 @@ Adaptive Agent Organization 已被列為長期主力研究方向，但**自動�
 - [x] routing decision persistence
 - [x] candidate-set / selected-target persistence
 - [x] normalized failure taxonomy
-- [ ] retry / fallback linkage（bounded retry 已完成；alternate-target fallback 尚無 runtime）
+- [x] retry / fallback linkage（bounded retry 與受治理 alternate-target fallback runtime 已完成）
 - [x] task / trace / routing correlation
 - [x] routing success / failure summary API
 - [x] restart-persistent routing / failure evidence
-- [ ] durable raw operational history（success / failure / retry 已有；fallback 尚無合格執行路徑）
+- [x] durable raw operational history（success / failure / retry / fallback 均有合格執行路徑）
+- [x] concurrent task／trace／decision／observation／cost correlation exit evidence
+- [x] restart-persistent missing-event detection
 - [x] repeated-exception aggregation / systemic-pattern analysis foundation
 - [ ] longitudinal dataset for future Experience Memory、Evolution Signal 與 organization experiments
 
-Agent/runtime 現已自動寫入 routing、execution、failure、retry/recovery 與 final outcome，並以
-同一 `task_id` / `trace_id` 連結 Token/Cost metrics。系統目前每個 task family 只允許一個 active
-capability，沒有可安全選用的替代 target，因此仍不製造虛假的 fallback 事件。
+Agent/runtime 現已自動寫入 routing、execution、failure、retry／fallback recovery 與 final outcome，並以
+同一 `task_id` / `trace_id` 連結 Token/Cost metrics。每個 task family 維持一個 primary active；只有
+明確 `fallback_eligible`、同 tenant／owner／organization／scope／trust、輸入相容且冪等的 alternate
+active 才可依優先序選用，每個 fallback target 單次任務最多執行一次。不合格 alternate 不會產生虛假的 fallback 事件。
+Capability generation 與 boundary-test generation 的 provider 例外會透過明確 adapter 邊界記為
+`stage=provider`，以固定 error code、去敏摘要與 provider operation metadata 保存；原始例外訊息不寫入 telemetry。
 Schema 與 PostgreSQL 替換邊界見 [TELEMETRY_DATABASE.md](docs/TELEMETRY_DATABASE.md)。
 
 預定資料鏈：
@@ -213,7 +210,7 @@ Audit Review = PASS
 | 狀態更新 | revision 條件更新，舊資料寫入失敗回 409 |
 | 決策交易 | 最終狀態、限制 metadata、ApprovalRecord 與 Audit 原子提交；失敗全部回滾 |
 | 任務配對 | 同步處理自己的 gap，不再從共用 queue 取出其他請求的工作 |
-| 去重 | 每個 task_family 最多一個處理中、待核准或 active 能力；資料庫唯一索引強制保護 |
+| 去重 | 每個 task_family 最多一個處理中／待核准名額與一個 primary active；明確標記的 fallback active 另以安全條件篩選，資料庫索引強制保護 primary／reservation invariant |
 | 共享資料 | Capability、版本化 TestReport、ApprovalRecord、Audit 共用 SQLite；跨 app、重啟與新程序查詢通過 |
 | 相容性 | 舊 SQLite schema 升級；遇既有重複能力明確拒絕啟動、不刪除資料 |
 | 獨立 Runtime | 真實 Uvicorn 程序完成建立、報告查詢、核准、重用；停止後以同一資料庫重啟仍可查詢與執行 |
@@ -252,7 +249,7 @@ Queue 保留擴充介面，Phase 1 不透過它執行背景任務。
 
 ## 尚未完成與已接受限制
 
-- [ ] Execution Experience & Evolution Telemetry：routing decision、candidate set、selected target、failure taxonomy、retry/fallback 與 outcome correlation。
+- [x] Execution Experience & Evolution Telemetry：routing、provider failure、retry、alternate-target fallback、並行／missing-event 與 outcome correlation 均已完成既定 Phase 1 驗收。
 - [ ] 長時間負載、吞吐量、延遲、鎖定逾時及故障復原驗證。
 - [ ] 程序強制終止後的生成名額自動復原／租約。
 - [ ] 認證、管理員角色與 tenant/owner/scope 資料控制。
@@ -278,20 +275,23 @@ Queue 保留擴充介面，Phase 1 不透過它執行背景任務。
 
 新增 Phase 1 必做項目：
 
-- [ ] Durable raw execution observations：success / failure / retry 已完成；alternate-target fallback 尚未實作。
+- [x] Durable raw execution observations：success / failure / retry / fallback 已完成。
 - [x] Task / trace / routing correlation。
 - [x] Candidate set / selected target / routing decision persistence。
-- [ ] Failure stage / normalized category：routing／selection／tool／validation 與 sanitized exception type 已完成；provider generation failure 目前仍記為 runtime/execution。
-- [ ] Retry / fallback linkage and recovery outcome：retry lineage／outcome 已完成；fallback 尚未實作。
+- [x] Failure stage / normalized category：routing／selection／tool／validation／provider 與 sanitized exception type；capability generation 及 boundary-test generation 均映射至 provider stage。
+- [x] Retry / fallback linkage and recovery outcome：retry／fallback lineage 與 outcome 已完成。
 - [x] Success denominator、failure rate、exception recurrence aggregation。
 - [x] Operational-history query / summary capability。
 - [x] Restart-persistent telemetry evidence。
 - [x] Telemetry 與 token / cost metrics 共用 `task_id` / `trace_id` identity linkage。
 - [x] 對 success、failure、retry、missing metrics、persistence 的自動測試。
+- [x] 16 個並行 task 的 trace／decision／observation／cost identity 無交叉污染，重啟後一致。
+- [x] Telemetry observation 寫入故障不改變 task outcome，missing-event summary 可在重啟後重建。
 
-因此 **Phase 1 = In Progress**。Telemetry 核心 runtime wiring、bounded retry、阻擋／耗盡證據、
-recovery analysis/planner/gate/outcome contracts 與 restart correlation 已完成；provider failure
-stage 對應、alternate-target fallback、完整 missing-event/並行 correlation 驗收與正式 exit checklist 尚未完成。
+因此 **Phase 1 = Complete on current feature branch**。Telemetry 核心 runtime wiring、bounded retry、
+阻擋／耗盡證據、recovery analysis/planner/gate/outcome contracts、provider failure stage、受治理
+alternate-target fallback、restart correlation、並行 identity isolation 與 durable missing-event detection
+均已完成正式 exit checklist；目前只剩提交／整合程序，不再是 Phase 1 工程阻塞。
 
 ---
 
@@ -396,7 +396,7 @@ Neither changes mandatory Phase 1.5 exit criteria. Strix does not replace Main/A
 
 | 階段 | 規劃與狀態 |
 |---|---|
-| Phase 1 | 進行中：Core Baseline 已驗證；目前必做 Execution Experience & Evolution Telemetry Foundation，完成後才正式退出 Phase 1 |
+| Phase 1 | 目前 feature 分支已完成：Core Baseline 與 Execution Experience & Evolution Telemetry 正式退出條件均通過；待整合至 `dev` |
 | Phase 1.5 | 尚未開始：Real Infrastructure + Controlled Code Evolution + Experimental Validation。除 LiteLLM/NIM/OpenRouter、PostgreSQL、Docker、auth/policy/recovery 外，實作 Skill/Sub-Agent autonomous construction、Main/Audit Secure Evolution Gate、frontier semantic review、Validation Incident、mandatory Human Escalation，並執行 reviewer ablation、known-defect security benchmark、model configuration 與 escalation-burden 實驗；不包含完整 recursive organization runtime |
 | Phase 2 | 規劃：pgvector、embedding、語意檢索、相容性篩選與排序；目前僅完成 task_family 精確去重 |
 | Phase 3 | 規劃：在 Phase 1 量測基礎上，以 tracing、Phoenix/DeepEval/MLflow 執行跨模型 baseline、token amortization、相似度、重用與回歸實驗 |

@@ -53,6 +53,39 @@ class CapabilityService:
     def find_active_by_task_family(self, task_family: str) -> Capability | None:
         return self._repository.find_active_by_task_family(task_family)
 
+    def list_active_by_task_family(self, task_family: str) -> list[Capability]:
+        return self._repository.list_active_by_task_family(task_family)
+
+    def list_eligible_fallbacks(
+        self,
+        primary: Capability,
+        input_data: dict,
+        *,
+        excluded_ids: set[str] | None = None,
+    ) -> list[Capability]:
+        excluded = excluded_ids or set()
+        candidates = []
+        for candidate in self.list_active_by_task_family(primary.task_family):
+            if candidate.capability_id in excluded or not candidate.fallback_eligible:
+                continue
+            if (
+                candidate.tenant_id != primary.tenant_id
+                or candidate.owner_id != primary.owner_id
+                or candidate.organization_id != primary.organization_id
+                or candidate.scope != primary.scope
+                or candidate.trust_level != primary.trust_level
+            ):
+                continue
+            if not set(candidate.inputs).issubset(input_data):
+                continue
+            if candidate.safety_requirements.get("idempotent") is not True:
+                continue
+            candidates.append(candidate)
+        return sorted(
+            candidates,
+            key=lambda item: (item.routing_priority, item.capability_id),
+        )
+
     def reserve_for_task(self, task_family: str, description: str) -> tuple[Capability, bool]:
         return self._repository.reserve_for_task(task_family, description)
 

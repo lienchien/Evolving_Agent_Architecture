@@ -296,5 +296,7 @@ class TelemetrySummary(BaseModel):
     fallback_observation_count: int = Field(ge=0)
     recovery_attempt_count: int = Field(ge=0)
     retry_recovery_rate: float | None = Field(default=None, ge=0, le=1)
+    missing_event_count: int = Field(default=0, ge=0)
+    missing_event_trace_count: int = Field(default=0, ge=0)
     instrumentation_failure_count: int = Field(ge=0)
     failure_recurrences: list[FailureRecurrence] = Field(default_factory=list)

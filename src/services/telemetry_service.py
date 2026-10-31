@@ -4,7 +4,7 @@ import logging
 from collections import Counter
 from datetime import datetime, timezone
 from threading import Lock
-from typing import Callable
+from typing import Any, Callable
 
 from src.domain.errors import UnknownTraceError
 from src.domain.telemetry import (
@@ -80,6 +80,8 @@ class TelemetryService:
         layer: str = "task",
         node_type: str = "capability_router",
         policy_version: str | None = None,
+        fallback_reason: str | None = None,
+        override_reason: str | None = None,
         evidence: DecisionEvidence | None = None,
     ) -> RoutingDecision:
         decision = RoutingDecision(
@@ -96,6 +98,8 @@ class TelemetryService:
             decision_model="deterministic",
             decision_model_version="capability-router-v1",
             policy_version=policy_version,
+            fallback_reason=fallback_reason,
+            override_reason=override_reason,
             evidence=evidence,
         )
         self._write(
@@ -118,6 +122,7 @@ class TelemetryService:
         decision_id: str | None = None,
         parent_observation_id: str | None = None,
         kind: ObservationKind = ObservationKind.EXECUTION,
+        metadata: dict[str, Any] | None = None,
     ) -> ExecutionObservation:
         observation = ExecutionObservation(
             trace_id=trace_id,
@@ -131,6 +136,7 @@ class TelemetryService:
             started_at=started_at,
             completed_at=completed_at,
             latency_ms=latency_ms,
+            metadata=metadata or {},
         )
         self._write(
             "save_execution_observation",
@@ -178,7 +184,7 @@ class TelemetryService:
         target_version: str | None,
         attempt_number: int,
         outcome: ObservationOutcome,
-        retry_decision: RetryDecision,
+        retry_decision: RetryDecision | None = None,
     ) -> RecoveryAttempt:
         attempt = RecoveryAttempt(
             trace_id=trace_id,
@@ -332,13 +338,34 @@ class TelemetryService:
         observations: list[ExecutionObservation] = []
         failures: list[ExecutionFailure] = []
         recovery_attempts: list[RecoveryAttempt] = []
+        missing_event_count = 0
+        missing_event_trace_count = 0
         for trace in traces:
-            decisions.extend(self._repository.list_routing_decisions(trace.trace_id))
-            observations.extend(self._repository.list_execution_observations(trace.trace_id))
-            failures.extend(self._repository.list_execution_failures(trace.trace_id))
-            recovery_attempts.extend(
-                self._repository.list_recovery_attempts(trace.trace_id)
+            trace_decisions = self._repository.list_routing_decisions(trace.trace_id)
+            trace_observations = self._repository.list_execution_observations(
+                trace.trace_id
             )
+            trace_failures = self._repository.list_execution_failures(trace.trace_id)
+            trace_recovery_attempts = self._repository.list_recovery_attempts(
+                trace.trace_id
+            )
+            decisions.extend(trace_decisions)
+            observations.extend(trace_observations)
+            failures.extend(trace_failures)
+            recovery_attempts.extend(trace_recovery_attempts)
+
+            trace_missing_events = 0
+            if trace.final_outcome is not None and not trace_observations:
+                trace_missing_events += 1
+            if (
+                trace.final_outcome is not None
+                and trace.final_outcome is not TraceOutcome.FAILED
+                and not trace_decisions
+            ):
+                trace_missing_events += 1
+            if trace_missing_events:
+                missing_event_trace_count += 1
+                missing_event_count += trace_missing_events
 
         patterns = Counter(
             (
@@ -407,6 +434,8 @@ class TelemetryService:
             retry_recovery_rate=(
                 successful_retries / len(retry_attempts) if retry_attempts else None
             ),
+            missing_event_count=missing_event_count,
+            missing_event_trace_count=missing_event_trace_count,
             instrumentation_failure_count=self.instrumentation_failure_count,
             failure_recurrences=recurrences,
         )

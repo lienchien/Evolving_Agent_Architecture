@@ -821,3 +821,42 @@ VulnBump 將「漏洞修補成功」定義為獨立驗證者在**全新容器**�
 - **來源可信度**：NVIDIA 官方工程教程 + Nous Research 公開 benchmark 與 traces；仍屬參與開發團隊的自有實驗，尚未獨立跨框架重現。作者與來源日期已核對。
 - **可重現性限制**：9 個故意觸發工具錯誤的案例，每模型／組別／任務僅 3 次；不代表一般任務分布。需要相同版本、可執行 harness、模型 API、隔離工具環境；部分官方教程要求 Docker，且原始結果的模型版本未必可長期取得。測試需報告信賴區間與成本變異，不因 1/27 的變動宣稱顯著。
 - **CEAA 實作狀態**：上述均為待驗證實驗設計；本次僅更新 Research Watch，**未修改正式 v1.9、DEV_PLAN 或實作程式**。Phase 1 既有 Telemetry 退出條件仍優先，不因研究收錄自動擴張工程範圍。
+
+
+---
+
+## 2026-11-07 — VISTA：可主動檢索的無損視覺記憶與互動 Agent 評估（B — Experimental Value）
+
+- **原始論文**：[VISTA: A Visual Harness for Reasoning in an Interactive World](https://arxiv.org/abs/2610.02200)
+- **作者／發表日期**：Qiushi Han、Keya Hu、Linlu Qiu、Cathy Wu、Kaiming He；arXiv 2026-10-01；本次由 2026-11-06 收到的 DeepLearning.AI《The Batch》發現，2026-11-07 收錄。
+- **研究優先級**：Medium–High（實驗方法參考，**非**架構修改）；**CEAA_relevance**：High（跨任務經驗／記憶檢索評估）；**design_novelty**：Low（核心概念已涵蓋）；**incremental_value**：Experiment；**admission_decision**：Include。
+- **證據等級**：已核對論文原始 arXiv 摘要及二手技術報導；以下數字為**作者報告**，非 CEAA 重現結果。完整程式、原始軌跡與私有測試結果尚待核查。
+
+### 核心貢獻及可核對的外部結果
+
+VISTA 為多模態模型提供可回取原始影格的 **lossless visual memory**，使 Agent 能依需要檢索歷史視覺觀察，而不必將全部影格永久放入當前上下文。論文摘要報告：在 ARC-AGI-3 的 25 個公開遊戲中，同一 Claude Opus 5.0 的 Relative Human Action Efficiency（RHAE）由 **40.68 → 100.00**；相對首次參與的人類受試者，完成任務所用動作少 **57.4%**。二手報導另稱在 GameWorld 的 GPT-5.6 Sol 設定下，VISTA 完成率 **63.3%**，native harness **40%**，首次人類參與者 **55.3%**；這些額外數字尚待論文表格逐項核對。上述是特定公開互動遊戲基準的 harness 改善，**不證明 Agent 在長期部署中持續演化**。
+
+### 與 CEAA 既有設計重疊之處／對應章節
+
+- **System Design v1.9 §2.1 Experience-to-Capability、§2.4 Experience as Training Data、§2.7 Long-Term Decision Evolution**：已有從歷史經驗抽取可重用能力的研究假說。
+- **§2.9 Skill Packages / Execution-Path Experience、§2.10 MADE / Memory Router**：已有依任務條件檢索歷史路徑及決策證據的設計；VISTA 並非首次提出 Memory 或 Experience-aware Retrieval。
+- **§17–20 Testing / Validation、§56–60 Metrics / Ablation（依 Research Watch 規則）**：已有獨立驗證與比較實驗要求。
+- **DEV_PLAN.md**：Phase 1 的 Trace / Outcome Telemetry 已完成；Phase 2 Memory Router／Decision PoC 與 Phase 3 跨場景驗證仍待實測。
+- **既有 Research Watch**：Langfuse／LangSmith Observability、Google ADK、NVIDIA NeMo Gym、NeMo Relay 等已涵蓋 trace-driven optimization、holdout 與成本測量；不得重述為 CEAA 新架構。
+
+### 相對 CEAA 的真正新增研究或工程價值／B 類收錄理由
+
+新增價值是**具體的視覺歷史記憶介面與外部定量 harness 對照**：將「保留原始觀察、按需主動回取、以摘要替代、完全不保留」作為可分離的實驗處理；同時衡量長時程互動任務的**動作效率**，而不僅是 token、延遲或一次性成功率。這可作為 CEAA 未來跨場景、尤其含圖像／GUI／機器人任務的 Baseline／Ablation，**不要求立即導入視覺模組或修改 v1.9**。
+
+### 建議 Baseline / Experiment / Ablation / Oracle / Metrics
+
+- **Baseline B0**：固定模型、固定任務、原生 harness（無跨步驟外部視覺記憶）。
+- **B1**：同模型 + 文字／摘要式歷史記憶；**B2**：同模型 + 原始影格全量保留（受 context 限制）；**B3**：同模型 + VISTA 式無損影格儲存／主動檢索；**B4**：CEAA 既有 Memory Router / Experience-aware 選擇（僅在對應模態介面可用時測試）。
+- **Ablation**：移除原始影格回取、只留摘要、取消主動檢索、取消跨回合 action-outcome history、限制 retrieval budget；控制模型、工具、上下文上限、測試任務及推論預算。
+- **Oracle**：遊戲環境提供的客觀完成／失敗訊號、動作紀錄與重放驗證；CEAA 跨場景實驗另以獨立 domain verifier 驗證，不能以模型自評代替。
+- **Metrics**：verified task success、RHAE / actions-to-success、首次嘗試成功率、token、總費用、Cost per Successful Task（含儲存／檢索成本）、P50/P95 latency、memory retrieval precision、跨任務 retention／transfer、policy violation、regression rate。
+- **長期演化驗證**：跨 T0…Tn 新任務／未見環境比較是否保留並遷移能力；單次 harness 效能提升**不得**宣稱為 Continuous Capability Evolution。
+
+### 證據與限制
+
+公開遊戲可能受 benchmark familiarity / leakage 影響；公開 25 遊戲結果不代表私有 holdout 泛化。視覺影格保留有隱私、儲存與檢索成本，對文字型 CEAA 任務的效益尚未證實。論文未證明長期 Skill/Agent 版本演化；需事前鎖定任務分割、記憶保留政策、評估預算與跨環境轉移指標。此條目只為**研究實驗參考**，不修改正式 System Design v1.9、DEV_PLAN 或 Runtime。

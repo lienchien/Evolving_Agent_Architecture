@@ -5,11 +5,11 @@
 - 3D 粒子群、發光 Agent 節點、弧線和沿路徑移動的光點
 - 可拖曳/縮放場景、節點點選、旋轉控制
 - 上方 KPI、底部事件流和 Agent 詳情面板
-- 完全本地執行，使用**模擬資料**；沒有連接 CEAA 真實後端
+- 完全本地執行，預設使用**模擬資料**；沒有連接 CEAA 真實後端
 
 ## 需求
 
-- Node.js 20.19+ 或 22.12+（Vite 需求依你安裝版本而定）
+- Node.js 18+（本專案固定使用 Vite 5.4；若升級到 Vite 7，需 Node.js 20.19+ 或 22.12+）
 - 可使用 WebGL 的瀏覽器
 
 ## 啟動
@@ -23,14 +23,30 @@ npm run dev
 
 ## 專案結構
 
-- `src/data.js`：模擬 Agent 與有向流動路徑的資料
+- `src/data.js`：模擬 Agent 與有向流動路徑的資料，以及模擬事件流
 - `src/Constellation.jsx`：Three.js 粒子、節點、曲線與動畫
-- `src/App.jsx`：React Dashboard、選擇節點與模擬事件
+- `src/App.jsx`：React Dashboard、選擇節點、事件處理（模擬 / WebSocket）
 - `src/style.css`：深色科技風介面
+- `server/mock_ws.py`：本機測試用的 FastAPI WebSocket 事件來源
 
 ## 接入現有 CEAA 平台
 
-目前 `src/App.jsx` 的 `setInterval` 用來模擬事件。正式接入時，改為 WebSocket：
+`src/App.jsx` 已內建兩種事件來源，共用同一個 `handleEvent`：
+
+- 未設定 `VITE_EVENTS_WS`：用 `setInterval` 產生模擬事件
+- 設定 `VITE_EVENTS_WS`：改用 WebSocket（斷線 3 秒自動重連）
+
+本機試接 WebSocket：
+
+```bash
+pip install fastapi uvicorn
+cd server && uvicorn mock_ws:app --port 8000
+# 另一個終端機，在專案根目錄：
+cp .env.example .env.local
+npm run dev
+```
+
+核心寫法：
 
 ```jsx
 useEffect(() => {
@@ -58,13 +74,17 @@ useEffect(() => {
 }
 ```
 
+目前會觸發光點動畫的 `type`：`task.delegated`（藍）、`task.completed`（青）、`task.failed`（紅）。
+`source_agent` / `target_agent` 必須對應 `src/data.js` 中 `AGENTS` 的 `id`，且兩者之間要有 `EDGES` 路徑（正反方向皆可）。
+
 將執行事件與畫面粒子路徑分離：**Agent 真正執行一次事件，前端才觸發一次動畫**，避免持續動畫被誤認為實際業務流量。建議從 PostgreSQL/事件匯流層訂閱事件，經 FastAPI WebSocket 推送到前端；不要把 Three.js 每一幀直接連接至資料庫。
 
 ## 效能
 
 - 一般粒子用 `BufferGeometry` / `Points` 批次呈現，不要為數千粒子建立數千個 React Mesh。
 - `useFrame` 內更新 Three.js object ref，不要每秒呼叫 React `setState` 60 次。
-- Agent 數量增加時使用 instancing、篩選、分群與 LOD，並降低手機版粒子數。
+- 事件光點使用 `InstancedMesh` 物件池（上限 48 個同時移動），不會隨事件數量增加 draw call。
+- Agent 數量增加時使用 instancing、篩選、分群與 LOD，並降低手機版粒子數（寬度 < 700px 時粒子數自動降為 45%）。
 - 真正的 GPU 渲染需要支援 WebGL 的顯示裝置；不要求 NVIDIA 顯卡。
 
 ## 參考

@@ -197,3 +197,4 @@ button:focus-visible { outline: 1px solid var(--blue); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
   .conn-connecting { animation: none; }
 }
+.legend .perf { color: var(--dim); }

@@ -1,6 +1,6 @@
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
+import { forwardRef, memo, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { Html, Line, OrbitControls } from '@react-three/drei'
+import { Html, Line, OrbitControls, PerformanceMonitor } from '@react-three/drei'
 import { Bloom, EffectComposer } from '@react-three/postprocessing'
 import * as THREE from 'three'
 
@@ -12,6 +12,8 @@ export const KIND_COLOR = {
 
 const MAX_PULSES = 48 // 同時在路徑上移動的光點上限
 const TRAIL = 7 // 每個光點的拖尾長度（instance 數）
+const MERGE_WINDOW = 0.18 // 同一路徑、同方向、同類型的事件，若前一顆光點才走不到 18%，就合併成一顆
+const LABEL_LIMIT = 16 // Agent 數量超過此值時，只顯示選取／相鄰／滑過節點的標籤
 
 const gauss = () => {
   let u = 0
@@ -49,6 +51,7 @@ const VERT = /* glsl */ `
   uniform float uTime;
   uniform float uPixel;
   uniform float uSel;
+  uniform float uSize;
   attribute vec3 aCenter;
   attribute vec3 aColor;
   attribute float aSize;
@@ -64,7 +67,7 @@ const VERT = /* glsl */ `
     off.xz = mat2(c, -s, s, c) * off.xz;
     vec4 mv = modelViewMatrix * vec4(aCenter + off, 1.0);
     gl_Position = projectionMatrix * mv;
-    gl_PointSize = aSize * uPixel * (38.0 / -mv.z);
+    gl_PointSize = aSize * uSize * uPixel * (38.0 / -mv.z);
     float tw = 0.5 + 0.5 * sin(uTime * (0.8 + aPhase * 0.25) + aPhase * 20.0);
     float sel = 1.0;
     if (uSel > -0.5) sel = abs(aAgent - uSel) < 0.5 ? 1.7 : 0.3;
@@ -84,7 +87,7 @@ const FRAG = /* glsl */ `
   }
 `
 
-function Particles({ agents, quality, selIndex }) {
+const Particles = memo(function Particles({ agents, quality, selIndex }) {
   const geometry = useMemo(() => {
     const per = Math.round(1500 * quality)
     const dust = Math.round(2600 * quality)
@@ -152,7 +155,10 @@ function Particles({ agents, quality, selIndex }) {
 
   useEffect(() => () => geometry.dispose(), [geometry])
 
-  const uniforms = useMemo(() => ({ uTime: { value: 0 }, uPixel: { value: 1 }, uSel: { value: -1 } }), [])
+  const uniforms = useMemo(
+    () => ({ uTime: { value: 0 }, uPixel: { value: 1 }, uSel: { value: -1 }, uSize: { value: quality < 1 ? 0.8 : 1 } }),
+    [quality],
+  )
 
   // 只改 uniform，不觸發 React re-render
   useFrame((state) => {
@@ -173,7 +179,7 @@ function Particles({ agents, quality, selIndex }) {
       />
     </points>
   )
-}
+})
 
 /* ---------------- Agent 節點 ---------------- */
 
@@ -193,7 +199,7 @@ function makeHaloTexture() {
   return tex
 }
 
-function AgentNode({ agent, selected, dim, busy, flashRef, onSelect, haloTex }) {
+const AgentNode = memo(function AgentNode({ agent, selected, dim, busy, flashRef, onSelect, haloTex, labelMode }) {
   const core = useRef()
   const halo = useRef()
   const ring1 = useRef()
@@ -255,19 +261,21 @@ function AgentNode({ agent, selected, dim, busy, flashRef, onSelect, haloTex }) 
           <meshBasicMaterial color={agent.color} transparent opacity={selected ? 0.7 : dim ? 0.08 : 0.22} toneMapped={false} />
         </mesh>
       </group>
-      <Html position={[0, r * 3.4, 0]} center zIndexRange={[20, 0]} style={{ pointerEvents: 'none' }}>
-        <div className={`node-label${selected ? ' is-sel' : ''}${dim ? ' is-dim' : ''}`}>
-          <b>{agent.name}</b>
-          <span>{busy ? `${busy} 執行中` : '待命'}</span>
-        </div>
-      </Html>
+      {(labelMode === 'all' || selected || hover || labelMode === agent.id) && (
+        <Html position={[0, r * 3.4, 0]} center zIndexRange={[20, 0]} style={{ pointerEvents: 'none' }}>
+          <div className={`node-label${selected ? ' is-sel' : ''}${dim ? ' is-dim' : ''}`}>
+            <b>{agent.name}</b>
+            <span>{busy ? `${busy} 執行中` : '待命'}</span>
+          </div>
+        </Html>
+      )}
     </group>
   )
-}
+})
 
 /* ---------------- 路徑 ---------------- */
 
-function Edges({ curves, selected }) {
+const Edges = memo(function Edges({ curves, selected }) {
   return [...curves.entries()].map(([key, e]) => {
     const on = selected && (e.s === selected || e.t === selected)
     return (
@@ -282,16 +290,23 @@ function Edges({ curves, selected }) {
       />
     )
   })
-}
+})
 
 /* ---------------- 事件光點（InstancedMesh 物件池） ---------------- */
 
-const Pulses = forwardRef(function Pulses({ curves, flashRef }, ref) {
+const Pulses = forwardRef(function Pulses({ curves, flashRef, glow }, ref) {
   const mesh = useRef()
+  // 有 Bloom 時顏色要 >1 才會發光；沒有 Bloom 時 >1 會被截成白色，所以維持原色
+  const glowRef = useRef(glow)
+  glowRef.current = glow
   const pool = useMemo(
     () =>
       Array.from({ length: MAX_PULSES }, () => ({
         active: false,
+        visible: false, // 上一幀是否有畫出來；用來在消失時只清一次
+        dirtyColor: false,
+        key: '',
+        count: 1, // 合併的事件數
         t: 0,
         speed: 0.5,
         curve: null,
@@ -304,27 +319,51 @@ const Pulses = forwardRef(function Pulses({ curves, flashRef }, ref) {
   const tmp = useMemo(() => ({ obj: new THREE.Object3D(), v: new THREE.Vector3() }), [])
   const colors = useMemo(() => new Float32Array(MAX_PULSES * TRAIL * 3), [])
 
+  // 一開始把全部 instance 縮成 0，之後只更新有在動的光點
+  useLayoutEffect(() => {
+    const m = mesh.current
+    tmp.obj.scale.setScalar(0)
+    tmp.obj.updateMatrix()
+    for (let i = 0; i < MAX_PULSES * TRAIL; i++) m.setMatrixAt(i, tmp.obj.matrix)
+    m.instanceMatrix.needsUpdate = true
+  }, [tmp])
+
   useImperativeHandle(
     ref,
     () => ({
-      // 一筆事件 = 一次動畫。找不到路徑時回傳 false。
+      // 一筆事件 = 一次動畫；短時間內同路徑同類型的事件合併成一顆更亮更大的光點。
       fire(source, target, type) {
-        let edge = curves.get(`${source}->${target}`)
+        let edgeKey = `${source}->${target}`
+        let edge = curves.get(edgeKey)
         let reverse = false
         if (!edge) {
-          edge = curves.get(`${target}->${source}`)
+          edgeKey = `${target}->${source}`
+          edge = curves.get(edgeKey)
           reverse = true
         }
         if (!edge) return false
+        const key = `${edgeKey}|${reverse ? 'r' : 'f'}|${type}`
+        flashRef.current[source] = Math.max(flashRef.current[source] || 0, 0.6)
+
+        const merge = pool.find((x) => x.active && x.key === key && x.t < MERGE_WINDOW)
+        const base = KIND_COLOR[type] ?? '#ffffff'
+        if (merge) {
+          merge.count++
+          merge.color.set(base).multiplyScalar(glowRef.current ? 1.8 + Math.min(merge.count - 1, 4) * 0.35 : 1)
+          merge.dirtyColor = true
+          return true
+        }
         const p = pool.find((x) => !x.active) ?? pool.reduce((a, b) => (a.t > b.t ? a : b))
         p.active = true
+        p.key = key
+        p.count = 1
         p.t = 0
         p.speed = 0.45 + Math.random() * 0.25
         p.curve = edge.curve
         p.reverse = reverse
         p.target = target
-        p.color.set(KIND_COLOR[type] ?? '#ffffff').multiplyScalar(1.8)
-        flashRef.current[source] = Math.max(flashRef.current[source] || 0, 0.6)
+        p.color.set(base).multiplyScalar(glowRef.current ? 1.8 : 1)
+        p.dirtyColor = true
         return true
       },
     }),
@@ -335,8 +374,11 @@ const Pulses = forwardRef(function Pulses({ curves, flashRef }, ref) {
     const m = mesh.current
     if (!m) return
     const { obj, v } = tmp
-    let idx = 0
-    for (const p of pool) {
+    let matrixChanged = false
+    let colorChanged = false
+    for (let pi = 0; pi < pool.length; pi++) {
+      const p = pool[pi]
+      if (!p.active && !p.visible) continue // 閒置光點完全跳過
       if (p.active) {
         p.t += dt * p.speed
         if (p.t >= 1) {
@@ -344,6 +386,13 @@ const Pulses = forwardRef(function Pulses({ curves, flashRef }, ref) {
           flashRef.current[p.target] = 1
         }
       }
+      const base = pi * TRAIL
+      if (p.dirtyColor) {
+        for (let k = 0; k < TRAIL; k++) m.setColorAt(base + k, p.color)
+        p.dirtyColor = false
+        colorChanged = true
+      }
+      const grow = 1 + Math.min(Math.log2(p.count), 3) * 0.22
       for (let k = 0; k < TRAIL; k++) {
         const tt = p.t - k * 0.022
         if (!p.active || tt < 0) {
@@ -351,16 +400,16 @@ const Pulses = forwardRef(function Pulses({ curves, flashRef }, ref) {
         } else {
           p.curve.getPoint(p.reverse ? 1 - tt : tt, v)
           obj.position.copy(v)
-          obj.scale.setScalar(1 - k / TRAIL)
+          obj.scale.setScalar((1 - k / TRAIL) * grow)
         }
         obj.updateMatrix()
-        m.setMatrixAt(idx, obj.matrix)
-        m.setColorAt(idx, p.color)
-        idx++
+        m.setMatrixAt(base + k, obj.matrix)
       }
+      p.visible = p.active
+      matrixChanged = true
     }
-    m.instanceMatrix.needsUpdate = true
-    if (m.instanceColor) m.instanceColor.needsUpdate = true
+    if (matrixChanged) m.instanceMatrix.needsUpdate = true
+    if (colorChanged && m.instanceColor) m.instanceColor.needsUpdate = true
   })
 
   return (
@@ -375,9 +424,35 @@ const Pulses = forwardRef(function Pulses({ curves, flashRef }, ref) {
 /* ---------------- 主場景 ---------------- */
 
 const Constellation = forwardRef(function Constellation(
-  { agents, edges, selected, onSelect, busy, autoRotate, quality = 1 },
+  { agents, edges, selected, onSelect, busy, autoRotate, quality = 1, onPerf },
   ref,
 ) {
+  // 自適應畫質：掉幀時先降 DPR，到 1 之後關閉 Bloom；回穩時反向恢復
+  const maxDpr = Math.min(window.devicePixelRatio || 1, quality < 1 ? 1.5 : 2)
+  const [dpr, setDpr] = useState(maxDpr)
+  const [bloom, setBloom] = useState(true)
+  const perf = useRef({ dpr: maxDpr, bloom: true })
+  const decline = () => {
+    if (perf.current.dpr > 1) perf.current.dpr = Math.max(1, perf.current.dpr - 0.25)
+    else perf.current.bloom = false
+    setDpr(perf.current.dpr)
+    setBloom(perf.current.bloom)
+  }
+  const incline = () => {
+    if (!perf.current.bloom) perf.current.bloom = true
+    else perf.current.dpr = Math.min(maxDpr, perf.current.dpr + 0.25)
+    setDpr(perf.current.dpr)
+    setBloom(perf.current.bloom)
+  }
+  const fallback = () => {
+    perf.current = { dpr: 1, bloom: false }
+    setDpr(1)
+    setBloom(false)
+  }
+  useEffect(() => {
+    onPerf?.({ dpr, bloom })
+  }, [dpr, bloom, onPerf])
+
   const curves = useMemo(() => buildCurves(agents, edges), [agents, edges])
   const flashRef = useRef({})
   const pulses = useRef()
@@ -406,12 +481,13 @@ const Constellation = forwardRef(function Constellation(
 
   return (
     <Canvas
-      dpr={[1, 2]}
+      dpr={dpr}
       camera={{ position: [0, 5, 24], fov: 48, near: 0.1, far: 200 }}
       gl={{ antialias: false, powerPreference: 'high-performance' }}
       onPointerMissed={() => onSelect(null)}
     >
       <color attach="background" args={['#03050b']} />
+      <PerformanceMonitor onIncline={incline} onDecline={decline} onFallback={fallback} flipflops={4} />
       <Particles agents={agents} quality={quality} selIndex={selIndex} />
       <Edges curves={curves} selected={selected} />
       {agents.map((a) => (
@@ -424,9 +500,10 @@ const Constellation = forwardRef(function Constellation(
           flashRef={flashRef}
           onSelect={onSelect}
           haloTex={haloTex}
+          labelMode={agents.length <= LABEL_LIMIT || (neighbors && neighbors.has(a.id)) ? 'all' : 'auto'}
         />
       ))}
-      <Pulses ref={pulses} curves={curves} flashRef={flashRef} />
+      <Pulses ref={pulses} curves={curves} flashRef={flashRef} glow={bloom} />
       <OrbitControls
         ref={controls}
         makeDefault
@@ -437,9 +514,18 @@ const Constellation = forwardRef(function Constellation(
         minDistance={6}
         maxDistance={48}
       />
-      <EffectComposer multisampling={0}>
-        <Bloom mipmapBlur intensity={1.1} luminanceThreshold={0.3} luminanceSmoothing={0.25} radius={0.75} />
-      </EffectComposer>
+      {bloom && (
+        <EffectComposer multisampling={0}>
+          <Bloom
+            mipmapBlur
+            levels={quality < 1 ? 5 : 8}
+            intensity={1.1}
+            luminanceThreshold={0.3}
+            luminanceSmoothing={0.25}
+            radius={0.75}
+          />
+        </EffectComposer>
+      )}
     </Canvas>
   )
 })

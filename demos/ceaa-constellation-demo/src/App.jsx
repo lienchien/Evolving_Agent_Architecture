@@ -4,6 +4,8 @@ import { AGENTS, EDGES, createMockStream } from './data.js'
 
 // 設定 VITE_EVENTS_WS（見 .env.example）就改用 WebSocket；留空則使用模擬資料。
 const WS_URL = import.meta.env.VITE_EVENTS_WS || ''
+// 模擬事件速率（筆/秒）。網址加 ?rate=200（或 #stress）可做壓力測試。
+const MOCK_RATE = Math.min(1000, Math.max(0.2, Number(new URLSearchParams(window.location.search).get('rate')) || (window.location.hash === '#stress' ? 200 : 1.4)))
 const ANIMATED = new Set(['task.delegated', 'task.completed', 'task.failed'])
 const AGENT_BY_ID = Object.fromEntries(AGENTS.map((a) => [a.id, a]))
 const nameOf = (id) => AGENT_BY_ID[id]?.name ?? id ?? '—'
@@ -14,50 +16,69 @@ const TYPE_LABEL = {
   'task.failed': '失敗',
 }
 
-const initial = { events: [], running: {}, stats: {}, totals: { tokens: 0, lat: 0, n: 0 }, times: [] }
+const FLUSH_MS = 250 // 事件先進 buffer，每 250ms 批次更新一次 React state
+const MAX_FEED = 120
 
-// 所有統計都從事件推導，WebSocket 與模擬資料共用同一個 reducer。
-function reducer(state, ev) {
+// rate：每秒一個 [秒, 筆數] 桶，只保留最近 60 秒，事件量再大也不會無限成長
+const initial = { events: [], running: {}, stats: {}, totals: { tokens: 0, lat: 0, n: 0 }, rate: [] }
+
+// 一次處理一整批事件（舊 → 新）。所有統計都從事件推導，WebSocket 與模擬資料共用。
+function reducer(state, batch) {
   const running = { ...state.running }
-  if (ev.state === 'running') running[ev.task_id] = { source: ev.source_agent, target: ev.target_agent }
-  else if (ev.task_id) delete running[ev.task_id]
-
-  const tokens = ev.metadata?.tokens ?? 0
-  const lat = ev.metadata?.latency_ms
   const stats = { ...state.stats }
-  const bump = (id, fn) => {
-    if (!id) return
-    const s = { sent: 0, received: 0, done: 0, failed: 0, tokens: 0, lat: 0, n: 0, last: null, ...stats[id] }
-    fn(s)
-    stats[id] = s
-  }
-  bump(ev.source_agent, (s) => {
-    s.sent++
-    s.last = ev.ts
-    if (ev.type === 'task.completed') s.done++
-    if (ev.type === 'task.failed') s.failed++
-    s.tokens += tokens
-    if (lat != null) {
-      s.lat += lat
-      s.n++
+  const touched = new Set()
+  const get = (id) => {
+    if (!touched.has(id)) {
+      stats[id] = { sent: 0, received: 0, done: 0, failed: 0, tokens: 0, lat: 0, n: 0, last: null, ...stats[id] }
+      touched.add(id)
     }
-  })
-  bump(ev.target_agent, (s) => {
-    s.received++
-    s.last = ev.ts
-  })
+    return stats[id]
+  }
+  let { tokens, lat, n } = state.totals
 
-  const now = Date.now()
+  for (const ev of batch) {
+    if (ev.state === 'running') running[ev.task_id] = { source: ev.source_agent, target: ev.target_agent }
+    else if (ev.task_id) delete running[ev.task_id]
+
+    const tk = ev.metadata?.tokens ?? 0
+    const l = ev.metadata?.latency_ms
+    tokens += tk
+    if (l != null) {
+      lat += l
+      n++
+    }
+    if (ev.source_agent) {
+      const s = get(ev.source_agent)
+      s.sent++
+      s.last = ev.ts
+      if (ev.type === 'task.completed') s.done++
+      if (ev.type === 'task.failed') s.failed++
+      s.tokens += tk
+      if (l != null) {
+        s.lat += l
+        s.n++
+      }
+    }
+    if (ev.target_agent) {
+      const s = get(ev.target_agent)
+      s.received++
+      s.last = ev.ts
+    }
+  }
+
+  const sec = Math.floor(Date.now() / 1000)
+  const rate = state.rate.filter(([t]) => sec - t < 60)
+  const lastBucket = rate[rate.length - 1]
+  if (lastBucket && lastBucket[0] === sec) rate[rate.length - 1] = [sec, lastBucket[1] + batch.length]
+  else rate.push([sec, batch.length])
+
+  const newest = batch.length > MAX_FEED ? batch.slice(-MAX_FEED) : batch
   return {
-    events: [ev, ...state.events].slice(0, 120),
+    events: [...newest].reverse().concat(state.events).slice(0, MAX_FEED),
     running,
     stats,
-    totals: {
-      tokens: state.totals.tokens + tokens,
-      lat: state.totals.lat + (lat ?? 0),
-      n: state.totals.n + (lat != null ? 1 : 0),
-    },
-    times: [...state.times.filter((t) => now - t < 60000), now],
+    totals: { tokens, lat, n },
+    rate,
   }
 }
 
@@ -71,7 +92,9 @@ export default function App() {
   const [paused, setPaused] = useState(false)
   const [conn, setConn] = useState(WS_URL ? 'connecting' : 'mock')
   const [, setClock] = useState(0)
+  const [perf, setPerf] = useState(null)
   const scene = useRef()
+  const bufferRef = useRef([])
   const pausedRef = useRef(paused)
   pausedRef.current = paused
   const streamRef = useRef(null)
@@ -80,11 +103,22 @@ export default function App() {
 
   const handleEvent = useCallback((ev) => {
     if (!ev?.type) return
-    dispatch(ev)
+    bufferRef.current.push(ev)
     // Agent 真的執行一次事件，前端才觸發一次動畫
     if (ANIMATED.has(ev.type) && ev.source_agent && ev.target_agent) {
       scene.current?.fire(ev.source_agent, ev.target_agent, ev.type)
     }
+  }, [])
+
+  // 批次把 buffer 寫進 state：事件量再大，React 每秒最多 render 4 次
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (!bufferRef.current.length) return
+      const batch = bufferRef.current
+      bufferRef.current = []
+      dispatch(batch)
+    }, FLUSH_MS)
+    return () => clearInterval(id)
   }, [])
 
   // 正式資料：WebSocket（斷線 3 秒後重連）
@@ -122,7 +156,15 @@ export default function App() {
   // 模擬資料
   useEffect(() => {
     if (WS_URL || paused) return
-    const id = setInterval(() => handleEvent(streamRef.current()), 700)
+    // 每 100ms 依 MOCK_RATE 產生對應數量的事件（小數部分累積到下一輪）
+    let carry = 0
+    const id = setInterval(() => {
+      carry += MOCK_RATE / 10
+      while (carry >= 1) {
+        handleEvent(streamRef.current())
+        carry--
+      }
+    }, 100)
     return () => clearInterval(id)
   }, [paused, handleEvent])
 
@@ -147,7 +189,8 @@ export default function App() {
   const now = Date.now()
   const activeCount = AGENTS.filter((a) => busy[a.id] || (state.stats[a.id]?.last && now - Date.parse(state.stats[a.id].last) < 15000)).length
   const runningCount = Object.keys(state.running).length
-  const perMin = state.times.filter((t) => now - t < 60000).length
+  const nowSec = Math.floor(now / 1000)
+  const perMin = state.rate.reduce((sum, [t, c]) => (nowSec - t < 60 ? sum + c : sum), 0)
   const avgLat = state.totals.n ? Math.round(state.totals.lat / state.totals.n) : 0
 
   const connLabel = { mock: '模擬資料', connecting: '連線中', live: '即時連線', offline: '已斷線，重試中' }[conn]
@@ -215,6 +258,7 @@ export default function App() {
             busy={busy}
             autoRotate={autoRotate}
             quality={quality}
+            onPerf={setPerf}
           />
           <div className="legend">
             {Object.entries(TYPE_LABEL).map(([k, v]) => (
@@ -223,6 +267,11 @@ export default function App() {
                 {v}
               </span>
             ))}
+            {perf && (
+              <span className="perf">
+                畫質 {perf.dpr}x{perf.bloom ? '' : ' · 光暈關閉'}
+              </span>
+            )}
             <span className="hint">拖曳旋轉 · 滾輪縮放 · 點選節點看詳情</span>
           </div>
         </section>

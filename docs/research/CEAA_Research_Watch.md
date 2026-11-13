@@ -860,3 +860,40 @@ VISTA 為多模態模型提供可回取原始影格的 **lossless visual memory*
 ### 證據與限制
 
 公開遊戲可能受 benchmark familiarity / leakage 影響；公開 25 遊戲結果不代表私有 holdout 泛化。視覺影格保留有隱私、儲存與檢索成本，對文字型 CEAA 任務的效益尚未證實。論文未證明長期 Skill/Agent 版本演化；需事前鎖定任務分割、記憶保留政策、評估預算與跨環境轉移指標。此條目只為**研究實驗參考**，不修改正式 System Design v1.9、DEV_PLAN 或 Runtime。
+
+
+## 2026-11-13 — NVIDIA TileGym：具結構性 Oracle 的多代理程式轉譯與可驗證 Skill 工作流程
+
+- **原文**：[Translating CUDA Tile Operations from Python to Rust Using Agentic AI](https://developer.nvidia.com/blog/translating-cuda-tile-operations-from-python-to-rust-using-agentic-ai/)
+- **作者／機構**：Yinuo Liu、Melih Elibol、Dheemanth Manur；NVIDIA Technical Blog。
+- **原文日期**：2026-09-16；**郵件發現／收錄日期**：2026-11-13（11/12 收到 NVIDIA Developer Newsletter，最近 24 小時內）。
+- **CEAA_relevance**：High；**design_novelty**：Low；**incremental_value**：Experiment；**分類**：**B — Experimental Value**；**admission_decision**：Include；**研究優先級**：Medium–High。
+- **證據層級**：NVIDIA 官方工程案例及公開 TileGym Skill／程式碼；作者報告的測試，尚非 CEAA 或獨立第三方重現。
+
+### 核心貢獻與可核對證據
+
+使用專用 Agent Skill，將 cuTile Python／Triton-TileIR 轉譯為 cuTile Rust。主協調者只負責狀態路由，專業子 Agent 依序完成分析、Kernel、Host/FFI、正確性驗證、效能測試；各階段以固定格式 artifact、機械式 verdict 與有限次 retry 交接。核心差異是以**共同 CUDA Tile IR 的結構比對**，在功能測試之外偵測可能漏掉的語意／效能差異，並用原始 kernel 當效能 Oracle。
+
+作者報告：24 個公開 TileGym operators（約 40 kernels）全部完成移植，於 NVIDIA DGX B200、347 組配對設定測得相對 cuTile Python 的整體效能幾何平均 0.995；所有 operators 通過 ≥0.95 的門檻；平均 token cost 約減半。這些是特定 GPU kernel 轉譯工作負載的結果，**不能直接推廣成通用 Agent 成功率或成本改善**。程式與 Skill 可供後續依其依賴環境重現。
+
+### 與 CEAA 既有設計重疊之處／對應章節
+
+- **System Design v1.9**：§2.1 Experience-to-Capability、§2.8 Skill Tiering & Performance Evolution、§2.9 Skill Packages／Execution Path、§2.10 MADE、§3.2 Validation Before Activation、§3.11 Generated Artifacts Untrusted、§8A.4 Candidate Artifact Contract、§8A.5–8A.9 Independent Review／Deterministic Verification、§17–20 Capability Testing／Validation。分階段驗證、治理、角色隔離、重試與回滾本來就已涵蓋，**不是 CEAA 新架構需求**。
+- **DEV_PLAN.md**：Phase 1 Telemetry／Failure Stage／Recovery Contracts 已驗收；Phase 1.5 Sandbox／Audit／Builder、Phase 3 Baseline／Ablation 待驗證。
+- **Research Watch 既有條目**：NeMo Gym × Siemens EDA 的 domain verifier、KDD Cup Data Agents 的受限工具／Trace、其他安全審核及 Skill 優化研究，均已涵蓋部分思想；本條不是重複宣稱「多 Agent + 驗證」為新方法。
+
+### 相對 CEAA 的真正新增研究或工程價值／B 類收錄理由
+
+提供一個**同一 IR 下的結構等價 Oracle + 功能 Oracle + 效能 Oracle** 三重驗證實例，以及可重現的專用 Skill／stage-artifact contract／verdict-driven routing 與具體量化結果。可用來測試：**當最終功能測試通過時，結構 Oracle 是否仍能發現隱藏回歸，且能否降低錯誤重試、人工檢查成本？** 這是 CEAA 已有獨立驗證架構下可獨立檢驗的研究增量，而不是建議新增 Manager、Audit 或改動 v1.9。
+
+### Baseline / Experiment / Ablation / Oracle / Metrics
+
+- **Baseline B0**：固定模型、單一 Agent 直接轉譯，僅單元／端到端測試；**B1**：固定模型、階段式子 Agent + artifact contracts + 功能測試；**B2**：B1 + IR／AST／schema 結構 Oracle；**CEAA**：B2 + 既有 Experience Memory／失敗分類／受治理 Skill 改善與獨立 Audit。
+- **Experiment**：固定模型、任務難度、環境及 retry/token 預算，在具可比較中介表示的轉譯或結構化產物任務上做 holdout、多次重複，量測新增結構 Oracle 對隱藏錯誤與後續能力保留的貢獻；保留人工覆核盲測。
+- **Ablation**：移除 IR diff、機械式 verdict、stage artifact contract、專家故障診斷、retry caps、歷史經驗重用；另測結構 Oracle 錯判對有效解的排除率。
+- **Oracle**：原始程式／參考 IR 結構、固定功能測試、獨立性能測試、人工審查；若非同一編譯 IR，需另定可比對的 AST／schema／行為契約，不得假定所有程式皆有可比較 IR。
+- **Metrics**：verified task success、hidden-regression detection rate、false rejection、error attribution accuracy、retry／repair attempts、P95 latency、total tokens、end-to-end Cost per Successful Task（含驗證與優化成本）、holdout generalization、capability retention；GPU 性能與 Agent 成功率分開報告。
+
+### 證據限制與後續工作
+
+NVIDIA 的結果依賴共同 Tile IR、DGX B200、CUDA 13.1+、Rust 1.89+、特定 compiler／CUPTI 測試環境。原文 GPU device-time 的 0.995 不是完整應用 wall-clock 的效能比；token cost 約減半是作者特定流程的結果，不能當成 CEAA 的已實證成果。CEAA 可先以可產生結構性 Oracle 的小型任務驗證 B0–B2，再評估跨任務持續演化是否帶來獨立增益；**不改正式 System Design v1.9 或 Runtime**。

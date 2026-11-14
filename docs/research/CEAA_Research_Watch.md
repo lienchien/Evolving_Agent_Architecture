@@ -900,3 +900,40 @@ VISTA 為多模態模型提供可回取原始影格的 **lossless visual memory*
 ### 證據限制與後續工作
 
 NVIDIA 的結果依賴共同 Tile IR、DGX B200、CUDA 13.1+、Rust 1.89+、特定 compiler／CUPTI 測試環境。原文 GPU device-time 的 0.995 不是完整應用 wall-clock 的效能比；token cost 約減半是作者特定流程的結果，不能當成 CEAA 的已實證成果。CEAA 可先以可產生結構性 Oracle 的小型任務驗證 B0–B2，再評估跨任務持續演化是否帶來獨立增益；**不改正式 System Design v1.9 或 Runtime**。
+
+
+---
+
+## 2026-11-14 — OpenAI Linux Kernel Cyber Agent：模型能力與 Harness 複雜度的消融
+
+- **原文**：[A thousand fewer paths to root](https://openai.com/index/a-thousand-fewer-paths-to-root/)；**作者／機構**：OpenAI Cyber team（文章署名 OpenAI）；**發表日期**：2026-11-04；**郵件發現日期**：2026-11-14（DeepLearning.AI The Batch，2026-11-13 送達）。
+- **CEAA_relevance**：High；**design_novelty**：Low；**experimental_reference_value**：High；**incremental_value**：Experiment；**experiment_status_in_CEAA**：Planned（Phase 1.5 安全治理、Phase 3 正式比較尚未驗證）；**分類**：**B — 既有設計的待執行實驗參考**；**admission_decision**：Include；**研究優先級**：High（實驗方法），非新架構提案。
+- **證據等級**：OpenAI 官方研究案例及方法／量化結果，原文已核對；不是獨立第三方重現，模型、資料、部分安全技術未完整開放。
+
+### 核心貢獻與原作者報告結果
+
+研究建立 Scout → Analyst → isolated dynamic triage → exploitability assessment → patch generation → human review 的分階段安全研究流程，保留可驗證的執行產物。報告在 2026 年 10 月的 Linux kernel 測試中，先篩出 5,034 個目標（約 280 萬行程式碼），得到 2,308 個候選、1,724 個動態重現結果，最終歸併為 948 個獨立本地權限提升漏洞及候選修補；總 API credits 約 US$1,213,430，即每個獨立漏洞約 US$1,279。**這是作者自述的單一領域工作負載，不是 CEAA 成果，也不是模型能力單獨造成的改善。**
+
+對 CEAA 更重要的是作者的**模型能力 × orchestration 複雜度**觀察：針對較早的 GPT-5.5 Cyber，將 103 個攻擊技巧整理為可選用的 Skill／技術參考，在 63 個候選上成功率由 76.2% 增至 88.9%；較強的 GPT-5.6 Cyber 即使移除重型技巧路由也能表現更好，重新加入技巧層僅增加約 1.5 個百分點。這支持「Skill／Harness 的邊際效益會隨底層模型改變」這個**可否證的實驗問題**，但原文不是嚴格控制所有變因的跨模型因果證明。
+
+另一個重要案例是**Outcome success 不等於 correct path**：早期 200 個看似成功取得 root 的結果，有 20 個其實使用了與指定目標不同的漏洞；作者後來加入獨立的路徑歸因檢查。這能作為 CEAA 既有 Audit／Oracle 設計的具體反例與驗證樣本。
+
+### 與 CEAA 既有設計重疊之處／對應章節
+
+- **System Design v1.9（依 Research Watch 已引用章節對照）**：§2.8 Skill Tiering & Performance Evolution、§2.9 Skill Packages／Execution Path、§2.10 MADE、§8A Secure Evolution Gate、§17–20 Capability Testing／Validation、§56–60 Metrics／Ablation；模型／Skill 選擇、治理、驗證及成本分析本已規劃，**不視為新架構需求**。
+- **DEV_PLAN.md**：Phase 1 的 Telemetry、bounded retry、failure stage、fallback 已完成；Phase 1.5 的隔離／獨立 Audit 及 Phase 3 的對照與消融尚待執行。
+- **既有 Research Watch**：NVIDIA TileGym（結構、功能、效能 Oracle）、NeMo Gym × Siemens EDA（Tool/Skill 驗證與效率）、Google ADK 自主優化等已涵蓋多代理與驗證；本條的獨特參考是**不同模型能力下的重／輕 orchestration 邊際收益比較**及**成功路徑錯誤歸因**。
+
+### 相對 CEAA 的真正新增研究／實驗參考價值與 B 類理由
+
+不是新增 Agent／Skill／Audit 模組，而是提供 CEAA 尚未完成之實驗的具體外部對照：當模型變強，額外 Skill 索引、複雜決策層與長路徑是否不再划算？**能力演化的收益應排除單純模型升級造成的提升**。另需以 path-aware Oracle 避免將錯誤執行路徑誤判為能力成長。可直接支援 Skill Complexity Compression、Model/Workflow Selection、Cost per Successful Task 與 Secure Evolution Gate 的未來實驗。
+
+### Baseline / Experiment / Ablation / Oracle / Metrics
+
+- **Baseline**：B0 固定模型 + 直接單 Agent；B1 固定模型 + 輕量 Tool/Skill 選擇；B2 固定模型 + 重型分層路由／完整 Skill scaffold；B3 只升級模型、不增加 CEAA evolution；CEAA 在固定模型下加入 Experience-aware Routing、受治理 Skill 版本演化與獨立驗證。
+- **Experiment**：至少兩種不同能力／成本的模型 × 三種 orchestration 複雜度，固定任務、工具權限、token/time/retry 預算；先於低風險 sandbox 任務驗證，再於不同任務族與 holdout 測試，區分短期執行改善與跨回合持續能力成長。
+- **Ablation**：移除 Skill technique library、Decision/Manager 分層、Experience Memory、路徑歸因驗證；比較相同模型／不同模型的邊際收益及維護負擔。
+- **Oracle**：獨立測試確定最終結果正確、執行路徑符合指定目標、無越權及無隱藏回歸；不能只看 HTTP 200、測試通過或目標狀態達成。
+- **Metrics**：verified task success、path attribution accuracy、false-success rate、out-of-scope rate、success lift by model tier、CPS（含路由／驗證／維護／探索成本）、P95 latency、token/retry、capability retention、holdout generalization、break-even reuse count。
+- **證據限制／資源**：原文的安全研究在受控環境中進行；不可直接複製攻擊實驗至未授權系統。不同模型比較可能受模型能力、資料與工作負載混雜影響；CEAA 應使用授權 sandbox、非攻擊性代理任務與預先固定的測試集，並事前登記比較條件。原文沒有證明 Agent／Skill 長期演化。
+- **權限邊界**：僅作為待執行實驗參考，不修改正式 System Design v1.9、DEV_PLAN 或 Runtime。

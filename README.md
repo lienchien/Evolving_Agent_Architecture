@@ -411,6 +411,7 @@ uvicorn src.main:app --reload
 ```
 
 With the server running, inspect the API at `http://localhost:8000/docs`.
+For Windows PowerShell setup and a full local approval/reuse walkthrough, see the [Phase 1 local startup guide](docs/PHASE1_LOCAL_STARTUP.md) (Traditional Chinese).
 
 Phase 1 is complete only when runtime success/failure/routing/retry/fallback telemetry is persisted and correlated with tasks and token/cost metrics, query/summary APIs and restart tests are verified against the [formal exit criteria](DEV_PLAN.md).
 

@@ -421,6 +421,7 @@ uvicorn src.main:app --reload
 ```
 
 伺服器啟動後可至 `http://localhost:8000/docs` 查看 API。
+Windows PowerShell 的完整啟動、核准與重用操作見 [Phase 1 本機啟動與測試指南](docs/PHASE1_LOCAL_STARTUP.md)。
 
 只有當成功／失敗／路由／重試／回退的 Runtime Telemetry、Task/Trace Correlation、Summary API 與 Restart Tests 都符合 [正式 Phase 1 退出條件](DEV_PLAN.md) 時，才能標記 Phase 1 Complete。
 
@@ -588,6 +589,7 @@ Memory Retrieval 須依可信身份、Tenant、Branch、Resource、資料分類�
 | [PROJECT_STATUS.md](PROJECT_STATUS.md) | 實際已記錄的實作狀態、測試與待辦 |
 | [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md) | 開發歷程與驗證紀錄 |
 | [Telemetry Database](docs/TELEMETRY_DATABASE.md) | 已建立的 SQLite 資料層及未來 Runtime 整合 |
+| [Phase 1 本機啟動與測試指南](docs/PHASE1_LOCAL_STARTUP.md) | Windows PowerShell 啟動步驟、API 驗證與注意事項 |
 | [Token/Cost Research](docs/TOKEN_COST_RESEARCH.md) | 量測契約與限制 |
 | [Multi-Agent Organization Design](docs/MULTI_AGENT_ORGANIZATION_DESIGN.md) | 未來階層權限、Branch Governance |
 | [Future Platform Vision](docs/AGENT_PLATFORM_FUTURE_VISION.md) | 研究驗證後才考慮的商品化願景 |

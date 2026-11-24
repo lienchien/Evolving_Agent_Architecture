@@ -937,3 +937,40 @@ NVIDIA 的結果依賴共同 Tile IR、DGX B200、CUDA 13.1+、Rust 1.89+、特�
 - **Metrics**：verified task success、path attribution accuracy、false-success rate、out-of-scope rate、success lift by model tier、CPS（含路由／驗證／維護／探索成本）、P95 latency、token/retry、capability retention、holdout generalization、break-even reuse count。
 - **證據限制／資源**：原文的安全研究在受控環境中進行；不可直接複製攻擊實驗至未授權系統。不同模型比較可能受模型能力、資料與工作負載混雜影響；CEAA 應使用授權 sandbox、非攻擊性代理任務與預先固定的測試集，並事前登記比較條件。原文沒有證明 Agent／Skill 長期演化。
 - **權限邊界**：僅作為待執行實驗參考，不修改正式 System Design v1.9、DEV_PLAN 或 Runtime。
+
+
+---
+
+## 2026-11-24 — Canary Deployment：Skill 漸進式部署與演化後回歸驗證
+
+- **發現來源**：[如何架構金絲雀部署以提高百萬流量電商平台上版穩定性](https://itplus.ithome.com.tw/vod-page/1042)，2026-11-24 Gmail 摘要；影片原頁無法取得，作者、發表日期及案例結果未核實。
+- **已查核方法來源**：[Canarying Releases — The Site Reliability Workbook, Chapter 16](https://sre.google/workbook/canarying-releases/)（Google SRE，2018 年出版，個別章節作者未核實）；[Google and Waze canary analysis](https://cloud.google.com/blog/products/devops-sre/canary-analysis-lessons-learned-and-best-practices-from-google-and-waze)。
+- **研究優先級**：Medium；C — Engineering Validation；使用者明確核准收錄。
+- **CEAA_relevance**: High；**design_novelty**: Low；**experimental_reference_value**: Medium；**incremental_value**: Implementation；**experiment_status_in_CEAA**: Planned（研究候選，非正式開發計畫承諾）；**admission_decision**: Include / C。
+
+### 核心貢獻與證據
+
+Google SRE 方法以有限、具代表性的工作負載驗證候選版本，與同期穩定版本分開量測，依品質及服務指標決定擴大部署、停止或回滾。樣本量、觀察時間、流量組成及負載差異影響判定。此為成熟部署工程方法，非新 Agent 演化演算法；未取得原始電商影片量化結果，CEAA 亦尚未實測。
+
+### 與 CEAA 既有設計重疊／對應章節
+
+- 已讀取根目錄 System Design v1.9：§3.2 Validation Before Activation、§3.10 Everything Is Versioned、§3.12 Independent Dual-Agent Cross-Validation、§8A.12 Revision Requires Full Revalidation、§12 Capability Versioning、§19 Validation Service。既有獨立審核、版本化及回滾不得被 canary 取代。
+- DEV_PLAN：Phase 1 Telemetry 已驗收；Phase 1.5-E/F/G 受控 Builder、Secure Evolution Gate、治理與恢復；Phase 3 正式實驗。未確認已有完整 Skill canary 實驗。
+- Research Watch：2026-10-15 Langfuse vs. LangSmith 版本化追蹤、2026-10-16 Google ADK 自主優化的 regression/holdout 與 versioned rollout 已有重疊；未見同名 Canary 條目。
+- **真正新增價值／C 類理由**：將通過既有 Gate 的 Skill 有限暴露、同期版本對照、序貫升級／停止判定、回滾影響範圍及成本量化形成可執行測試契約。補充部署後驗證，非架構創新。
+
+### 建議方法與實驗
+
+1. 候選 Skill 先通過既有功能、安全、回歸與授權 Gate；初期僅隔離 replay 或 shadow（禁止重複外部副作用），之後才可在明確授權的低風險任務試行。
+2. 固定模型、工具、policy、資料版本，依任務難度、領域及風險分層隨機或配對分配；保持 session 版本一致。5% → 10% → 25% → 50% → 100% 僅為待測比例；達預定樣本及觀察窗口後才升級，資料不足暫停。
+3. **Baseline B0**：相同離線 Gate 後一次性切換（隔離模擬）；**B1**：固定比例 canary + 人工核准；**Experiment E1**：分階段 canary + 獨立指標判定 + 受控停止／回滾。使用相同正常候選、注入缺陷及環境漂移任務。
+4. **Ablation**：固定 vs 動態暴露；移除版本分層觀測、同期對照或自動回滾（僅隔離模擬，保留強制安全 Gate）。
+5. **Oracle**：獨立 protected acceptance/regression tests、確定性任務驗收、必要的獨立語意審核、權限及副作用契約。安全違規立即停止；事前鎖定品質非劣界限、延遲及成本預算、最小樣本與統計停止規則；未知驗收或缺失 telemetry fail closed。
+6. **Metrics**：Verified Success Rate、Capability Retention、regression rate、false promotion/rollback、受影響任務數及比例、time-to-detect、time-to-rollback、P95 latency、human review effort、Cost per Successful Task（含雙版本、驗證、重試、回滾與監控成本）。
+7. **Telemetry**：task/trace ID、stable/candidate skill version、cohort、routing policy、exposure stage、oracle version、validation outcome、rollback reason、checkpoint、cost/latency、side-effect status。回滾停止新任務路由；不可逆外部操作另行人工處置，不假設切回版本即可撤銷副作用。
+
+### 可否證假設、資源與限制
+
+H1：相同離線 Gate 與候選缺陷下，漸進式部署降低受影響任務數；H2：同期穩定版本與獨立 Oracle 降低錯誤晉升；H3：風險降低效益可能被雙版本與驗證成本抵銷。採固定 holdout、重複試驗、分層統計及信賴區間，允許負面結果。初期用 mock provider、版本化測試 Skill、故障注入及現有 telemetry，無需大型 GPU 或正式流量。低頻異質任務、模型隨機性、資料漂移、延遲副作用及樣本不足可能造成誤判。以上為 CEAA 擬驗證方案，並非原作者已證實的 Agent 結果。
+
+**權限邊界**：僅增量研究筆記，不修改 System Design v1.9、DEV_PLAN、Runtime 或正式退出條件，不授權 production 部署。

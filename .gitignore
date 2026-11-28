@@ -23,6 +23,11 @@ __pycache__/
 # Generated capability reports (existing tracked examples remain tracked)
 /capability_library/CAP-*/
 
+# Local inference caches and model weights
+.ollama/
+*.gguf
+*.safetensors
+
 # Environment variables
 .env
 .env.*

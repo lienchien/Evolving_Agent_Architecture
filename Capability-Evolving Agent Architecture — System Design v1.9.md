@@ -1985,28 +1985,24 @@ Internal LLM Gateway
  ↓
 Routing Policy
  ↓
-LiteLLM
- ├─ NVIDIA NIM
- ├─ OpenRouter
- └─ LocalLLMProvider
+LLMProvider contract
+ ├─ MockLLMProvider (deterministic baseline)
+ ├─ OllamaProvider (local inference; loopback only)
+ └─ LiteLLMProvider (explicit cloud selection: OpenRouter / NVIDIA NIM)
 ```
 
 ---
 
-# 29. Local LLM Readiness
+# 29. Local LLM Inference
 
-預留：
+Phase 1.5-B 採 **local-first 開發驗證**：Ollama 載入已安裝的量化權重，不在此階段訓練或微調模型。Ollama 與 LiteLLM 共用 `LLMProvider` 契約、結構 schema 與 usage 語意，但各自使用原生傳輸；llama.cpp、vLLM、LM Studio 仍保留為替換候選。
 
-```text
-LocalLLMProvider
-```
+- 本地請求固定走 loopback，只使用明確的本地模型標籤；不可在失敗時自動送往雲端。雲端對照需事先明確選擇且符合資料政策。
+- 本地配置管理 context、輸出上限、請求逾時與單程序併發；記錄 token、延遲、裝置分配與模型 digest。不把未回報的本地電力或硬體成本填成零。
+- 使用同任務、同模型家族與量化、相同上下文和輸出限制比較不同大小；先衡量格式、可信參考答案與效能，不把 smoke test 視為通用能力或安全證據。
+- Ollama 與雲端 adapter 目前只供獨立驗證。模型的位置不改變生成輸出的信任等級；主 API 執行仍受 Sandbox、授權與審核門檻限制。
 
-未來可接：
-
-- Ollama
-- llama.cpp
-- vLLM
-- LM Studio
+設定及受控實驗見 [Phase 1.5-B 本地推理](docs/PHASE15_LOCAL_INFERENCE.md)。
 
 ---
 
@@ -2962,7 +2958,7 @@ Phase 1 **不要求** MemoryRouterInterface runtime、Local/Global Decision、Pa
 
 | 工作主軸 | 計畫內容與安全邊界 |
 | --- | --- |
-| Runtime & Providers | Secret-safe configuration、LiteLLM Adapter、Real Usage / Provider Fallback；保留 Mock Baseline |
+| Runtime & Providers | Secret-safe configuration、Ollama 本地推理／模型大小對照、LiteLLM 雲端對照、原生 usage；保留 Mock Baseline 與受政策約束的 fallback 設計 |
 | Repository & Isolation | PostgreSQL + migration/transaction、Docker Sandbox、CPU/RAM/FS/Network quota、Ephemeral Git/Worktree |
 | Builder | BuildSpecification、CodeBuilderRuntime、Candidate Artifact / BuildResult，Pi 1.x 與 OpenCode 為候選，應公平比較後決定 |
 | Secure Evolution | 獨立 Main / Audit First-pass Reviewer、Regression / Semantic Security Evidence、Policy / Human Approval、Fail Closed |

@@ -1309,3 +1309,69 @@ Summary 提供明確 completed denominator、success/failure rate、事件數與
 - 以保留 merge commit 的方式合併至 `dev`：`7f48db7`（`merge: complete Phase 1 telemetry and recovery`）。
 - 合併後在 `dev` 執行完整 pytest：**59 passed, 1 warning in 15.20s**；警告仍為既有 Starlette／AnyIO `BlockingPortal` alias 棄用。
 - `README.md`、`README.zh-TW.md`、`PROJECT_STATUS.md`、`DEV_PLAN.md` 與 Telemetry 文件已更新為 Phase 1 完成且合併至 `dev` 的狀態。Phase 1.5 仍未開始。
+
+---
+
+## 2026-11-15 — Phase 1.5-A Runtime Configuration（feature 分支）
+
+- 從 `dev` 建立 `feature/phase15-runtime-configuration`；既有未提交的 `.gitignore` 變更保留，未混入本輪功能範圍。
+- `Settings.from_environment()` 改為 Container 建立時讀取環境，避免 import-time 設定快取；加入 development／test／production-like profile，test 必須明確指定隔離的 SQLite 與報告路徑。
+- 現有 subprocess timeout、bounded retry hard cap／backoff 已由設定接線；新增 `.env.example` 與 [設定說明](docs/PHASE15_RUNTIME_CONFIGURATION.md)。
+- 真實 LLM、PostgreSQL、Docker、Builder／非零 Builder 預算及 production-like profile 在相應安全基礎完成前明確拒絕啟動，不會靜默退回 Mock／SQLite／subprocess。
+- 新增設定解析、無效值、不可用 adapter 與容器接線測試。最終完整 pytest：**85 passed, 1 warning in 14.44s**；警告仍為既有 Starlette／AnyIO `BlockingPortal` alias 棄用。
+- 本輪狀態：A 階段已在 feature 分支實作與驗證，尚未提交、推送或合併；B–I 未實作。
+
+---
+
+## 2026-11-15 — Phase 1.5-B Real Provider 前置準備
+
+- 在同一 feature 分支加入 `src.provider_preflight` 離線檢查：確認 `LLM_PROVIDER=litellm`、OpenRouter／NVIDIA NIM 模型前綴及對應 API key 環境變數是否存在；只輸出變數名稱和缺項，不輸出 key 值。
+- 檢查不進行網路請求、模型計費或 Runtime adapter 啟用；主程式仍拒絕真實 Provider，避免無隔離 subprocess 執行模型生成程式碼。
+- 更新 `.env.example` 與 [真實 LLM 前置準備](docs/PHASE15_REAL_PROVIDER_PREPARATION.md)，說明帳戶、模型、憑證、費用控制與安全依賴。LiteLLM adapter、真實 usage／cost、健康檢查與 fallback 尚未實作。
+- 設定與前置檢查聚焦測試：**36 passed**。完整 pytest：**95 passed, 1 warning in 16.19s**；警告仍為既有 Starlette／AnyIO `BlockingPortal` alias 棄用。
+- 尚未提交、推送或合併。
+
+---
+
+## 2026-11-15 — Phase 1.5-B LiteLLM Provider Adapter（隔離實作）
+
+- 新增 `LiteLLMProvider`，實作既有 `LLMProvider` 契約，提供能力及邊界測例的結構化 JSON 解析；prompt 只傳 task input 欄位名稱，不傳輸入值。
+- Adapter 對單次請求設定逾時、輸出 token 上限、`num_retries=0` 與 `max_retries=0`，避免 SDK 隱藏重試；截斷、不完整及 schema 不符的回應 fail closed。
+- 只映射回應中明確提供的 token usage 與 `usage.cost`；缺失值保留 unavailable，不以 LiteLLM 成本估算冒充 provider 帳單。原始 provider exception 與無效模型輸出不寫入錯誤訊息。
+- `Container` 明確拒絕注入 `LiteLLMProvider`，避免未隔離的現有 API 執行模型生成程式碼。SDK 版本列於可選 `requirements-llm.txt`，本輪未安裝、未使用真實 key 或發出模型請求。
+- Adapter／設定／前置檢查聚焦測試：**56 passed**。最終完整 pytest：**115 passed, 1 warning in 16.24s**；警告仍為既有 Starlette／AnyIO `BlockingPortal` alias 棄用。
+- Phase 1.5-B 尚待 SDK／provider 真實相容性、health/fallback、成本硬上限及經隔離／授權的端到端驗證；本輪未提交、推送或合併。
+
+---
+
+## 2026-11-15 — 本機 LiteLLM SDK 安裝驗證
+
+- 依可選 `requirements-llm.txt` 在專案 `.venv` 安裝 LiteLLM **1.109.0**；最初受沙盒網路權限阻擋，取得核准後由 PyPI 成功安裝。
+- `pip check` 顯示 **No broken requirements found**；LiteLLM import、`completion()` 與 `ModelResponse` 可用，SDK `mock_response` 回傳 `offline-ok`，沒有使用 key 或呼叫模型供應商。
+- 匯入時曾嘗試更新模型價格表，網路受限後使用內建副本；以 `LITELLM_OFFLINE_MODE=true` 執行的離線 smoke test 無此請求。此模式不阻擋對已配置供應商的請求。
+- 安裝後完整 pytest：**115 passed, 1 warning in 17.79s**；警告仍為既有 Starlette／AnyIO `BlockingPortal` alias 棄用。
+- 主 API 的真實 Provider 啟動阻擋不變；尚未提交、推送或合併。
+
+---
+
+## 2026-11-15 — Phase 1.5-B 獨立實測與輸出參數接線
+
+- 使用者在自己的 PowerShell 環境驗證 OpenRouter key 與免費模型連線成功；`generate_capability()` 的真實 LiteLLM 回應通過 adapter 解析，`generate_boundary_tests()` 在供應商預設推理下曾因輸出上限回傳空正文，僅關閉推理後又因 JSON schema 不符被 adapter 拒絕。
+- 使用者以 `reasoning_effort=none`、`response_format=json_object` 重試獨立 boundary 呼叫，15 個測例通過格式驗證，回報 612 tokens、`usage.cost=0.0`。此為使用者回報的 response usage，並非正式帳單核對；測例與生成程式碼均未執行。
+- `Settings` 新增可選的 `LLM_REASONING_EFFORT`、`LLM_RESPONSE_FORMAT`，透過 `LiteLLMProvider.from_settings()` 傳入；只有 OpenRouter 獨立 adapter 支援這兩項，未設定時保持原有供應商預設。NVIDIA NIM 尚未驗證的參數組合 fail closed，主 API 的真實 Provider 禁用不變。
+- 補上預設不傳參數、兩種生成方法均傳參數、非法值／未驗證供應商拒絕及設定接線測試；preflight 亦會拒絕 NVIDIA NIM 使用尚未驗證的輸出參數。真實 LiteLLM SDK `mock_response` 可接受新參數並通過 adapter 解析。
+- 設定／adapter／前置檢查聚焦測試：**66 passed**。完整 pytest：**125 passed, 1 warning in 18.11s**；警告仍為既有 Starlette／AnyIO `BlockingPortal` alias 棄用。
+- 新參數的設定接線尚未以真實供應商再次驗證；仍待健康檢查、fallback、成本硬上限、隔離與授權後才能接入主 Runtime。本輪未提交、推送或合併。
+
+---
+
+## 2026-11-28 — Phase 1.5-B 本地推理與 3B／7B 對照
+
+- 加入 loopback-only Ollama adapter、離線 preflight、本機模型 readiness 與單程序推理限制。獨立本地／雲端 adapter 共用嚴格 schema，主 API 拒絕兩者接入；未啟用雲端 fallback 或候選程式碼執行。
+- 新增同任務模型大小對照指令，使用字數、字元數的可信 Python 參考答案檢查模型提出的期待值，不執行生成程式碼。3B／7B 皆達 4/4 結構及任務契約、6/6 測例期待值；兩者皆由 Ollama 回報全 GPU 載入。限制及量測見 [本地推理紀錄](docs/PHASE15_LOCAL_INFERENCE.md)。
+- 完整 pytest：**144 passed、1 warning**（既有 Starlette／AnyIO alias 棄用）。此輪未更動 `dev`／`main` 或使用雲端模型。
+
+### 合併至 `dev`
+
+- 先同步 `origin/dev` 的研究文件更新 `34babed`，再以 squash 整合 `feature/phase15-runtime-configuration`（`bd666cd`），保留兩邊內容。合併提交使用 GitHub `noreply`，不把 feature 的提交中繼資料帶進 `dev`。
+- 整合後在 `dev` 重跑完整 pytest：**144 passed、1 warning**（同一項相依套件棄用警告）。主 API 的真實模型封鎖維持不變，未上傳本機模型權重、密鑰或測試資料。

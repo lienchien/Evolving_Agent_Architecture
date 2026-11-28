@@ -48,6 +48,9 @@ flowchart TB
     L2 --> AGENT
     L3 --> AGENT
     TOOLS --> AGENT
+    TOOLS --> MODEL["LLMProvider / explicit model policy"]
+    MODEL --> LOCAL["Ollama · loopback inference"]
+    MODEL --> CLOUD["LiteLLM · opt-in cloud"]
 
     subgraph DATA["Knowledge & Runtime"]
       KB["Knowledge / RAG / Domain Memory"]
@@ -90,6 +93,8 @@ flowchart TB
     class REG,L1,L2,L3,TOOLS skill
     class MEMORY,CAP,DEC,OPT learn
 ```
+
+本地、雲端推理與候選程式碼執行是不同邊界。現階段兩類真實 adapter 都只供獨立測試，未接入主 API。參見 [本地模型與大小比較](../PHASE15_LOCAL_INFERENCE.md)。
 
 ## Skill Complexity Compression (Research Hypothesis)
 

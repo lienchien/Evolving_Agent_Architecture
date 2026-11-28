@@ -9,8 +9,9 @@ from src.domain.errors import CapabilityConflictError
 
 from src.agents.evolution_agent import EvolutionAgent
 from src.agents.main_agent import MainAgent
-from src.config import settings
+from src.config import Settings
 from src.infrastructure.console_notification import ConsoleNotificationProvider
+from src.infrastructure.structured_llm import StructuredLLMProvider
 from src.infrastructure.memory_queue import InMemoryEvolutionQueue
 from src.infrastructure.mock_llm import MockLLMProvider
 from src.infrastructure.sqlite_repository import SqliteCapabilityRepository
@@ -43,24 +44,38 @@ class Container:
     def __init__(
         self,
         database_path: str | None = None,
-        report_directory: str = "capability_library",
+        report_directory: str | None = None,
         llm_provider: LLMProvider | None = None,
         telemetry_repository: TelemetryRepository | None = None,
+        runtime_settings: Settings | None = None,
     ) -> None:
+        config = runtime_settings or Settings.from_environment()
         resolved_database_path = (
-            database_path if database_path is not None else settings.database_path
+            database_path if database_path is not None else config.database_path
         )
+        resolved_report_directory = (
+            report_directory if report_directory is not None else config.report_directory
+        )
+        config.validate_available_adapters(database_path=resolved_database_path)
+        if isinstance(llm_provider, StructuredLLMProvider):
+            raise ValueError(
+                "Real model adapters cannot enter the API runtime before sandbox and governance gates"
+            )
         repository = SqliteCapabilityRepository(resolved_database_path)
         llm_provider = llm_provider or MockLLMProvider()
-        sandbox = SubprocessSandbox()
+        sandbox = SubprocessSandbox(timeout_seconds=config.sandbox_timeout_seconds)
         notification_provider = ConsoleNotificationProvider()
 
+        self.runtime_settings = config
         self.queue = InMemoryEvolutionQueue()
         self.telemetry_repository = telemetry_repository or SqliteTelemetryRepository(
             resolved_database_path
         )
         self.telemetry_service = TelemetryService(self.telemetry_repository)
-        self.retry_policy = BoundedRetryPolicy()
+        self.retry_policy = BoundedRetryPolicy(
+            hard_max_retries=config.retry_hard_max,
+            base_backoff_ms=config.retry_backoff_ms,
+        )
         self.report_store = TestReportStore(repository)
         self.audit_service = AuditService(repository)
         self.research_metrics_service = ResearchMetricsService(repository)
@@ -76,7 +91,7 @@ class Container:
             sandbox,
             self.capability_service,
             self.report_store,
-            report_directory,
+            resolved_report_directory,
             self.research_metrics_service,
         )
         self.notification_service = NotificationService(notification_provider)

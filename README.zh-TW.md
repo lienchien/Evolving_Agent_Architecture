@@ -42,7 +42,7 @@ Capability Evolution 與 Experience-guided Decision Evolution 是支撐這個共
 
 ## 專案狀態
 
-**文件已對齊 v1.9 與 2026-10-31 Phase 1 退出修訂。Phase 1 已通過退出條件並合併至 `dev`；Phase 1.5 尚未開始。**
+**Phase 1 已通過退出條件並合併至 `dev`；本 feature 分支已實作 Phase 1.5-A 設定與 B 階段本地／雲端獨立推理，尚未接入主 API。**
 
 | 功能 | 目前狀態 |
 | --- | --- |
@@ -51,13 +51,13 @@ Capability Evolution 與 Experience-guided Decision Evolution 是支撐這個共
 | Token / Cost Research Foundation 與研究 API | 已實作；缺少的真實 Provider Usage 維持 unavailable |
 | ExecutionTrace / RoutingDecision / Failure / Recovery Domain、TelemetryRepository、SQLite Schema v1 | **資料層基礎已建立**，Repository 測試已記錄 |
 | Runtime 自動寫入、Task/Trace 關聯、bounded retry/fallback 證據、missing-event detection、查詢與 Summary API | **已於 `dev` 實作並完成 Phase 1 退出驗證**；替代目標須明確標記、同 scope、冪等、依優先序且每個 target 僅嘗試一次 |
-| Real LLM、Docker Sandbox、PostgreSQL Adapter、CodeBuilderRuntime、獨立 Main/Audit Gate、完整 Auth/Policy | **Phase 1.5 規劃中，未實作** |
+| 本地 Ollama、雲端 LiteLLM、Docker Sandbox、PostgreSQL、Builder、Main/Audit 與 Auth/Policy | **獨立 provider 已實作；主 Runtime 接線與安全強化待完成** |
 | MemoryRouterInterface、DecisionModelInterface、Static Skill Packages、Validated Path Registry | **Phase 2 PoC 規劃中，未實作** |
 | 完整自動修復、遞迴多 Agent 組織、Capability Sharing / Marketplace | 遠期研究／可選商品化 |
 
 **Phase 1 整合後完整測試：2026-10-31，59 passed、1 warning。** 警告為既有 Starlette／AnyIO `BlockingPortal` alias 棄用。
 
-**下一個工程里程碑**是 Phase 1.5 的真實基礎設施與安全強化。Phase 1 退出套件已涵蓋並行 task/trace/event/cost 關聯，以及重啟後仍可辨識的 missing-event detection。詳見 [Telemetry Database](docs/TELEMETRY_DATABASE.md)。
+**目前可做獨立本地推理驗證**，不需啟用主 API 的真實模型。見 [Ollama 3B／7B 基準和操作方式](docs/PHASE15_LOCAL_INFERENCE.md)；Phase 1 遙測基礎見 [Telemetry Database](docs/TELEMETRY_DATABASE.md)。
 
 **現有已實作的 Mock 核心流程**（與 v1.9 完整目標架構不同）：
 
@@ -432,7 +432,7 @@ Windows PowerShell 的完整啟動、核准與重用操作見 [Phase 1 本機啟
 | 階段 | 核心目標 | 狀態 |
 | --- | --- | --- |
 | **Phase 1 — Core + Telemetry** | Mock Capability Lifecycle、Token/Cost 基礎與完整執行／路由／失敗資料 | **已在 `dev` 完成**：所有既定退出檢查通過 |
-| **Phase 1.5 — Real Infrastructure + Governed Builder** | 真實 Provider、PostgreSQL、Docker、CodeBuilderRuntime、Main/Audit、Auth/Policy 與 Human Governance | **規劃中，未實作** |
+| **Phase 1.5 — Real Infrastructure + Governed Builder** | 本地／雲端 Provider、PostgreSQL、Docker、Builder、Main/Audit、Auth/Policy 與 Human Governance | **A 設定與 B 獨立推理已實作；主 Runtime 與其餘階段待完成** |
 | **Phase 2 — Retrieval + MADE PoC** | Capability/Memory Retrieval、Decision Routing、Static Skill Packages、Validated Path 與有限 Recovery | **規劃中，未實作** |
 | **Phase 3 — Evaluation** | E1 Capability/Cost、E2 Memory×Decision、E3 Skill Optimization、E4 Package Hierarchy、E5 Recovery、可選 E6 HYSET | **研究設計完成，尚未實驗驗證** |
 | **Phase 4–7** | Background Workers、強化隔離、Dashboard、完整本地 Reasoning LLM | **遠期／可選** |

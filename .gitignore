@@ -9,6 +9,19 @@ __pycache__/
 
 # Pytest
 .pytest_cache/
+/.pytest-tmp-*/
+/.codex-pytest-tmp/
+
+# Local SQLite databases and sidecar files
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+
+# Generated capability reports (existing tracked examples remain tracked)
+/capability_library/CAP-*/
 
 # Environment variables
 .env

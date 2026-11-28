@@ -1,16 +1,22 @@
 # Capability-Evolving Agent — Project Status
 
-更新日期：2026-10-31
+更新日期：2026-11-28
 
-目前分支：`dev`；Phase 1 feature：`feature/provider-failure-stage`（已合併）
+目前開發分支：`feature/phase15-runtime-configuration`；Phase 1 feature：`feature/provider-failure-stage`（已合併）
 
 ## Current Stage
 
-**Phase 1 — Complete on `dev` / Phase 1.5 Not Started**
+**Phase 1 — Complete on `dev` / Phase 1.5-A implemented; B local and cloud adapters isolated from the API**
+
+2026-11-15 起依序實作 Phase 1.5。A 階段已加入啟動時載入的設定、development/test/production-like profile、SQLite 與報告路徑、subprocess timeout、bounded retry 參數及保留的 Builder 預算／功能開關。尚未實作的真實 Provider、PostgreSQL、Docker、Builder 和 production-like profile 會明確拒絕啟動。詳見 [Phase 1.5-A 設定說明](docs/PHASE15_RUNTIME_CONFIGURATION.md)。此狀態仍在 feature 分支，尚未合併至 `dev`。
+
+B 階段已在 feature 分支完成 [真實 LLM 前置設定與獨立 adapter](docs/PHASE15_REAL_PROVIDER_PREPARATION.md)：OpenRouter／NVIDIA NIM 模型前綴與憑證變數的離線檢查、LiteLLM `LLMProvider` adapter、結構化 JSON／usage 解析及錯誤淨化。本機 `.venv` 已安裝 LiteLLM 1.109.0，`pip check`、SDK mock 回應與 OpenRouter 免費模型的使用者端獨立呼叫均通過；`generate_capability()` 解析成功，`generate_boundary_tests()` 在關閉推理及 JSON 模式下解析成功，相關參數已做成可選設定。測例尚未執行，主 Runtime 仍未接入真實 Provider。健康檢查、provider fallback、成本硬上限、正式帳單及受控端到端驗證仍未完成。
+
+2026-11-28：B 階段加入 [Ollama 本地 adapter 與 3B／7B 對照](docs/PHASE15_LOCAL_INFERENCE.md)，採本地優先開發驗證，雲端由操作者另行選用。兩種 adapter 共用嚴格 JSON 驗證；Ollama 已完成本地模型查詢與相同任務推理。主 API 仍只允許現有 Mock 路徑，不會執行真實模型生成的程式碼。
 
 Phase 1 原有的 Core Baseline 開發與驗證條件已完成，但在確認 Execution Experience & Evolution Telemetry 是未來 Experience Memory、system diagnosis、Capability / Agent / Organization Evolution 的必要歷史資料層後，**Phase 1 退出條件已重新開啟並擴充**。
 
-目前狀態應解讀為：**Core Baseline、Telemetry runtime core、bounded retry、provider failure stage、受治理 alternate-target fallback、並行 correlation 與 missing-event detection 均已通過既定退出驗證，並合併至 `dev`**。下一階段為 **Phase 1.5 — Real Infrastructure & Hardening**。
+目前狀態應解讀為：**Core Baseline、Telemetry runtime core、bounded retry、provider failure stage、受治理 alternate-target fallback、並行 correlation 與 missing-event detection 均已通過既定退出驗證，並合併至 `dev`**。本 feature 分支目前在 **Phase 1.5-B 的獨立推理驗證**，安全 Runtime 與後續工作仍待實作。
 
 核心 mock 流程、FastAPI TestClient 整合、併發一致性與跨程序持久化已取得執行證據。
 獨立 Uvicorn 已完成 loopback HTTP 全流程與停止／重啟持久化驗證；新增 Token／費用
@@ -373,10 +379,11 @@ Phase 1.5 已正式加入研究實驗，不只驗證 infrastructure 與 feature 
 4. **Known-Defect Security Benchmark**：功能錯誤、過度權限、secret exposure、unsafe process/network、data exfiltration、dependency risk、prompt/tool injection、cross-branch access、privilege escalation、recursive delegation bypass。
 5. **Model Configuration Comparison**：同模型 reviewer、frontier same-family reviewer、cross-model / cross-provider reviewer。
 6. **Human Escalation Evaluation**：escalation rate、false escalation、human burden、resolution outcome。
+7. **Local Model Size Comparison**：在固定同任務與推理限制下，以 3B／7B 比較格式、期待值正確性、token、冷暖延遲與 GPU 分配。
 
 核心研究指標包括 detection rate、functional/security recall、false-positive rate、false-negative rate、reviewer agreement、human escalation rate、token/cost、latency。
 
-目前狀態仍為 **Planned / Not Implemented / Not Evaluated**。
+本地模型大小已完成 [獨立初測](docs/PHASE15_LOCAL_INFERENCE.md)，不是受控執行或整體建構／審查實驗；其餘正式實驗仍待實作與驗收。
 
 ---
 
@@ -397,7 +404,7 @@ Neither changes mandatory Phase 1.5 exit criteria. Strix does not replace Main/A
 | 階段 | 規劃與狀態 |
 |---|---|
 | Phase 1 | 已於 `dev` 完成：Core Baseline 與 Execution Experience & Evolution Telemetry 正式退出條件均通過 |
-| Phase 1.5 | 尚未開始：Real Infrastructure + Controlled Code Evolution + Experimental Validation。除 LiteLLM/NIM/OpenRouter、PostgreSQL、Docker、auth/policy/recovery 外，實作 Skill/Sub-Agent autonomous construction、Main/Audit Secure Evolution Gate、frontier semantic review、Validation Incident、mandatory Human Escalation，並執行 reviewer ablation、known-defect security benchmark、model configuration 與 escalation-burden 實驗；不包含完整 recursive organization runtime |
+| Phase 1.5 | A 設定與 B 本地／雲端獨立 adapter 已在 feature 分支實作；本地 3B／7B 同任務初測已完成。主 Runtime 接線、雲端健康檢查、受政策管控的 fallback、成本硬上限與 C–I 尚未完成。後續包含 PostgreSQL、Docker、auth/policy/recovery、受控 Skill/Sub-Agent 建構與審查及正式實驗；不包含完整 recursive organization runtime |
 | Phase 2 | 規劃：pgvector、embedding、語意檢索、相容性篩選與排序；目前僅完成 task_family 精確去重 |
 | Phase 3 | 規劃：在 Phase 1 量測基礎上，以 tracing、Phoenix/DeepEval/MLflow 執行跨模型 baseline、token amortization、相似度、重用與回歸實驗 |
 | Phase 4 | 規劃：Redis/RQ、Evolution/Testing/Notification workers |

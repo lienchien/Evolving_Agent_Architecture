@@ -32,7 +32,7 @@ Capability Evolution and Experience-guided Decision Evolution are **mechanisms s
 
 ## Project Status
 
-**Documentation aligned to v1.9 and the 2026-10-31 Phase 1 exit revision. Phase 1 exit criteria are verified and merged into `dev`. Phase 1.5 has not started.**
+**Phase 1 exit criteria were verified and merged into `dev`. This feature branch implements Phase 1.5-A configuration and isolated local/cloud provider adapters, not production runtime integration.**
 
 | Area | Verified status |
 | --- | --- |
@@ -41,13 +41,13 @@ Capability Evolution and Experience-guided Decision Evolution are **mechanisms s
 | Token / Cost Research foundation and research endpoints | Implemented; missing real provider usage remains unavailable |
 | ExecutionTrace / RoutingDecision / Failure / Recovery domain, TelemetryRepository and SQLite schema v1 | **Foundation implemented**, contract tests recorded |
 | Runtime telemetry, task/trace correlation, bounded retry/fallback evidence, missing-event detection, filtering and summary API | **Implemented and Phase 1 exit-verified on `dev`**; alternate targets are explicitly eligible, same-scope, idempotent, priority ordered and single-attempt |
-| Real providers, Docker Sandbox, PostgreSQL adapter, CodeBuilderRuntime, independent Main/Audit Gate, auth/policy hardening | **Phase 1.5 planned; not implemented** |
+| Local Ollama, cloud LiteLLM, Docker Sandbox, PostgreSQL, Builder, Main/Audit and auth/policy | **Isolated providers prototyped; runtime integration and security hardening pending** |
 | MemoryRouterInterface, DecisionModelInterface, Static Skill Packages, Validated Path Registry | **Phase 2 PoC planned; not implemented** |
 | Reliable automated recovery, recursive multi-Agent organization, shared capability marketplace | Future / optional research |
 
 **Phase 1 integrated full suite: 59 passed, 1 warning (2026-10-31)**. The warning is the existing Starlette/AnyIO `BlockingPortal` alias deprecation.
 
-**Immediate next milestone:** begin the planned Phase 1.5 real-infrastructure and security hardening work. The Phase 1 exit suite covers concurrent task/trace/event/cost correlation and restart-persistent missing-event detection. See [Execution Telemetry Database](docs/TELEMETRY_DATABASE.md).
+**Current checkpoint:** local inference can be tested without enabling real models in the main API. See the [Ollama 3B/7B baseline and reproducibility guide](docs/PHASE15_LOCAL_INFERENCE.md) and [Execution Telemetry Database](docs/TELEMETRY_DATABASE.md).
 
 **Actually implemented mock flow** (distinct from the full v1.9 design):
 
@@ -390,7 +390,7 @@ Do not infer production authentication, multi-tenant data isolation, full Code E
 
 **Implemented dependencies:** Python, FastAPI, Pydantic, LangGraph, pytest, httpx and SQLite.
 
-**Phase 1.5 candidates:** LiteLLM, NVIDIA NIM/OpenRouter or equivalent real LLM provider; PostgreSQL; Docker sandbox; replaceable CodeBuilderRuntime (Pi 1.x vs OpenCode under evaluation); auth, policy enforcement and independent Main/Audit reviews.
+**Phase 1.5:** local Ollama for development inference, LiteLLM for explicit NVIDIA NIM/OpenRouter comparisons, and planned PostgreSQL, Docker sandbox, replaceable CodeBuilderRuntime, auth, policy and independent Main/Audit reviews.
 
 **Phase 2–3:** Embedding/pgvector or other retrieval backend, `MemoryRouterInterface`, `DecisionModelInterface`, static Package/Path Registry, optional Phoenix/DeepEval/MLflow. CPU-first lightweight decision inference may be evaluated here; a full local reasoning LLM is **not a prerequisite**.
 

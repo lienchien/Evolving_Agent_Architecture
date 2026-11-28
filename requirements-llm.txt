@@ -1,0 +1,2 @@
+# Optional Phase 1.5-B adapter dependency; not required by the mock runtime.
+litellm==1.109.0

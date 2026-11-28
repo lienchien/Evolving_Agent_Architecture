@@ -525,6 +525,7 @@ Required experiment groups:
 4. Known-defect / known-vulnerability artifact benchmark.
 5. Reviewer model configuration comparison, including same-model and cross-model / cross-provider setups.
 6. Human Escalation effectiveness and review-burden analysis.
+7. Local model-size comparison: run identical tasks on quantized 3B and 7B models with fixed prompts and inference limits; record correctness, schema pass rate, latency, token usage and device allocation. This inference-only baseline is not an execution or reviewer-safety result. See [local inference](PHASE15_LOCAL_INFERENCE.md).
 
 Core metrics:
 

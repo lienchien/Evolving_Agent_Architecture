@@ -1,6 +1,6 @@
 # Capability-Evolving Agent — Phase 1 Development Plan
 
-更新日期：2026-10-31
+更新日期：2026-11-28
 
 ## 目前基準
 
@@ -479,6 +479,8 @@ Phase 1.5 應先完成這套機制的必要基礎：real provider abstraction、
 
 ### Phase 1.5-A — Runtime Configuration
 
+**2026-11-15 implementation status:** settings parser / validation、profile、SQLite/report path、subprocess timeout 與 bounded retry 接線已在 `feature/phase15-runtime-configuration` 實作；真實 adapter、Builder 預算執行與 production-like 啟動仍 fail closed。測試與限制見 [Runtime Configuration](docs/PHASE15_RUNTIME_CONFIGURATION.md)。尚未合併至 `dev`。
+
 - 統一 runtime configuration / environment profile。
 - env.example 補齊 provider、model、database、sandbox、timeout、retry、budget 與 feature flag。
 - dev / test / production-like configuration 分離。
@@ -486,9 +488,12 @@ Phase 1.5 應先完成這套機制的必要基礎：real provider abstraction、
 
 ### Phase 1.5-B — Real LLM Provider
 
+**2026-11-15 implementation status:** 已在 `feature/phase15-runtime-configuration` 加入 OpenRouter／NVIDIA NIM 的離線設定檢查及獨立 LiteLLM adapter。結構化回應、usage、timeout／output cap、無 SDK 內部重試與錯誤淨化已用 fake completion 驗證；本機 `.venv` 已安裝 LiteLLM 1.109.0 並完成 SDK mock smoke test。使用者端 OpenRouter 免費模型獨立實測證明能力生成可解析、邊界測例需關閉推理與啟用 JSON 模式才能通過本輪格式驗證；這兩項已加入可選 OpenRouter adapter 設定。尚未接入主 Runtime，測例未執行，健康檢查、provider fallback、成本硬上限與帳單核對仍待實作。見 [Real Provider Preparation](docs/PHASE15_REAL_PROVIDER_PREPARATION.md)。
+
 - LiteLLM adapter。
 - NVIDIA NIM / OpenRouter。
-- provider fallback / health check。
+- **本地優先**：獨立 Ollama adapter、只允許本機已安裝的模型、離線設定檢查與本地讀取式 readiness；不做自動雲端 fallback。OpenRouter 保留為明確選用的對照。
+- 先驗證本地逾時、context／輸出限制與單程序併發；雲端健康檢查、受政策管控的 fallback、額度及帳單核對仍待實作。
 - provider-native token usage / cost / latency。
 - 保留 MockLLMProvider 作 deterministic test baseline。
 - 為未來 Builder、Main Reviewer、Audit Reviewer 預留獨立 model routing policy。
@@ -807,6 +812,8 @@ Audit = frontier model B
 > 不同角色與不同 model family / provider 是否能降低 correlated blind spots，並提升功能與安全問題 detection？
 
 量測 detection、false positive / negative、cost、latency 與 escalation burden。
+
+**D.1 — 同任務的本地模型大小對照。** 在同一台機器、同模型家族／量化下，固定 prompt、任務、context、輸出上限、seed 與並行度，依序比較 3B／7B。記錄每次格式通過、參考答案正確、冷／暖狀態、token、延遲及 GPU 分配。先以字數與字元計數做基準；後續擴充固定題庫、多次重跑與交錯順序，再評估適合不同角色的模型。此對照不替代 reviewer 實驗或隔離執行驗證。見 [本地推理實驗](docs/PHASE15_LOCAL_INFERENCE.md)。
 
 #### Experiment Group E — Human Escalation Effectiveness
 

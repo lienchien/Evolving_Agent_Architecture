@@ -94,7 +94,7 @@ Starlette／AnyIO `BlockingPortal` alias 棄用。
 
 ## 限制與後續
 
-- 尚未接上 LiteLLM、NVIDIA NIM 或 OpenRouter，沒有真實 token/cost 資料。
+- Phase 1 API 仍用 Mock LLM；Phase 1.5-B 僅在獨立 adapter 取得 OpenRouter／Ollama 原生 usage，尚未接入任務持久化與成本彙總。
 - 尚未實作 static-agent baseline runner；目前 baseline 必須由研究者明確提供。
 - 尚未分類 Exact／Near-Similar／Generalized reuse，也沒有 adaptation/revision cost。
 - summary 目前在 service 層讀取符合條件的紀錄後計算；大量資料時需下推 SQL／分析庫。
@@ -104,6 +104,8 @@ Starlette／AnyIO `BlockingPortal` alias 棄用。
 
 Phase 1.5 應讓真實 provider adapter 回傳原生 usage 與可靠價格；Phase 3 再執行完整
 baseline／模型組合／相似度／長序列研究，檢驗節省是否以成功率或維護成本為代價。
+
+[本地 3B／7B 對照](PHASE15_LOCAL_INFERENCE.md) 固定任務與推理條件。Ollama 提供 prompt／output token counts；僅兩者都存在才加總。沒有供應商帳單欄位不代表本地成本為零，電力及硬體折舊未量測，亦不可與雲端帳單直接合併。
 
 ## Future Experiment F — Agent Scaling Efficiency / Aggregate Token Demand（延期）
 
